@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Image, Text, TouchableOpacity, ScrollView, SectionList } from 'react-native';
+import React, { useState } from 'react';
+import { View, Image, Text, TouchableOpacity, ScrollView, SectionList, TextInput } from 'react-native';
 
 const menu = [
   {
@@ -19,9 +19,37 @@ const menu = [
   },
 ];
 
+const handleSearch = async()=>{
+  if(!search.trim()) return;
+
+  try{
+    const response = await fetch ("https://10.0.2.2:8000/prompt", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt: search }),
+    });
+    const data = await response.json();
+    setResposta(data.resposta);
+  } catch (error){
+    console.error("Erro ao chamar API:", error);
+}
+};
 const HomeScreen = ({ navigator }) => {
+  const [search, setSearch]= useState('');
   return (
     <View style={styles.main}>
+      {/*Barra de pesquisa */}
+      <View style={styles.searchBar}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Pesquisar..."
+          placeholderTextColor="#777"
+          value={search}
+          onChangeText={setSearch}
+        />
+        </View>
       {/* Botão de menu */}
       <View style={styles.buttons}>
         <TouchableOpacity onPress={() => navigator.navigate('')}>
@@ -38,7 +66,7 @@ const HomeScreen = ({ navigator }) => {
         renderSectionHeader={({ section }) => (// define como cada seção vai ser exibida
           <View style={styles.div}>
             <View style={styles.icones}>
-              <Text style={styles.title}>{section.title}</Text>
+              <Text style={styles.title}>ㅤ{section.title}</Text>
               <Image source={section.icon} style={styles.frames} />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.row}> // faz a barra de rolagem horizontal
@@ -81,6 +109,19 @@ const styles = {
         flex: 1,
         backgroundColor: '#22272C',
         paddingHorizontal: 12,
+        paddingTop: 40,
+      },
+      searchBar: {
+        backgroundColor: '#D3D3D3',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        marginBottom: 15,
+        marginTop: '5%',
+      },
+      searchInput: {
+        color: '#000000',
+        fontSize: 16,
       },
       container: {
         flex: 1,
