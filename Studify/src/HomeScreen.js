@@ -23,7 +23,7 @@ const handleSearch = async()=>{
   if(!search.trim()) return;
 
   try{
-    const response = await fetch ("https://10.0.2.2:8000/prompt", {
+    const response = await fetch ("https://social-coats-hide.loca.lt", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,8 +36,12 @@ const handleSearch = async()=>{
     console.error("Erro ao chamar API:", error);
 }
 };
+
+
+
 const HomeScreen = ({ navigator }) => {
   const [search, setSearch]= useState('');
+  const [resposta, setResposta] = useState('');
   return (
     <View style={styles.main}>
       {/*Barra de pesquisa */}
@@ -49,7 +53,15 @@ const HomeScreen = ({ navigator }) => {
           value={search}
           onChangeText={setSearch}
         />
+        <TouchableOpacity onPress={handleSearch}>
+          <Text style={{color : '#000'}}>Buscar</Text>
+        </TouchableOpacity>
         </View>
+        {resposta ? (
+          <View style={styles.respostaBox}>
+            <Text style={styles.respostaTexto}>{resposta}</Text>
+          </View>
+        ) : null}
       {/* Botão de menu */}
       <View style={styles.buttons}>
         <TouchableOpacity onPress={() => navigator.navigate('')}>
@@ -182,6 +194,16 @@ const styles = {
       },
       div: {
         marginTop: '15%',
-      },  
+      },
+      respostaBox: {
+        backgroundColor: '#333',
+        borderRadius: 8,
+        padding: 12,
+        marginVertical: 10,
+      },
+      respostaTexto: {
+        color: '#fff',
+        fontSize: 16,
+      },        
     };
 export default HomeScreen;
