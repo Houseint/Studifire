@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Image, Text, TouchableOpacity, ScrollView, SectionList, TextInput } from 'react-native';
+
+import React from 'react';
+import { View, Image, Text, TouchableOpacity, ScrollView, SectionList } from 'react-native';
 
 const menu = [
   {
@@ -19,49 +20,9 @@ const menu = [
   },
 ];
 
-const handleSearch = async()=>{
-  if(!search.trim()) return;
-
-  try{
-    const response = await fetch ("https://social-coats-hide.loca.lt", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt: search }),
-    });
-    const data = await response.json();
-    setResposta(data.resposta);
-  } catch (error){
-    console.error("Erro ao chamar API:", error);
-}
-};
-
-
-
 const HomeScreen = ({ navigator }) => {
-  const [search, setSearch]= useState('');
-  const [resposta, setResposta] = useState('');
   return (
     <View style={styles.main}>
-      {/*Barra de pesquisa */}
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Pesquisar..."
-          placeholderTextColor="#777"
-          value={search}
-          onChangeText={setSearch}
-        />
-        <TouchableOpacity onPress={handleSearch}>
-          <Text style={{color : '#000'}}>Buscar</Text>
-        </TouchableOpacity>
-        </View>
-        {resposta ? (
-          <View style={styles.respostaBox}>
-            <Text style={styles.respostaTexto}>{resposta}</Text>
-          </View>
-        ) : null}
       {/* Botão de menu */}
       <View style={styles.buttons}>
         <TouchableOpacity onPress={() => navigator.navigate('')}>
@@ -73,15 +34,15 @@ const HomeScreen = ({ navigator }) => {
       <View style={styles.container}>
         {/* Div para os últimos conteúdos acessados | Histórico */}
         <SectionList
-        sections={menu} //define os dados que vão ser exibidos
-        keyExtractor={(item, index) => item + index} //gera uma chave unica para cada item, isso e pq o react native precisa identificar cada um separadamente
-        renderSectionHeader={({ section }) => (// define como cada seção vai ser exibida
+        sections={menu}
+        keyExtractor={(item, index) => item + index}
+        renderSectionHeader={({ section }) => (
           <View style={styles.div}>
             <View style={styles.icones}>
               <Text style={styles.title}>ㅤ{section.title}</Text>
               <Image source={section.icon} style={styles.frames} />
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.row}> // faz a barra de rolagem horizontal
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.row}>
               {section.data.map((_, i) => (
                 <View key={i} style={styles.rectangle} />
               ))}
@@ -122,18 +83,6 @@ const styles = {
         backgroundColor: '#22272C',
         paddingHorizontal: 12,
         paddingTop: 40,
-      },
-      searchBar: {
-        backgroundColor: '#D3D3D3',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        marginBottom: 15,
-        marginTop: '5%',
-      },
-      searchInput: {
-        color: '#000000',
-        fontSize: 16,
       },
       container: {
         flex: 1,
@@ -194,16 +143,7 @@ const styles = {
       },
       div: {
         marginTop: '15%',
-      },
-      respostaBox: {
-        backgroundColor: '#333',
-        borderRadius: 8,
-        padding: 12,
-        marginVertical: 10,
-      },
-      respostaTexto: {
-        color: '#fff',
-        fontSize: 16,
       },        
     };
 export default HomeScreen;
+
