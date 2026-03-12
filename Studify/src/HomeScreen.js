@@ -39,7 +39,7 @@ const HomeScreen = ({ navigator }) => {
         renderSectionHeader={({ section }) => (
           <View style={styles.div}>
             <View style={styles.icones}>
-              <Text style={styles.title}>ㅤ{section.title}</Text>
+              <Text style={styles.title}>{section.title}</Text>
               <Image source={section.icon} style={styles.frames} />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.row}>
@@ -90,6 +90,7 @@ const styles = {
         marginLeft: '5%',
       },
       title: {
+        marginLeft: 8,  
         color: '#FFFFFF',
         fontSize: 20,
         fontFamily: 'Roboto',

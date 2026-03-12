@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, KeyboardAvoidingView, Platform, StatusBar, Image,} from  'react-native';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, KeyboardAvoidingView, Platform, StatusBar, Image, ScrollView, TouchableWithoutFeedback, Keyboard } from  'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useNavigation } from '@react-navigation/native';
 
-
+const navigation = useNavigation();
 const { width, height } = Dimensions.get('window');
 
 export default function StudifyRegisterScreen({ navigation }) {
@@ -50,12 +51,16 @@ export default function StudifyRegisterScreen({ navigation }) {
       {/*orb de iluminaçao  */}
       <View style={styles.glowOrb1} />  
       <View style={styles.glowOrb2} />
-        //essas orbs é um trampo pra fazer, tipo, cada uma fica em um canto da tela, ai elas brilham, fazendo um efeito de luz natural, um refletido nos componentes da tela, fica bonito
+        {/* //essas orbs é um trampo pra fazer, tipo, cada uma fica em um canto da tela, ai elas brilham, fazendo um efeito de luz natural, um refletido nos componentes da tela, fica bonito */}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // esse componente faz o conteudo da tela subir e sem comprimido para cima quando o usuario abrir o teclado, evitando o corte na tela
-        style={styles.keyboardView}
-      >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          
+          <ScrollView
+            contentContainerStyle={styles.keyboardView}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+          
         {/* LOGO DO APLICATIVO */}
         <Animated.View          //o animated view é uma view que aceita animaçoes, sem segredo 👌
           style={[
@@ -77,8 +82,8 @@ export default function StudifyRegisterScreen({ navigation }) {
               />
             </LinearGradient>
           </View>
-
-          <Text style={styles.logoTitle}>STUDIFY</Text>
+          {/* PRECISA MUDAR A LOGO NO FIGMA DE STUDIFY PRA STUDYFIRE */}
+          <Text style={styles.logoTitle}>STUDYFIRE</Text>  
           <Text style={styles.logoSubtitle}>PREPARANDO PARA O FUTURO</Text>
         </Animated.View>
 
@@ -123,7 +128,7 @@ export default function StudifyRegisterScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Confirmar senha */}
+          {/* botao confirmar senha*/}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Confirmar senha</Text>
             <View style={styles.inputWrapper}>
@@ -138,8 +143,8 @@ export default function StudifyRegisterScreen({ navigation }) {
             </View>
           </View>
 
-          {/* botao 'cadastrar' */}
-          <TouchableOpacity style={styles.cadastrarButton} activeOpacity={0.85}>
+          {/* o botao de cadastrar */}
+          <TouchableOpacity style={styles.cadastrarButton} activeOpacity={0.85} onPress={()=> navigation.navigate("")}> 
             <LinearGradient
               colors={['#5ab8d4', '#3a9ab8', '#2a7a98']}
               start={{ x: 0, y: 0 }}
@@ -151,7 +156,7 @@ export default function StudifyRegisterScreen({ navigation }) {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* rodape */}
+        {/*é o footer*/}
         <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
           <Text style={styles.footerText}>
             Já tem uma conta?{' '}
@@ -163,10 +168,10 @@ export default function StudifyRegisterScreen({ navigation }) {
             </Text>
           </Text>
         </Animated.View>
-      </KeyboardAvoidingView>
-    </View>
-  );
-}
+        </ScrollView>
+        </TouchableWithoutFeedback>
+        </View>
+  )};
 
 
 
@@ -200,23 +205,6 @@ const styles = StyleSheet.create({
       borderRadius: 130,
       backgroundColor: 'rgba(0, 120, 180, 0.05)',
     },
-
-    helpCircle: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: 'rgba(255,255,255,0.12)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
-    },
-    helpText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: '700',
-    },
-  
     // Logo
     logoContainer: {
       alignItems: 'center',
