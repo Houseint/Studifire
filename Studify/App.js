@@ -11,7 +11,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-      initialRouteName='Register'
+      initialRouteName='Login'
       >
         <Stack.Screen name="Register" component={StudifyRegisterScreen} options={{headerShown: false}}/>
         <Stack.Screen name="Home" component={HomeScreen} options={{headerShown:false}}/>

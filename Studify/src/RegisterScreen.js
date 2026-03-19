@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import {View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, KeyboardAvoidingView, Platform, StatusBar, Image, ScrollView, TouchableWithoutFeedback, Keyboard } from  'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useNavigation } from '@react-navigation/native';
 
-const navigation = useNavigation();
+
 const { width, height } = Dimensions.get('window');
 
 export default function StudifyRegisterScreen({ navigation }) {
@@ -76,7 +75,7 @@ export default function StudifyRegisterScreen({ navigation }) {
               start={{ x: 0.2, y: 0 }}
               end={{ x: 0.8, y: 1 }}
             >
-              <Image source={require('../img/Logo.png')}
+              <Image source={require('../img/Logo (2).png')}
               style={{width: 60, height: 60 }}
               resizeMode= "contain"
               />
@@ -116,7 +115,7 @@ export default function StudifyRegisterScreen({ navigation }) {
           {/* Senha */}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Senha</Text>
-            <View style={styles.inputWrapper}> //input wrapper junta todos os inputs deixando mais bonitinho
+            <View style={styles.inputWrapper}> {/*//input wrapper junta todos os inputs deixando mais bonitinho*/}
               <TextInput
                 style={styles.input}
                 value={senha}
@@ -144,7 +143,7 @@ export default function StudifyRegisterScreen({ navigation }) {
           </View>
 
           {/* o botao de cadastrar */}
-          <TouchableOpacity style={styles.cadastrarButton} activeOpacity={0.85} onPress={()=> navigation.navigate("")}> 
+          <TouchableOpacity style={styles.cadastrarButton} activeOpacity={0.85} onPress={()=> navigation.navigate("Login")}> 
             <LinearGradient
               colors={['#5ab8d4', '#3a9ab8', '#2a7a98']}
               start={{ x: 0, y: 0 }}
@@ -162,10 +161,8 @@ export default function StudifyRegisterScreen({ navigation }) {
             Já tem uma conta?{' '}
             <Text
               style={styles.footerLink}
-              onPress={() => navigation?.navigate('Login')}
-            >
-              Entrar
-            </Text>
+              onPress={() => navigation.navigate('Login')}
+            > Entrar </Text>
           </Text>
         </Animated.View>
         </ScrollView>

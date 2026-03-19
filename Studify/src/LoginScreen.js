@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, TouchableWithoutFeedback, Keyboard, StatusBar, Image} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import 'react-native-gesture-handler';  
+
+
 
 const {width, height} = Dimensions.get('window');
 
 
 export default function LoginScreen({ navigation }) {
+  console.log('navigation', navigation)
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -54,7 +55,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.headerText}>Login</Text>
       </Animated.View>
  
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      
         <ScrollView
           contentContainerStyle={styles.scrollView}
           keyboardShouldPersistTaps="handled"
@@ -69,7 +70,7 @@ export default function LoginScreen({ navigation }) {
             <View style={styles.logoIconWrapper}>
               {/* Troque por <Image source={require('./assets/logo.png')} style={{ width: 90, height: 90 }} resizeMode="contain" /> */}
               <Image
-                source={{ uri: 'https://i.imgur.com/placeholder.png' }}
+                source={ require('../img/Logo (2).png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -80,7 +81,7 @@ export default function LoginScreen({ navigation }) {
                 start={{ x: 0.2, y: 0 }}
                 end={{ x: 0.8, y: 1 }}
               >
-                <Text style={styles.logoIconText}>📚</Text>
+               
               </LinearGradient>
             </View>
  
@@ -124,7 +125,9 @@ export default function LoginScreen({ navigation }) {
             </View>
  
             {/* Botão Entrar */}
-            <TouchableOpacity style={styles.entrarButton} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.entrarButton} activeOpacity={0.85} onPress={()=> {
+              console.log('clicou no botao entrar');
+              navigation.navigate('Home')}}>
               <LinearGradient
                 colors={['#5ab8d4', '#3a9ab8', '#2a7a98']}
                 start={{ x: 0, y: 0 }}
@@ -143,7 +146,7 @@ export default function LoginScreen({ navigation }) {
               É novo por aqui?{' '}
               <Text
                 style={styles.footerLink}
-                onPress={() => navigation?.navigate('RegisterScreen')}
+                onPress={() => navigation?.navigate('Register')}
               >
                 Cadastrar
               </Text>
@@ -151,7 +154,7 @@ export default function LoginScreen({ navigation }) {
           </Animated.View>
  
         </ScrollView>
-      </TouchableWithoutFeedback>
+      
     </View>
   );
 }
@@ -218,10 +221,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   logoImage: {
-    width: 90,
-    height: 90,
-    position: 'absolute',
-    zIndex: 1,
+    width: 100,
+    height: 100
   },
   logoIconGradient: {
     width: 90,
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   entrarButton: {
     marginTop: 10,
     borderRadius: 30,
-    overflow: 'hidden',
+    // overflow: 'hidden',
     shadowColor: '#00aacc',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
