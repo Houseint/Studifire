@@ -1,24 +1,43 @@
-# TODO: Implementar Modal de Edição/Exclusão de Cards na HomeScreen
+# Studifire Reorganization TODO
 
-## Passos aprovados do plano:
-1. **[✅]** Adicionar estados para modal de edição no bloco `// ─── ESTADO`
-2. **[✅]** Adicionar funções de lógica no bloco `// ─── LÓGICA`: openEditModal, updateMateria, deleteMateria
-3. **[✅]** Atualizar componente CardMateria para suportar onCardPress
-4. **[✅]** Passar onCardPress={openEditModal} para TODOS os CardMateria nas seções (historico, revisados, fixados)
-5. **[✅]** Criar novo Modal de Edição após o modal existente
-6. **[✅]** Testar: Adicionar, editar, deletar, verificar sync em todas seções e filtro de busca
-7. **[✅]** Extrair styles para src/styles/HomeScreenStyles.js ✅
+## Plan Overview
+- Restructure: screens/ (main screens), components/ (reusables: common/ + screen-specific), styles/ (split screen/component).
+- Start with: HomeScreen (cluttered), LoginScreen/RegisterScreen.
+- Goals: Thin screens, extract sub-components, fix imports.
 
-**Task completa! Execute `npx react-native run-android` (ou iOS) para testar a funcionalidade completa do modal de edição/exclusão nos cards.**
+## Steps (to be checked off)
 
-</xai:function_call name="edit_file">
-<parameter name="path">Studify/src/HomeScreen.js
-2. **[ ]** Adicionar funções de lógica no bloco `// ─── LÓGICA`: openEditModal, updateMateria, deleteMateria
-3. **[ ]** Atualizar componente CardMateria para suportar onCardPress
-4. **[ ]** Passar onCardPress={materia => openEditModal(materia)} para TODOS os CardMateria nas seções (historico, revisados, fixados)
-5. **[ ]** Criar novo Modal de Edição após o modal existente
-6. **[ ]** Testar: Adicionar, editar, deletar, verificar sync em todas seções e filtro de busca
-7. **[ ]** ✅ Opcional: Extrair styles para arquivo separado (homescreenStyles.js) após funcionalidade completa
+### Phase 1: Setup Structure & HomeScreen
+- [x] Create folders: `src/screens/`, `src/components/common/`, `src/components/home/`, `src/styles/screens/`, `src/styles/components/common/`, `src/styles/components/home/`.
+- [x] Move/refactor HomeScreen.js → screens/HomeScreen.js (thin: import components).
+- [x] Extract components/home/Icon.js + styles/components/common/IconStyles.js.
+- [x] Extract components/home/CardMateria.js + styles/components/home/CardMateriaStyles.js.
+- [x] Extract components/home/Secao.js + styles/components/home/SecaoStyles.js.
+- [x] Update HomeScreen.js imports/logic.
+- [x] Create all HomeScreen extracted styles files.
 
-**Próximo passo atual: 1**
+### Phase 2: Auth Screens (Login/Register)
 
+- [x] Move LoginScreen.js → screens/LoginScreen.js.
+- [x] Move RegisterScreen.js → screens/RegisterScreen.js.
+- [x] Ensure styles/ imports fixed (already good).
+
+### Phase 2.5: Extract Common Reusables
+- [x] components/common/CustomInput.js
+- [x] components/common/CustomButton.js (LinearGradient)
+
+
+### Phase 3: Remaining Screens
+- [x] ProfileScreen.js, Historic.js, HelpScreen.js → screens/.
+- [x] Extract styles if inline.
+- [x] Create missing styles/ files (placeholders).
+
+### Phase 4: Global Updates & Test
+- [x] Update App.js/index.js imports to new screen paths.
+
+- [ ] Extract global components (Modal wrapper, etc.).
+- [ ] Test: Run `npx expo start`, check all screens/navigation.
+- [ ] Lint/fix issues.
+- [ ] Complete!
+
+**Progress: Starting Phase 1**
