@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { SecaoStyles } from '../../styles/components/home/SecaoStyles.js';
+import { SecaoStyles as styles } from '../../styles/components/home/SecaoStyles.js';
 
 const Secao = ({ titulo, icone, children, acaoBotao }) => (
   <View style={styles.secao}>

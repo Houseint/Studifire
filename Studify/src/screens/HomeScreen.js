@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 
-import { HomeScreenStyles } from '../styles/screens/HomeScreenStyles.js';
+import { HomeScreenStyles } from '../styles/HomeScreenStyles.js';
 import Icon from '../components/common/Icon';
 import CardMateria from '../components/home/CardMateria';
 import Secao from '../components/home/Secao';
@@ -222,17 +222,156 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Modals unchanged - inline for now (extract later) */}
-      {/* ADD MODAL */}
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        {/* ... (copy original modal JSX/logic here - abbreviated for brevity; full in production) */}
-        {/* Note: Full modal JSX from original would be pasted here */}
+      {/* MODAL ADICIONAR MATÉRIA */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
+          <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitulo}>Nova Matéria</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={{ color: "#5a6a7a", fontSize: 20 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalLabel}>Nome da matéria *</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Ex: Matemática, Física..."
+              placeholderTextColor="#5a6a7a"
+              value={novaMateria}
+              onChangeText={setNovaMateria}
+              selectionColor="#6c8ebf"
+            />
+
+            <Text style={styles.modalLabel}>Descrição (opcional)</Text>
+            <TextInput
+              style={[styles.modalInput, { height: 80, textAlignVertical: "top" }]}
+              placeholder="Tópicos, capítulos..."
+              placeholderTextColor="#5a6a7a"
+              value={novaDescricao}
+              onChangeText={setNovaDescricao}
+              multiline
+              selectionColor="#6c8ebf"
+            />
+
+            <TouchableOpacity
+              style={styles.modalConfirmar}
+              onPress={adicionarMateria}
+            >
+              <Text style={styles.modalConfirmarText}>Adicionar</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
-      {/* EDIT MODAL */}
-      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
-        {/* ... full edit modal from original */}
+      {/* MODAL EDITAR MATÉRIA */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setEditModalVisible(false)}
+        >
+          <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitulo}>
+                Editar {selectedMateria?.nome || 'Matéria'}
+              </Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Text style={{ color: "#5a6a7a", fontSize: 20 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalLabel}>Nome da matéria *</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Ex: Matemática, Física..."
+              placeholderTextColor="#5a6a7a"
+              value={novaMateria}
+              onChangeText={setNovaMateria}
+              selectionColor="#6c8ebf"
+            />
+
+            <Text style={styles.modalLabel}>Descrição (opcional)</Text>
+            <TextInput
+              style={[styles.modalInput, { height: 80, textAlignVertical: "top" }]}
+              placeholder="Tópicos, capítulos..."
+              placeholderTextColor="#5a6a7a"
+              value={novaDescricao}
+              onChangeText={setNovaDescricao}
+              multiline
+              selectionColor="#6c8ebf"
+            />
+
+            <TouchableOpacity
+              style={[styles.modalConfirmar, { backgroundColor: '#6c9fd4' }]}
+              onPress={() => {
+                if (!novaMateria.trim()) {
+                  Alert.alert("Atenção", "Digite o nome da matéria!");
+                  return;
+                }
+                updateMateria(selectedMateria.id, {
+                  nome: novaMateria.trim(),
+                  descricao: novaDescricao.trim(),
+                });
+                setEditModalVisible(false);
+                setSelectedMateria(null);
+              }}
+            >
+              <Text style={styles.modalConfirmarText}>Salvar Alterações</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#d32f2f',
+                borderRadius: 14,
+                paddingVertical: 15,
+                alignItems: 'center',
+                marginTop: 12,
+              }}
+              onPress={() =>
+                Alert.alert(
+                  'Confirmar exclusão',
+                  'Esta matéria será removida de todas as seções.',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Excluir',
+                      style: 'destructive',
+                      onPress: () => deleteMateria(selectedMateria.id),
+                    },
+                  ]
+                )
+              }
+            >
+              <Text
+                style={{
+                  color: '#ffffff',
+                  fontSize: 16,
+                  fontWeight: '800',
+                  letterSpacing: 0.5,
+                }}
+              >
+                Excluir Matéria
+              </Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
 }
+

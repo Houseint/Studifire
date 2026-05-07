@@ -1,6 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { CardMateriaStyles } from '../../styles/components/home/CardMateriaStyles.js';
+import { TouchableOpacity, Text } from 'react-native';
+import { CardMateriaStyles as styles } from '../../styles/components/home/CardMateriaStyles.js';
 
 const CardMateria = ({
   materia,

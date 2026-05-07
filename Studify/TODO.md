@@ -36,6 +36,8 @@
 - [x] Update App.js/index.js imports to new screen paths.
 
 - [ ] Extract global components (Modal wrapper, etc.).
+- [ ] Fix duplicated/broken HomeScreen implementations (components/HomeScreen.js vs screens/HomeScreen.js)
+- [ ] Complete modal JSX/logic in HomeScreen.js (Adicionar + Editar)
 - [ ] Test: Run `npx expo start`, check all screens/navigation.
 - [ ] Lint/fix issues.
 - [ ] Complete!
