@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
-import { IconStyles } from '../../styles/components/common/IconStyles.js';
+import { IconStyles as styles } from '../../styles/components/common/IconStyles.js';
 
 const Icon = ({ name, size = 24, color = '#fff', style = {} }) => {
   const icons = {
@@ -24,3 +24,4 @@ const Icon = ({ name, size = 24, color = '#fff', style = {} }) => {
 };
 
 export default Icon;
+

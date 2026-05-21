@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CustomButtonStyles } from '../../styles/components/common/CustomButtonStyles.js';
+import { CustomButtonStyles as styles } from '../../styles/components/common/CustomButtonStyles.js';
 
 const CustomButton = ({
   title,
@@ -30,3 +30,4 @@ const CustomButton = ({
 );
 
 export default CustomButton;
+

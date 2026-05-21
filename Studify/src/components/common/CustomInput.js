@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { CustomInputStyles } from '../../styles/components/common/CustomInputStyles.js';
+import { CustomInputStyles as styles } from '../../styles/components/common/CustomInputStyles.js';
 
 const CustomInput = ({
   label,
@@ -32,3 +32,4 @@ const CustomInput = ({
 );
 
 export default CustomInput;
+

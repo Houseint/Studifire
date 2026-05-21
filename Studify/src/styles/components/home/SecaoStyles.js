@@ -2,19 +2,21 @@ import { StyleSheet } from 'react-native';
 
 export const SecaoStyles = StyleSheet.create({
   secao: {
-    marginTop: 24,
+    marginTop: 18,
   },
   secaoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
   secaoTitulo: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    color: '#9AA4CC',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     flex: 1,
   },
 });
