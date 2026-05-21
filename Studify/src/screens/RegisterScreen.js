@@ -6,18 +6,18 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
-  KeyboardAvoidingView,
-  Platform,
   StatusBar,
   Image,
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { RegisterScreenStyles as styles } from '../styles/RegisterScreenStyles.js';
+import { registerUser } from '../services/authDb';
 
 const { width, height } = Dimensions.get("window");
 
@@ -25,6 +25,7 @@ export default function StudifyRegisterScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -52,17 +53,47 @@ export default function StudifyRegisterScreen({ navigation }) {
     ]).start();
   }, []);
 
+  const handleRegister = async () => {
+    if (!email.trim() || !senha.trim() || !confirmarSenha.trim()) {
+      Alert.alert('Atenção', 'Preencha todos os campos.');
+      return;
+    }
+
+    if (senha.length < 6) {
+      Alert.alert('Atenção', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (senha !== confirmarSenha) {
+      Alert.alert('Atenção', 'As senhas não conferem.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await registerUser(email, senha);
+      Alert.alert('Sucesso', 'Conta criada com sucesso!');
+      navigation.navigate('Login');
+    } catch (error) {
+      if (error.message === 'EMAIL_EXISTS') {
+        Alert.alert('Atenção', 'Este e-mail já está cadastrado.');
+      } else {
+        Alert.alert('Erro', 'Não foi possível cadastrar agora.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
 
-      {/*gradiente pro fundo da tela(background) */}
       <LinearGradient
         colors={["#0a0f1e", "#0d1a2e", "#0a1520"]}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/*orb de iluminaçao  */}
       <View style={styles.glowOrb1} />
       <View style={styles.glowOrb2} />
 
@@ -72,24 +103,20 @@ export default function StudifyRegisterScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* LOGO DO APLICATIVO */}
           <Animated.View
             style={[
               styles.logoContainer,
               { opacity: fadeAnim, transform: [{ scale: logoScale }] },
             ]}
           >
-            {/* aplicando a logo */}
             <View style={styles.logoIconWrapper}>
               <Image
                 source={require("../../img/LogoStudifirWithDesc.png")}
                 style={{ width: 300, height: 350 }}
               />
             </View>
-            {/* PRECISA MUDAR A LOGO NO FIGMA DE STUDIFY PRA STUDYFIRE */}
           </Animated.View>
 
-          {/* caixas do formulario*/}
           <Animated.View
             style={[
               styles.formContainer,
@@ -99,7 +126,6 @@ export default function StudifyRegisterScreen({ navigation }) {
               },
             ]}
           >
-            {/* parte do email */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>E-mail</Text>
               <View style={styles.inputWrapper}>
@@ -115,7 +141,6 @@ export default function StudifyRegisterScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Senha */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Senha</Text>
               <View style={styles.inputWrapper}>
@@ -130,7 +155,6 @@ export default function StudifyRegisterScreen({ navigation }) {
               </View>
             </View>
 
-            {/* botao confirmar senha*/}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Confirmar senha</Text>
               <View style={styles.inputWrapper}>
@@ -145,11 +169,11 @@ export default function StudifyRegisterScreen({ navigation }) {
               </View>
             </View>
 
-            {/* o botao de cadastrar */}
             <TouchableOpacity
               style={styles.cadastrarButton}
               activeOpacity={0.85}
-              onPress={() => navigation.navigate("Login")}
+              onPress={handleRegister}
+              disabled={loading}
             >
               <LinearGradient
                 colors={["#5ab8d4", "#3a9ab8", "#2a7a98"]}
@@ -157,12 +181,11 @@ export default function StudifyRegisterScreen({ navigation }) {
                 end={{ x: 1, y: 1 }}
                 style={styles.cadastrarGradient}
               >
-                <Text style={styles.cadastrarText}>Cadastrar</Text>
+                <Text style={styles.cadastrarText}>{loading ? 'Cadastrando...' : 'Cadastrar'}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
 
-          {/*é o footer*/}
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
             <Text style={styles.footerText}>
               Já tem uma conta?{" "}
@@ -170,8 +193,7 @@ export default function StudifyRegisterScreen({ navigation }) {
                 style={styles.footerLink}
                 onPress={() => navigation.navigate("Login")}
               >
-                {" "}
-                Entrar{" "}
+                Entrar
               </Text>
             </Text>
           </Animated.View>

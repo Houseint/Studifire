@@ -11,18 +11,20 @@ import {
   Keyboard,
   StatusBar,
   Image,
-  StyleSheet
+  StyleSheet,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { LoginScreenStyles as styles } from '../styles/LoginScreenStyles.js';
+import { loginUser } from '../services/authDb';
 
 const { width, height } = Dimensions.get("window");
 
 export default function LoginScreen({ navigation }) {
-  console.log("navigation", navigation);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -48,21 +50,42 @@ export default function LoginScreen({ navigation }) {
       }),
     ]).start();
   }, []);
+
+  const handleLogin = async () => {
+    if (!email.trim() || !senha.trim()) {
+      Alert.alert('Atenção', 'Preencha e-mail e senha.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const user = await loginUser(email, senha);
+
+      if (!user) {
+        Alert.alert('Login inválido', 'E-mail ou senha incorretos.');
+        return;
+      }
+
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível fazer login agora.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
 
-      {/* Background gradient */}
       <LinearGradient
         colors={["#0a0f1e", "#0d1a2e", "#0a1520"]}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Glow orbs */}
       <View style={styles.glowOrb1} />
       <View style={styles.glowOrb2} />
 
-      {/* Header — botão Login no canto superior esquerdo */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <Text style={styles.headerText}>Login</Text>
       </Animated.View>
@@ -72,7 +95,6 @@ export default function LoginScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo */}
         <Animated.View
           style={[
             styles.logoContainer,
@@ -83,7 +105,6 @@ export default function LoginScreen({ navigation }) {
           ]}
         >
           <View style={styles.logoIconWrapper}>
-            {/* MUDAR O ARQUIVO DA LOGO*/}
             <Image
               source={require("../../img/LogoStudifirWithDesc.png")}
               style={styles.logoImage}
@@ -91,7 +112,6 @@ export default function LoginScreen({ navigation }) {
           </View>
         </Animated.View>
 
-        {/* Formulário */}
         <Animated.View
           style={[
             styles.formContainer,
@@ -101,7 +121,6 @@ export default function LoginScreen({ navigation }) {
             },
           ]}
         >
-          {/* E-mail */}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>E-mail</Text>
             <View style={styles.inputWrapper}>
@@ -116,7 +135,6 @@ export default function LoginScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Senha */}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Senha</Text>
             <View style={styles.inputWrapper}>
@@ -130,14 +148,11 @@ export default function LoginScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Botão Entrar */}
           <TouchableOpacity
             style={styles.entrarButton}
             activeOpacity={0.85}
-            onPress={() => {
-              console.log("clicou no botao entrar");
-              navigation.navigate("Home");
-            }}
+            onPress={handleLogin}
+            disabled={loading}
           >
             <LinearGradient
               colors={["#5ab8d4", "#3a9ab8", "#2a7a98"]}
@@ -145,12 +160,11 @@ export default function LoginScreen({ navigation }) {
               end={{ x: 1, y: 1 }}
               style={styles.entrarGradient}
             >
-              <Text style={styles.entrarText}>Entrar</Text>
+              <Text style={styles.entrarText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Footer */}
         <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
           <Text style={styles.footerText}>
             É novo por aqui?{" "}
@@ -166,3 +180,5 @@ export default function LoginScreen({ navigation }) {
     </View>
   );
 }
+
+
