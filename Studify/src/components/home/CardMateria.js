@@ -51,6 +51,11 @@ const CardMateria = ({
   const theme = pickTheme(materia);
   const urgent = isUrgent(materia);
 
+  const topicos = materia.topicos || [];
+  const totalTopicos = topicos.length;
+  const concluidos = topicos.filter((t) => t.estudado).length;
+  const progresso = totalTopicos > 0 ? concluidos / totalTopicos : 0;
+
   return (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: theme.backgroundColor, borderColor: theme.borderColor }]}
@@ -73,14 +78,14 @@ const CardMateria = ({
 
       {urgent ? <Text style={styles.urgentBadge}>Urgente</Text> : null}
 
-      {materia.descricao ? (
+      {totalTopicos > 0 ? (
         <Text style={styles.cardDesc} numberOfLines={2}>
-          {materia.descricao}
+          {concluidos}/{totalTopicos} tópicos
         </Text>
       ) : null}
 
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { backgroundColor: theme.progress }]} />
+        <View style={[styles.progressFill, { width: `${progresso * 100}%`, backgroundColor: theme.progress }]} />
       </View>
     </TouchableOpacity>
   );
