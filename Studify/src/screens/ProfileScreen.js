@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileScreenStyles as styles } from '../styles/ProfileScreenStyles';
@@ -86,6 +85,15 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       <View style={styles.sairContainer}>
+        <TouchableOpacity
+          style={styles.historicoButton}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Historic')}
+        >
+          <Text style={{ fontSize: 18 }}>📋</Text>
+          <Text style={styles.historicoButtonText}>Histórico</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.sairButton}
           activeOpacity={0.7}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,14 @@ import styles from '../styles/screens/HomeScreenStyles';
 import Icon from '../components/common/Icon';
 import CardMateria from '../components/home/CardMateria';
 import Secao from '../components/home/Secao';
+import {
+  carregarMaterias,
+  criarMateria,
+  atualizarMateria,
+  deletarMateria,
+  registrarSessao,
+  toggleFixada as toggleFixadaDb,
+} from '../services/subjectsDb';
 
 const TopicoItem = ({ nome, onRemove }) => (
   <View style={styles.topicoChip}>
@@ -24,14 +32,7 @@ const TopicoItem = ({ nome, onRemove }) => (
   </View>
 );
 
-const TopicoCheckItem = ({ nome, checked, onToggle }) => (
-  <TouchableOpacity style={styles.topicoCheckRow} activeOpacity={0.7} onPress={onToggle}>
-    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-      {checked && <Text style={styles.checkboxIcon}>✓</Text>}
-    </View>
-    <Text style={[styles.topicoCheckLabel, checked && styles.topicoCheckLabelDone]}>{nome}</Text>
-  </TouchableOpacity>
-);
+
 
 export default function HomeScreen({ navigation }) {
   const [revisados, setRevisados] = useState([]);
@@ -50,39 +51,59 @@ export default function HomeScreen({ navigation }) {
   const [editTopicos, setEditTopicos] = useState([]);
   const [editTopicoInput, setEditTopicoInput] = useState('');
 
-  const [detalheVisible, setDetalheVisible] = useState(false);
-  const [materiaDetalhe, setMateriaDetalhe] = useState(null);
-
   const MAX_TOPICOS = 10;
 
-  const adicionarMateria = () => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const materias = await carregarMaterias();
+        const revisadas = materias.filter((m) => !m.fixada);
+        const fix = materias.filter((m) => m.fixada);
+        setRevisados(revisadas);
+        setFixados(fix);
+      } catch (e) {
+        console.error('Erro ao carregar matérias:', e);
+      }
+    })();
+  }, []);
+
+  const adicionarMateria = async () => {
     if (!novaMateria.trim()) {
       Alert.alert('Atenção', 'Digite o nome da matéria!');
       return;
     }
     const topicosValidos = novosTopicos.filter((t) => t.nome.trim());
-    const nova = {
-      id: Date.now(),
-      nome: novaMateria.trim(),
-      topicos: topicosValidos,
-      fixada: false,
-    };
-    setRevisados((prev) => [nova, ...prev]);
+    try {
+      const nova = await criarMateria(novaMateria.trim(), topicosValidos);
+      setRevisados((prev) => [nova, ...prev]);
+    } catch (e) {
+      Alert.alert('Erro', 'Não foi possível salvar a matéria.');
+    }
     setNovaMateria('');
     setNovosTopicos([]);
     setTopicoInput('');
     setModalVisible(false);
   };
 
-  const acessarMateria = (materia) => {
+  const acessarMateria = async (materia) => {
+    try {
+      await registrarSessao(materia.id, 0);
+    } catch (e) {
+      console.error('Erro ao registrar sessão:', e);
+    }
     setHistorico((prev) => {
       const semDuplicata = prev.filter((m) => m.id !== materia.id);
       return [materia, ...semDuplicata].slice(0, 10);
     });
   };
 
-  const fixarMateria = (materia) => {
+  const fixarMateria = async (materia) => {
     const jaFixada = fixados.find((m) => m.id === materia.id);
+    try {
+      await toggleFixadaDb(materia.id, jaFixada);
+    } catch (e) {
+      console.error('Erro ao fixar matéria:', e);
+    }
     if (jaFixada) {
       setFixados((prev) => prev.filter((m) => m.id !== materia.id));
     } else {
@@ -98,12 +119,16 @@ export default function HomeScreen({ navigation }) {
     setEditModalVisible(true);
   };
 
-  const salvarEdicao = () => {
+  const salvarEdicao = async () => {
     if (!editNome.trim()) {
       Alert.alert('Atenção', 'Digite o nome da matéria!');
       return;
     }
     const topicosValidos = editTopicos.filter((t) => t.nome.trim());
+    await atualizarMateria(selectedMateria.id, {
+      nome: editNome.trim(),
+      topicos: topicosValidos,
+    });
     updateMateria(selectedMateria.id, {
       nome: editNome.trim(),
       topicos: topicosValidos,
@@ -119,7 +144,13 @@ export default function HomeScreen({ navigation }) {
     setFixados(updateFn);
   };
 
-  const deleteMateria = (id) => {
+  const deleteMateria = async (id) => {
+    try {
+      await deletarMateria(id);
+    } catch (e) {
+      console.error('Erro ao deletar matéria:', e);
+      return;
+    }
     const filterFn = (prev) => prev.filter((m) => m.id !== id);
     setRevisados(filterFn);
     setHistorico(filterFn);
@@ -131,12 +162,7 @@ export default function HomeScreen({ navigation }) {
     Alert.alert('Excluído', 'Matéria removida com sucesso!');
   };
 
-  const openDetalheModal = (materia) => {
-    setMateriaDetalhe(materia);
-    setDetalheVisible(true);
-  };
-
-  const toggleTopicoEstudado = (materiaId, topicoIndex) => {
+  const toggleTopicoEstudado = async (materiaId, topicoIndex) => {
     const toggleFn = (prev) =>
       prev.map((m) => {
         if (m.id !== materiaId) return m;
@@ -145,13 +171,21 @@ export default function HomeScreen({ navigation }) {
         );
         return { ...m, topicos: novosTopicos };
       });
+    const materia = [...revisados, ...fixados].find((m) => m.id === materiaId);
+    if (materia) {
+      const novosTopicos = materia.topicos.map((t, i) =>
+        i === topicoIndex ? { ...t, estudado: !t.estudado } : t
+      );
+      try {
+        await atualizarMateria(materiaId, { topicos: novosTopicos });
+      } catch (e) {
+        console.error('Erro ao atualizar tópico:', e);
+        return;
+      }
+    }
     setRevisados(toggleFn);
     setHistorico(toggleFn);
     setFixados(toggleFn);
-    if (materiaDetalhe && materiaDetalhe.id === materiaId) {
-      const updated = toggleFn([materiaDetalhe]);
-      setMateriaDetalhe(updated[0]);
-    }
   };
 
   const revisadosFiltrados = revisados.filter((m) => {
@@ -360,7 +394,7 @@ export default function HomeScreen({ navigation }) {
                 materia={m}
                 mostrarFixar
                 mostrarAcesso
-                onCardPress={openDetalheModal}
+                onCardPress={() => navigation.navigate('Detail', { id: m.id })}
                 onAcesso={acessarMateria}
                 estaFixada={getEstaFixada(m)}
                 onPinPress={() => fixarMateria(m)}
@@ -378,7 +412,7 @@ export default function HomeScreen({ navigation }) {
                 key={m.id}
                 materia={m}
                 mostrarAcesso
-                onCardPress={openDetalheModal}
+                onCardPress={() => navigation.navigate('Detail', { id: m.id })}
                 onAcesso={acessarMateria}
                 estaFixada={true}
                 onPinPress={() => fixarMateria(m)}
@@ -396,9 +430,9 @@ export default function HomeScreen({ navigation }) {
           <Text style={[styles.navLabel, styles.navLabelActive]}>Início</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => setBusca('')}>
-          <Text style={styles.navIcon}>⌕</Text>
-          <Text style={styles.navLabel}>Explorar</Text>
+        <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Chat')}>
+          <Text style={styles.navIcon}>🤖</Text>
+          <Text style={styles.navLabel}>IA</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -514,46 +548,6 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       </Modal>
 
-      <Modal
-        visible={detalheVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDetalheVisible(false)}
-      >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDetalheVisible(false)}>
-          <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitulo}>{materiaDetalhe?.nome || 'Matéria'}</Text>
-              <TouchableOpacity onPress={() => setDetalheVisible(false)}>
-                <Text style={{ color: '#5a6a7a', fontSize: 20 }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            {materiaDetalhe?.topicos?.length > 0 ? (
-              <View>
-                <Text style={styles.modalLabel}>Tópicos</Text>
-                {materiaDetalhe.topicos.map((t, i) => (
-                  <TopicoCheckItem
-                    key={i}
-                    nome={t.nome}
-                    checked={t.estudado}
-                    onToggle={() => toggleTopicoEstudado(materiaDetalhe.id, i)}
-                  />
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.vazio}>Nenhum tópico cadastrado.</Text>
-            )}
-
-            <TouchableOpacity
-              style={[styles.modalConfirmar, { backgroundColor: '#5a6a7a' }]}
-              onPress={() => setDetalheVisible(false)}
-            >
-              <Text style={styles.modalConfirmarText}>Fechar</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }

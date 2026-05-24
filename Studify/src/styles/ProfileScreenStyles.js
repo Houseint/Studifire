@@ -127,6 +127,7 @@ export const ProfileScreenStyles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 40,
     marginBottom: 40,
+    gap: 16,
   },
   sairButton: {
     flexDirection: 'row',
@@ -141,6 +142,23 @@ export const ProfileScreenStyles = StyleSheet.create({
   },
   sairButtonText: {
     color: '#ff453a',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  historicoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(90,184,212,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(90,184,212,0.25)',
+  },
+  historicoButtonText: {
+    color: '#5ab8d4',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
