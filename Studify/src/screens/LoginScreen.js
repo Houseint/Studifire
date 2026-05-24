@@ -1,55 +1,23 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  Dimensions,
-  Animated,
-  ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard,
   StatusBar,
-  Image,
   StyleSheet,
   Alert,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { LoginScreenStyles as styles } from '../styles/LoginScreenStyles.js';
 import { loginUser } from '../services/authDb';
 
-const { width, height } = Dimensions.get("window");
-
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
-  const logoScale = useRef(new Animated.Value(0.8)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 900,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 60,
-        friction: 10,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   const handleLogin = async () => {
     if (!email.trim() || !senha.trim()) {
@@ -81,104 +49,76 @@ export default function LoginScreen({ navigation }) {
       <LinearGradient
         colors={["#0a0f1e", "#0d1a2e", "#0a1520"]}
         style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
       />
 
       <View style={styles.glowOrb1} />
       <View style={styles.glowOrb2} />
 
-      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        <Text style={styles.headerText}>Login</Text>
-      </Animated.View>
+      <View style={{ flex: 1, paddingHorizontal: 30, justifyContent: 'center' }}>
+        <View style={[styles.logoContainer, { marginBottom: 40 }]}>
+          <Image
+            source={require("../../img/LogoStudifirWithDesc.png")}
+            style={styles.logoImage}
+          />
+        </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollView}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View
-          style={[
-            styles.logoContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: logoScale }],
-            },
-          ]}
-        >
-          <View style={styles.logoIconWrapper}>
-            <Image
-              source={require("../../img/LogoStudifirWithDesc.png")}
-              style={styles.logoImage}
+        <View style={{ marginBottom: 18 }}>
+          <Text style={styles.inputLabel}>E-mail</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              selectionColor="#00d4ff"
             />
           </View>
-        </Animated.View>
+        </View>
 
-        <Animated.View
-          style={[
-            styles.formContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+        <View style={{ marginBottom: 18 }}>
+          <Text style={styles.inputLabel}>Senha</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={senha}
+              onChangeText={setSenha}
+              secureTextEntry
+              selectionColor="#00d4ff"
+            />
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={{
+            marginTop: 10,
+            borderRadius: 30,
+            backgroundColor: '#5ab8d4',
+            paddingVertical: 15,
+            alignItems: 'center',
+          }}
+          activeOpacity={0.85}
+          onPress={handleLogin}
+          disabled={loading}
         >
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>E-mail</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                selectionColor="#00d4ff"
-              />
-            </View>
-          </View>
+          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </Text>
+        </TouchableOpacity>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Senha</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={senha}
-                onChangeText={setSenha}
-                secureTextEntry
-                selectionColor="#00d4ff"
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.entrarButton}
-            activeOpacity={0.85}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={["#5ab8d4", "#3a9ab8", "#2a7a98"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.entrarGradient}
-            >
-              <Text style={styles.entrarText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-          <Text style={styles.footerText}>
-            É novo por aqui?{" "}
+        <View style={{ alignItems: 'center', marginTop: 40 }}>
+          <Text style={{ color: 'rgba(200, 220, 230, 0.7)', fontSize: 13 }}>
+            É novo por aqui?{' '}
             <Text
-              style={styles.footerLink}
+              style={{ color: '#00c8f0', fontWeight: '700' }}
               onPress={() => navigation?.navigate("Register")}
             >
               Cadastrar
             </Text>
           </Text>
-        </Animated.View>
-      </ScrollView>
+        </View>
+      </View>
     </View>
   );
 }
-
-

@@ -1,16 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  Dimensions,
-  Animated,
   StatusBar,
   Image,
-  ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard,
   StyleSheet,
   Alert,
 } from "react-native";
@@ -19,39 +14,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { RegisterScreenStyles as styles } from '../styles/RegisterScreenStyles.js';
 import { registerUser } from '../services/authDb';
 
-const { width, height } = Dimensions.get("window");
-
 export default function StudifyRegisterScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
-  const logoScale = useRef(new Animated.Value(0.8)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 900,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 60,
-        friction: 10,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   const handleRegister = async () => {
     if (!email.trim() || !senha.trim() || !confirmarSenha.trim()) {
@@ -92,113 +59,92 @@ export default function StudifyRegisterScreen({ navigation }) {
       <LinearGradient
         colors={["#0a0f1e", "#0d1a2e", "#0a1520"]}
         style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
       />
 
       <View style={styles.glowOrb1} />
       <View style={styles.glowOrb2} />
 
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.keyboardView}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      <View style={{ flex: 1, paddingHorizontal: 30, justifyContent: 'center' }}>
+        <View style={[styles.logoContainer, { marginBottom: 40 }]}>
+          <Image
+            source={require("../../img/LogoStudifirWithDesc.png")}
+            style={{ width: 300, height: 350 }}
+          />
+        </View>
+
+        <View style={{ marginBottom: 18 }}>
+          <Text style={styles.inputLabel}>E-mail</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor="transparent"
+              selectionColor="#00d4ff"
+            />
+          </View>
+        </View>
+
+        <View style={{ marginBottom: 18 }}>
+          <Text style={styles.inputLabel}>Senha</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={senha}
+              onChangeText={setSenha}
+              secureTextEntry
+              placeholderTextColor="transparent"
+              selectionColor="#00d4ff"
+            />
+          </View>
+        </View>
+
+        <View style={{ marginBottom: 18 }}>
+          <Text style={styles.inputLabel}>Confirmar senha</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={confirmarSenha}
+              onChangeText={setConfirmarSenha}
+              secureTextEntry
+              placeholderTextColor="transparent"
+              selectionColor="#00d4ff"
+            />
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={{
+            marginTop: 10,
+            borderRadius: 30,
+            backgroundColor: '#5ab8d4',
+            paddingVertical: 15,
+            alignItems: 'center',
+          }}
+          activeOpacity={0.85}
+          onPress={handleRegister}
+          disabled={loading}
         >
-          <Animated.View
-            style={[
-              styles.logoContainer,
-              { opacity: fadeAnim, transform: [{ scale: logoScale }] },
-            ]}
-          >
-            <View style={styles.logoIconWrapper}>
-              <Image
-                source={require("../../img/LogoStudifirWithDesc.png")}
-                style={{ width: 300, height: 350 }}
-              />
-            </View>
-          </Animated.View>
+          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
+            {loading ? 'Cadastrando...' : 'Cadastrar'}
+          </Text>
+        </TouchableOpacity>
 
-          <Animated.View
-            style={[
-              styles.formContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>E-mail</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  placeholderTextColor="transparent"
-                  selectionColor="#00d4ff"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Senha</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  value={senha}
-                  onChangeText={setSenha}
-                  secureTextEntry
-                  placeholderTextColor="transparent"
-                  selectionColor="#00d4ff"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Confirmar senha</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  value={confirmarSenha}
-                  onChangeText={setConfirmarSenha}
-                  secureTextEntry
-                  placeholderTextColor="transparent"
-                  selectionColor="#00d4ff"
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.cadastrarButton}
-              activeOpacity={0.85}
-              onPress={handleRegister}
-              disabled={loading}
+        <View style={{ alignItems: 'center', marginTop: 40 }}>
+          <Text style={{ color: 'rgba(200, 220, 230, 0.7)', fontSize: 13 }}>
+            Já tem uma conta?{' '}
+            <Text
+              style={{ color: '#00c8f0', fontWeight: '700' }}
+              onPress={() => navigation.navigate("Login")}
             >
-              <LinearGradient
-                colors={["#5ab8d4", "#3a9ab8", "#2a7a98"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.cadastrarGradient}
-              >
-                <Text style={styles.cadastrarText}>{loading ? 'Cadastrando...' : 'Cadastrar'}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-            <Text style={styles.footerText}>
-              Já tem uma conta?{" "}
-              <Text
-                style={styles.footerLink}
-                onPress={() => navigation.navigate("Login")}
-              >
-                Entrar
-              </Text>
+              Entrar
             </Text>
-          </Animated.View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }

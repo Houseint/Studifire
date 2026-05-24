@@ -1,15 +1,17 @@
-import * as SQLite from 'expo-sqlite';
-import * as Crypto from 'expo-crypto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SQLite from "expo-sqlite";
+import * as Crypto from "expo-crypto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DB_NAME = process.env.EXPO_PUBLIC_DB_NAME || 'studify.db';
-const SESSION_KEY = process.env.EXPO_PUBLIC_SESSION_KEY || 'studify_session';
+const DB_NAME = process.env.EXPO_PUBLIC_DB_NAME || "studify.db";
+const SESSION_KEY = process.env.EXPO_PUBLIC_SESSION_KEY || "studify_session";
 
-const dbPromise = SQLite.openDatabaseAsync(DB_NAME);
-
+let dbPromise = null;
 let initialized = false;
 
 async function getDb() {
+  if (!dbPromise) {
+    dbPromise = SQLite.openDatabaseAsync(DB_NAME);
+  }
   const db = await dbPromise;
 
   if (!initialized) {
@@ -23,20 +25,25 @@ async function getDb() {
       );
     `);
 
-    const columns = await db.getAllAsync('PRAGMA table_info(users);');
-    const hasSenhaHash = columns.some((c) => c.name === 'senha_hash');
-    const hasSenhaPlain = columns.some((c) => c.name === 'senha');
+    const columns = await db.getAllAsync("PRAGMA table_info(users);");
+    const hasSenhaHash = columns.some((c) => c.name === "senha_hash");
+    const hasSenhaPlain = columns.some((c) => c.name === "senha");
 
     if (!hasSenhaHash) {
       await db.execAsync("ALTER TABLE users ADD COLUMN senha_hash TEXT;");
     }
 
     if (hasSenhaPlain) {
-      const users = await db.getAllAsync('SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \"\";');
+      const users = await db.getAllAsync(
+        'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \"\";',
+      );
       for (const user of users) {
         if (user.senha) {
           const hash = await hashPassword(user.senha);
-          await db.runAsync('UPDATE users SET senha_hash = ? WHERE id = ?;', [hash, user.id]);
+          await db.runAsync("UPDATE users SET senha_hash = ? WHERE id = ?;", [
+            hash,
+            user.id,
+          ]);
         }
       }
     }
@@ -56,19 +63,19 @@ export async function registerUser(email, senha) {
   const normalizedEmail = email.trim().toLowerCase();
 
   const existing = await db.getFirstAsync(
-    'SELECT id FROM users WHERE email = ? LIMIT 1;',
-    [normalizedEmail]
+    "SELECT id FROM users WHERE email = ? LIMIT 1;",
+    [normalizedEmail],
   );
 
   if (existing) {
-    throw new Error('EMAIL_EXISTS');
+    throw new Error("EMAIL_EXISTS");
   }
 
   const senhaHash = await hashPassword(senha);
 
   await db.runAsync(
-    'INSERT INTO users (email, senha_hash, created_at) VALUES (?, ?, ?);',
-    [normalizedEmail, senhaHash, new Date().toISOString()]
+    "INSERT INTO users (email, senha_hash, created_at) VALUES (?, ?, ?);",
+    [normalizedEmail, senhaHash, new Date().toISOString()],
   );
 }
 
@@ -78,8 +85,8 @@ export async function loginUser(email, senha) {
   const senhaHash = await hashPassword(senha);
 
   const user = await db.getFirstAsync(
-    'SELECT id, email FROM users WHERE email = ? AND senha_hash = ? LIMIT 1;',
-    [normalizedEmail, senhaHash]
+    "SELECT id, email FROM users WHERE email = ? AND senha_hash = ? LIMIT 1;",
+    [normalizedEmail, senhaHash],
   );
 
   if (!user) {
