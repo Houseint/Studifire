@@ -43,32 +43,52 @@ async function getDb() {
         FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
       );
     `);
+
+    const subCols = await db.getAllAsync("PRAGMA table_info(subjects)");
+    if (!subCols.some((c) => c.name === 'user_id')) {
+      await db.execAsync("ALTER TABLE subjects ADD COLUMN user_id INTEGER DEFAULT 1;");
+    }
+
+    const sessCols = await db.getAllAsync("PRAGMA table_info(sessions)");
+    if (!sessCols.some((c) => c.name === 'user_id')) {
+      await db.execAsync("ALTER TABLE sessions ADD COLUMN user_id INTEGER DEFAULT 1;");
+    }
+
+    const chatCols = await db.getAllAsync("PRAGMA table_info(chat_conversations)");
+    if (!chatCols.some((c) => c.name === 'user_id')) {
+      await db.execAsync("ALTER TABLE chat_conversations ADD COLUMN user_id INTEGER DEFAULT 1;");
+    }
+
     initialized = true;
   }
 
   return db;
 }
 
-export async function carregarMaterias() {
+export async function carregarMaterias(userId) {
   const db = await getDb();
   const rows = await db.getAllAsync(
-    'SELECT * FROM subjects ORDER BY accessed_at DESC'
+    'SELECT * FROM subjects WHERE user_id = ? ORDER BY accessed_at DESC',
+    [userId]
   );
   return rows.map(parseRow);
 }
 
-export async function getMateriaById(id) {
+export async function getMateriaById(userId, id) {
   const db = await getDb();
-  const row = await db.getFirstAsync('SELECT * FROM subjects WHERE id = ?', [id]);
+  const row = await db.getFirstAsync(
+    'SELECT * FROM subjects WHERE id = ? AND user_id = ?',
+    [id, userId]
+  );
   return row ? parseRow(row) : null;
 }
 
-export async function criarMateria(nome, topicos) {
+export async function criarMateria(userId, nome, topicos) {
   const db = await getDb();
   const now = new Date().toISOString();
   const result = await db.runAsync(
-    'INSERT INTO subjects (nome, topicos, fixada, created_at, accessed_at) VALUES (?, ?, 0, ?, ?)',
-    [nome.trim(), JSON.stringify(topicos), now, now]
+    'INSERT INTO subjects (nome, topicos, fixada, created_at, accessed_at, user_id) VALUES (?, ?, 0, ?, ?, ?)',
+    [nome.trim(), JSON.stringify(topicos), now, now, userId]
   );
   return {
     id: result.lastInsertRowId,
@@ -80,7 +100,7 @@ export async function criarMateria(nome, topicos) {
   };
 }
 
-export async function atualizarMateria(id, updates) {
+export async function atualizarMateria(userId, id, updates) {
   const db = await getDb();
   const sets = [];
   const vals = [];
@@ -101,80 +121,104 @@ export async function atualizarMateria(id, updates) {
     vals.push(updates.accessed_at);
   }
   if (sets.length === 0) return;
-  vals.push(id);
+  vals.push(id, userId);
   await db.runAsync(
-    `UPDATE subjects SET ${sets.join(', ')} WHERE id = ?`,
+    `UPDATE subjects SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`,
     vals
   );
 }
 
-export async function deletarMateria(id) {
+export async function deletarMateria(userId, id) {
   const db = await getDb();
-  await db.runAsync('DELETE FROM sessions WHERE subject_id = ?', [id]);
-  await db.runAsync('DELETE FROM subjects WHERE id = ?', [id]);
+  await db.runAsync(
+    'DELETE FROM sessions WHERE subject_id = ? AND subject_id IN (SELECT id FROM subjects WHERE user_id = ?)',
+    [id, userId]
+  );
+  await db.runAsync('DELETE FROM subjects WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
-export async function registrarSessao(subjectId, durationMinutes) {
+export async function registrarSessao(userId, subjectId, durationMinutes) {
   const db = await getDb();
   const now = new Date().toISOString();
   await db.runAsync(
-    'INSERT INTO sessions (subject_id, started_at, duration_minutes) VALUES (?, ?, ?)',
-    [subjectId, now, durationMinutes]
+    'INSERT INTO sessions (subject_id, started_at, duration_minutes, user_id) VALUES (?, ?, ?, ?)',
+    [subjectId, now, durationMinutes, userId]
   );
-  await atualizarMateria(subjectId, { accessed_at: now });
+  await atualizarMateria(userId, subjectId, { accessed_at: now });
 }
 
-export async function toggleFixada(id, atualmenteFixada) {
-  return atualizarMateria(id, { fixada: !atualmenteFixada });
+export async function toggleFixada(userId, id, atualmenteFixada) {
+  return atualizarMateria(userId, id, { fixada: !atualmenteFixada });
 }
 
-export async function carregarHistorico() {
+export async function carregarHistorico(userId) {
   const db = await getDb();
   const rows = await db.getAllAsync(
-    'SELECT s.*, sub.nome AS subject_nome FROM sessions s JOIN subjects sub ON s.subject_id = sub.id ORDER BY s.started_at DESC'
+    `SELECT s.*, sub.nome AS subject_nome FROM sessions s
+     JOIN subjects sub ON s.subject_id = sub.id
+     WHERE sub.user_id = ?
+     ORDER BY s.started_at DESC`,
+    [userId]
   );
   return rows;
 }
 
-export async function carregarSessoesPorMateria(subjectId) {
+export async function carregarSessoesPorMateria(userId, subjectId) {
   const db = await getDb();
   return db.getAllAsync(
-    'SELECT * FROM sessions WHERE subject_id = ? ORDER BY started_at DESC',
-    [subjectId]
+    'SELECT * FROM sessions WHERE subject_id = ? AND user_id = ? ORDER BY started_at DESC',
+    [subjectId, userId]
   );
 }
 
-export async function criarConversa() {
+export async function criarConversa(userId) {
   const db = await getDb();
   const now = new Date().toISOString();
   const result = await db.runAsync(
-    'INSERT INTO chat_conversations (titulo, created_at) VALUES (?, ?)',
-    ['Nova conversa', now]
+    'INSERT INTO chat_conversations (titulo, created_at, user_id) VALUES (?, ?, ?)',
+    ['Nova conversa', now, userId]
   );
   return { id: result.lastInsertRowId, titulo: 'Nova conversa', created_at: now };
 }
 
-export async function listarConversas() {
+export async function listarConversas(userId) {
   const db = await getDb();
   return db.getAllAsync(
-    'SELECT c.*, (SELECT content FROM chat_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) AS ultima_msg FROM chat_conversations c ORDER BY c.created_at DESC'
+    `SELECT c.*,
+      (SELECT content FROM chat_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) AS ultima_msg
+     FROM chat_conversations c
+     WHERE c.user_id = ?
+     ORDER BY c.created_at DESC`,
+    [userId]
   );
 }
 
-export async function getConversa(id) {
+export async function getConversa(userId, id) {
   const db = await getDb();
-  return db.getFirstAsync('SELECT * FROM chat_conversations WHERE id = ?', [id]);
+  return db.getFirstAsync(
+    'SELECT * FROM chat_conversations WHERE id = ? AND user_id = ?',
+    [id, userId]
+  );
 }
 
-export async function atualizarTituloConversa(id, titulo) {
+export async function atualizarTituloConversa(userId, id, titulo) {
   const db = await getDb();
-  await db.runAsync('UPDATE chat_conversations SET titulo = ? WHERE id = ?', [titulo, id]);
+  await db.runAsync(
+    'UPDATE chat_conversations SET titulo = ? WHERE id = ? AND user_id = ?',
+    [titulo, id, userId]
+  );
 }
 
-export async function deletarConversa(id) {
+export async function deletarConversa(userId, id) {
   const db = await getDb();
-  await db.runAsync('DELETE FROM chat_messages WHERE conversation_id = ?', [id]);
-  await db.runAsync('DELETE FROM chat_conversations WHERE id = ?', [id]);
+  await db.runAsync(
+    'DELETE FROM chat_messages WHERE conversation_id IN (SELECT id FROM chat_conversations WHERE id = ? AND user_id = ?)',
+    [id, userId]
+  );
+  await db.runAsync(
+    'DELETE FROM chat_conversations WHERE id = ? AND user_id = ?',
+    [id, userId]
+  );
 }
 
 export async function salvarMensagem(conversationId, role, content) {
@@ -187,20 +231,26 @@ export async function salvarMensagem(conversationId, role, content) {
   return { id: result.lastInsertRowId, conversation_id: conversationId, role, content, created_at: now };
 }
 
-export async function carregarMensagens(conversationId) {
+export async function carregarMensagens(userId, conversationId) {
   const db = await getDb();
   return db.getAllAsync(
-    'SELECT * FROM chat_messages WHERE conversation_id = ? ORDER BY created_at ASC',
-    [conversationId]
+    `SELECT m.* FROM chat_messages m
+     JOIN chat_conversations c ON m.conversation_id = c.id
+     WHERE m.conversation_id = ? AND c.user_id = ?
+     ORDER BY m.created_at ASC`,
+    [conversationId, userId]
   );
 }
 
-export async function limparConversasAntigas(limite = 20) {
+export async function limparConversasAntigas(userId, limite = 20) {
   const db = await getDb();
-  const todas = await db.getAllAsync('SELECT id FROM chat_conversations ORDER BY created_at DESC');
+  const todas = await db.getAllAsync(
+    'SELECT id FROM chat_conversations WHERE user_id = ? ORDER BY created_at DESC',
+    [userId]
+  );
   if (todas.length > limite) {
     for (let i = limite; i < todas.length; i++) {
-      await deletarConversa(todas[i].id);
+      await deletarConversa(userId, todas[i].id);
     }
   }
 }

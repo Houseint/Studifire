@@ -14,12 +14,12 @@ import styles from '../styles/screens/HomeScreenStyles';
 import Icon from '../components/common/Icon';
 import CardMateria from '../components/home/CardMateria';
 import Secao from '../components/home/Secao';
+import { useUserId } from '../hooks/useUserId';
 import {
   carregarMaterias,
   criarMateria,
   atualizarMateria,
   deletarMateria,
-  registrarSessao,
   toggleFixada as toggleFixadaDb,
 } from '../services/subjectsDb';
 
@@ -35,6 +35,7 @@ const TopicoItem = ({ nome, onRemove }) => (
 
 
 export default function HomeScreen({ navigation }) {
+  const userId = useUserId();
   const [revisados, setRevisados] = useState([]);
   const [historico, setHistorico] = useState([]);
   const [fixados, setFixados] = useState([]);
@@ -54,9 +55,10 @@ export default function HomeScreen({ navigation }) {
   const MAX_TOPICOS = 10;
 
   useEffect(() => {
+    if (!userId) return;
     (async () => {
       try {
-        const materias = await carregarMaterias();
+        const materias = await carregarMaterias(userId);
         const revisadas = materias.filter((m) => !m.fixada);
         const fix = materias.filter((m) => m.fixada);
         setRevisados(revisadas);
@@ -65,7 +67,7 @@ export default function HomeScreen({ navigation }) {
         console.error('Erro ao carregar matérias:', e);
       }
     })();
-  }, []);
+  }, [userId]);
 
   const adicionarMateria = async () => {
     if (!novaMateria.trim()) {
@@ -74,7 +76,7 @@ export default function HomeScreen({ navigation }) {
     }
     const topicosValidos = novosTopicos.filter((t) => t.nome.trim());
     try {
-      const nova = await criarMateria(novaMateria.trim(), topicosValidos);
+      const nova = await criarMateria(userId, novaMateria.trim(), topicosValidos);
       setRevisados((prev) => [nova, ...prev]);
     } catch (e) {
       Alert.alert('Erro', 'Não foi possível salvar a matéria.');
@@ -85,12 +87,7 @@ export default function HomeScreen({ navigation }) {
     setModalVisible(false);
   };
 
-  const acessarMateria = async (materia) => {
-    try {
-      await registrarSessao(materia.id, 0);
-    } catch (e) {
-      console.error('Erro ao registrar sessão:', e);
-    }
+  const acessarMateria = (materia) => {
     setHistorico((prev) => {
       const semDuplicata = prev.filter((m) => m.id !== materia.id);
       return [materia, ...semDuplicata].slice(0, 10);
@@ -100,7 +97,7 @@ export default function HomeScreen({ navigation }) {
   const fixarMateria = async (materia) => {
     const jaFixada = fixados.find((m) => m.id === materia.id);
     try {
-      await toggleFixadaDb(materia.id, jaFixada);
+      await toggleFixadaDb(userId, materia.id, jaFixada);
     } catch (e) {
       console.error('Erro ao fixar matéria:', e);
     }
@@ -125,7 +122,7 @@ export default function HomeScreen({ navigation }) {
       return;
     }
     const topicosValidos = editTopicos.filter((t) => t.nome.trim());
-    await atualizarMateria(selectedMateria.id, {
+    await atualizarMateria(userId, selectedMateria.id, {
       nome: editNome.trim(),
       topicos: topicosValidos,
     });
@@ -146,7 +143,7 @@ export default function HomeScreen({ navigation }) {
 
   const deleteMateria = async (id) => {
     try {
-      await deletarMateria(id);
+      await deletarMateria(userId, id);
     } catch (e) {
       console.error('Erro ao deletar matéria:', e);
       return;
@@ -177,7 +174,7 @@ export default function HomeScreen({ navigation }) {
         i === topicoIndex ? { ...t, estudado: !t.estudado } : t
       );
       try {
-        await atualizarMateria(materiaId, { topicos: novosTopicos });
+        await atualizarMateria(userId, materiaId, { topicos: novosTopicos });
       } catch (e) {
         console.error('Erro ao atualizar tópico:', e);
         return;

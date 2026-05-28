@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, SectionList, StatusBar, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
 
 const FILTROS = [
@@ -29,22 +30,24 @@ function getFiltroData(filtro) {
 }
 
 export default function HistoricScreen({ navigation }) {
+  const userId = useUserId();
   const [filtro, setFiltro] = useState('todos');
   const [materias, setMaterias] = useState([]);
   const [sessoes, setSessoes] = useState([]);
 
   useEffect(() => {
+    if (!userId) return;
     (async () => {
       try {
-        const m = await carregarMaterias();
+        const m = await carregarMaterias(userId);
         setMaterias(m);
-        const s = await carregarHistorico();
+        const s = await carregarHistorico(userId);
         setSessoes(s);
       } catch (e) {
         console.error('Erro ao carregar histórico:', e);
       }
     })();
-  }, []);
+  }, [userId]);
 
   const filtroData = getFiltroData(filtro);
   const sessoesFiltradas = filtroData
@@ -152,7 +155,7 @@ function agruparPorData(sessoes) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f1e' },
+  container: { flex: 1, backgroundColor: '#090E1F' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
@@ -160,47 +163,48 @@ const s = StyleSheet.create({
   },
   backButton: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: '#27315B',
+    backgroundColor: '#111832',
     alignItems: 'center', justifyContent: 'center', marginRight: 14,
   },
-  backButtonText: { color: '#8a9bb5', fontSize: 22 },
-  headerTitle: { color: '#e8edf5', fontSize: 22, fontWeight: '700' },
+  backButtonText: { color: '#7F8AB7', fontSize: 22 },
+  headerTitle: { color: '#F4F6FF', fontSize: 22, fontWeight: '700' },
   statsRow: {
     flexDirection: 'row', paddingHorizontal: 20, marginTop: 8, marginBottom: 16,
   },
   statCard: {
     flex: 1, alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#111832',
+    borderRadius: 14, borderWidth: 1, borderColor: '#27315B',
     paddingVertical: 14, marginHorizontal: 4,
   },
-  statValue: { color: '#e8edf5', fontSize: 20, fontWeight: '700' },
-  statLabel: { color: '#6a7a8a', fontSize: 11, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 4 },
+  statValue: { color: '#F4F6FF', fontSize: 20, fontWeight: '700' },
+  statLabel: { color: '#8E97C4', fontSize: 11, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 4 },
   filtrosRow: {
     flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12,
   },
   filtroBtn: {
     flex: 1, paddingVertical: 8, borderRadius: 10,
     alignItems: 'center', marginHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: '#111832',
   },
-  filtroBtnAtivo: { backgroundColor: 'rgba(90,184,212,0.2)' },
-  filtroBtnText: { color: '#6a7a8a', fontSize: 13, fontWeight: '600' },
-  filtroBtnTextAtivo: { color: '#5ab8d4' },
+  filtroBtnAtivo: { backgroundColor: 'rgba(111,82,255,0.2)' },
+  filtroBtnText: { color: '#7F8AB7', fontSize: 13, fontWeight: '600' },
+  filtroBtnTextAtivo: { color: '#8A68FF' },
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionHeader: {
-    color: '#8a9bb5', fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
+    color: '#8F98C2', fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
     letterSpacing: 0.8, marginTop: 16, marginBottom: 8,
   },
   sessionItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12,
+    backgroundColor: '#111832', borderRadius: 12,
     padding: 14, marginBottom: 8,
   },
   sessionLeft: { flex: 1 },
-  sessionSubject: { color: '#e8edf5', fontSize: 15, fontWeight: '600' },
-  sessionTime: { color: '#6a7a8a', fontSize: 13, marginTop: 2 },
-  sessionDuration: { color: '#5ab8d4', fontSize: 14, fontWeight: '600' },
+  sessionSubject: { color: '#F4F6FF', fontSize: 15, fontWeight: '600' },
+  sessionTime: { color: '#7F8AB7', fontSize: 13, marginTop: 2 },
+  sessionDuration: { color: '#8A68FF', fontSize: 14, fontWeight: '600' },
   empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { color: '#6a7a8a', fontSize: 15 },
+  emptyText: { color: '#7F8AB7', fontSize: 15 },
 });

@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { enviarMensagem } from '../services/aiService';
+import { useUserId } from '../hooks/useUserId';
 import {
   criarConversa,
   listarConversas,
@@ -18,6 +19,7 @@ import {
 } from '../services/subjectsDb';
 
 export default function ChatScreen({ navigation }) {
+  const userId = useUserId();
   const [conversaId, setConversaId] = useState(null);
   const [mensagens, setMensagens] = useState([]);
   const [input, setInput] = useState('');
@@ -29,9 +31,10 @@ export default function ChatScreen({ navigation }) {
   const tituloSalvoRef = useRef(false);
 
   const carregarConversa = useCallback(async (id) => {
+    if (!userId) return;
     setConversaId(id);
     setStatus('conectando');
-    const msgs = await carregarMensagens(id);
+    const msgs = await carregarMensagens(userId, id);
     if (msgs.length === 0) {
       setMensagens([{
         _id: 'welcome',
@@ -43,28 +46,31 @@ export default function ChatScreen({ navigation }) {
     }
     setStatus('online');
     tituloSalvoRef.current = msgs.length > 0;
-  }, []);
+  }, [userId]);
 
   const novaConversa = useCallback(async () => {
-    await limparConversasAntigas(20);
-    const conv = await criarConversa();
+    if (!userId) return;
+    await limparConversasAntigas(userId, 20);
+    const conv = await criarConversa(userId);
     await carregarConversa(conv.id);
     setHistModal(false);
-  }, [carregarConversa]);
+  }, [carregarConversa, userId]);
 
   useEffect(() => {
+    if (!userId) return;
     (async () => {
-      const ultima = await listarConversas();
+      const ultima = await listarConversas(userId);
       if (ultima.length > 0) {
         await carregarConversa(ultima[0].id);
       } else {
         await novaConversa();
       }
     })();
-  }, [carregarConversa, novaConversa]);
+  }, [carregarConversa, novaConversa, userId]);
 
   const abrirHistorico = async () => {
-    const lista = await listarConversas();
+    if (!userId) return;
+    const lista = await listarConversas(userId);
     setConversasLista(lista);
     setHistModal(true);
   };
@@ -79,7 +85,7 @@ export default function ChatScreen({ navigation }) {
 
     if (!tituloSalvoRef.current) {
       const titulo = texto.length > 40 ? texto.slice(0, 40) + '…' : texto;
-      await atualizarTituloConversa(conversaId, titulo);
+      await atualizarTituloConversa(userId, conversaId, titulo);
       tituloSalvoRef.current = true;
     }
 
@@ -108,7 +114,7 @@ export default function ChatScreen({ navigation }) {
         text: 'Excluir',
         style: 'destructive',
         onPress: async () => {
-          await deletarConversa(id);
+          await deletarConversa(userId, id);
           if (id === conversaId) await novaConversa();
           else abrirHistorico();
         },
@@ -253,35 +259,36 @@ export default function ChatScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f1e' },
+  container: { flex: 1, backgroundColor: '#090E1F' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 50, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomWidth: 1, borderBottomColor: '#27315B',
   },
   backButton: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: '#27315B',
+    backgroundColor: '#111832',
     alignItems: 'center', justifyContent: 'center', marginRight: 10,
   },
-  backButtonText: { color: '#8a9bb5', fontSize: 22 },
+  backButtonText: { color: '#7F8AB7', fontSize: 22 },
   headerInfo: { flex: 1 },
-  headerTitle: { color: '#e8edf5', fontSize: 17, fontWeight: '700' },
+  headerTitle: { color: '#F4F6FF', fontSize: 17, fontWeight: '700' },
   headerStatusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
   statusOnline: { backgroundColor: '#4CAF50' },
   statusDigitando: { backgroundColor: '#FF9800' },
-  statusOffline: { backgroundColor: '#5a6a7a' },
-  headerStatus: { color: '#8a9bb5', fontSize: 12 },
+  statusOffline: { backgroundColor: '#8E97C4' },
+  headerStatus: { color: '#7F8AB7', fontSize: 12 },
   novaBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(90,184,212,0.15)',
+    backgroundColor: 'rgba(111,82,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
     marginLeft: 8,
   },
-  novaBtnText: { color: '#5ab8d4', fontSize: 22, fontWeight: '300', lineHeight: 24 },
+  novaBtnText: { color: '#8A68FF', fontSize: 22, fontWeight: '300', lineHeight: 24 },
 
   lista: { paddingHorizontal: 16, paddingBottom: 8 },
   bolha: {
@@ -292,73 +299,70 @@ const s = StyleSheet.create({
   bolhaBot: { justifyContent: 'flex-start' },
   bolhaBotIcon: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(90,184,212,0.15)',
+    backgroundColor: 'rgba(111,82,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
     marginRight: 8, marginBottom: 4,
   },
   bolhaBotIconText: { fontSize: 14 },
   bolhaContent: {
     maxWidth: '78%', borderRadius: 16, padding: 13,
-  },
-  bolhaContent: {
-    maxWidth: '78%', borderRadius: 16, padding: 13,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#111832',
     borderBottomLeftRadius: 4,
   },
   bolhaContentUser: {
-    backgroundColor: '#5ab8d4',
+    backgroundColor: '#6F52FF',
     borderBottomRightRadius: 4,
     maxWidth: '78%', borderRadius: 16, padding: 13,
   },
   bolhaTexto: { fontSize: 15, lineHeight: 21 },
-  bolhaTextoUser: { color: '#0a0f1e' },
-  bolhaTextoBot: { color: '#e8edf5' },
+  bolhaTextoUser: { color: '#FFFFFF' },
+  bolhaTextoBot: { color: '#F4F6FF' },
 
   inputArea: {
     flexDirection: 'row', alignItems: 'flex-end',
     paddingHorizontal: 12, paddingVertical: 10,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
+    borderTopWidth: 1, borderTopColor: '#27315B',
   },
   input: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.06)',
+    flex: 1, backgroundColor: '#1B2545',
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10,
-    color: '#e8edf5', fontSize: 15, maxHeight: 100,
+    color: '#F4F6FF', fontSize: 15, maxHeight: 100,
   },
   enviarBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: '#5ab8d4',
+    backgroundColor: '#6F52FF',
     alignItems: 'center', justifyContent: 'center',
     marginLeft: 8,
   },
   enviarBtnDisabled: { opacity: 0.4 },
-  enviarBtnText: { color: '#0a0f1e', fontSize: 20, fontWeight: '700' },
+  enviarBtnText: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
 
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalBox: {
-    backgroundColor: '#0d1a2e',
+    backgroundColor: '#151D3A',
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, maxHeight: '70%',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: '#2A3564',
     borderBottomWidth: 0,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 16,
   },
-  modalTitulo: { color: '#e8edf5', fontSize: 18, fontWeight: '700' },
-  modalVazio: { color: '#5a6a7a', fontSize: 14, textAlign: 'center', marginTop: 20 },
+  modalTitulo: { color: '#F4F6FF', fontSize: 18, fontWeight: '700' },
+  modalVazio: { color: '#8E97C4', fontSize: 14, textAlign: 'center', marginTop: 20 },
   histItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 12,
     borderRadius: 12, marginBottom: 4,
   },
-  histItemAtiva: { backgroundColor: 'rgba(90,184,212,0.1)' },
+  histItemAtiva: { backgroundColor: 'rgba(111,82,255,0.1)' },
   histItemLeft: { flex: 1, marginRight: 12 },
-  histTitulo: { color: '#e8edf5', fontSize: 15, fontWeight: '600' },
-  histTituloAtiva: { color: '#5ab8d4' },
-  histPreview: { color: '#5a6a7a', fontSize: 12, marginTop: 3 },
-  histData: { color: '#4a5a6a', fontSize: 12, fontWeight: '500' },
+  histTitulo: { color: '#F4F6FF', fontSize: 15, fontWeight: '600' },
+  histTituloAtiva: { color: '#8A68FF' },
+  histPreview: { color: '#8E97C4', fontSize: 12, marginTop: 3 },
+  histData: { color: '#7F8AB7', fontSize: 12, fontWeight: '500' },
 });

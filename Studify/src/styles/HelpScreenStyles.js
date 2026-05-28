@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const HelpScreenStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0f1e',
+    backgroundColor: '#090E1F',
   },
   gradient: {
     position: 'absolute',
@@ -20,17 +20,19 @@ export const HelpScreenStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: '#27315B',
+    backgroundColor: '#111832',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
   backButtonText: {
-    color: '#8a9bb5',
+    color: '#7F8AB7',
     fontSize: 22,
   },
   headerTitle: {
-    color: '#e8edf5',
+    color: '#F4F6FF',
     fontSize: 22,
     fontWeight: '700',
   },
@@ -40,10 +42,10 @@ export const HelpScreenStyles = StyleSheet.create({
     paddingTop: 8,
   },
   secaoCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: '#111832',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#27315B',
     marginBottom: 14,
     overflow: 'hidden',
   },
@@ -80,12 +82,13 @@ export const HelpScreenStyles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   secaoSubtitulo: {
-    color: '#5a6a7a',
+    color: '#8E97C4',
     fontSize: 11,
     fontWeight: '500',
     marginTop: 1,
   },
   secaoArrow: {
+    color: '#7F8AB7',
     fontSize: 16,
     fontWeight: '700',
     marginRight: 4,
@@ -99,7 +102,7 @@ export const HelpScreenStyles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.04)',
+    borderTopColor: 'rgba(39,49,91,0.5)',
   },
   metodoIcon: {
     fontSize: 18,
@@ -112,12 +115,12 @@ export const HelpScreenStyles = StyleSheet.create({
     marginLeft: 10,
   },
   metodoNome: {
-    color: '#e8edf5',
+    color: '#F4F6FF',
     fontSize: 14,
     fontWeight: '600',
   },
   metodoDesc: {
-    color: '#6a7a8a',
+    color: '#7F8AB7',
     fontSize: 12,
     lineHeight: 17,
     marginTop: 3,
@@ -127,7 +130,7 @@ export const HelpScreenStyles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.04)',
+    borderTopColor: 'rgba(39,49,91,0.5)',
   },
   linkIcon: {
     fontSize: 16,
@@ -137,17 +140,17 @@ export const HelpScreenStyles = StyleSheet.create({
     flex: 1,
   },
   linkNome: {
-    color: '#e8edf5',
+    color: '#F4F6FF',
     fontSize: 14,
     fontWeight: '600',
   },
   linkUrl: {
-    color: '#5a6a7a',
+    color: '#8E97C4',
     fontSize: 11,
     marginTop: 2,
   },
   linkArrow: {
-    color: '#5ab8d4',
+    color: '#7F8AB7',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,

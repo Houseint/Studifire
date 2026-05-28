@@ -22,9 +22,9 @@ export default function App() {
 
     async function bootstrapSession() {
       try {
-        const sessionUser = await getSessionUser();
+        const user = await getSessionUser();
         if (mounted) {
-          setInitialRoute(sessionUser ? 'Home' : 'Login');
+          setInitialRoute(user ? 'Home' : 'Login');
         }
       } catch {
         if (mounted) {
