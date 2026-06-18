@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Linking, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { HelpScreenStyles as s } from '../styles/HelpScreenStyles';
+
 
 const CORES_SECAO = ['#4CAF50', '#FF9800', '#2196F3', '#E91E63', '#9C27B0', '#FF5722'];
 

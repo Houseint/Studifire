@@ -21,13 +21,15 @@ async function getDb() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT NOT NULL UNIQUE,
         senha_hash TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        avatar TEXT
       );
     `);
 
     const columns = await db.getAllAsync("PRAGMA table_info(users);");
     const hasSenhaHash = columns.some((c) => c.name === "senha_hash");
     const hasSenhaPlain = columns.some((c) => c.name === "senha");
+    const hasAvatar = columns.some((c) => c.name === "avatar");
 
     if (!hasSenhaHash) {
       await db.execAsync("ALTER TABLE users ADD COLUMN senha_hash TEXT;");
@@ -46,6 +48,10 @@ async function getDb() {
           ]);
         }
       }
+    }
+
+    if (!hasAvatar) {
+      await db.execAsync("ALTER TABLE users ADD COLUMN avatar TEXT;");
     }
 
     initialized = true;
@@ -111,6 +117,17 @@ export async function getSessionUser() {
     await AsyncStorage.removeItem(SESSION_KEY);
     return null;
   }
+}
+
+export async function atualizarAvatar(userId, avatarBase64) {
+  const db = await getDb();
+  await db.runAsync("UPDATE users SET avatar = ? WHERE id = ?", [avatarBase64, userId]);
+}
+
+export async function getUserById(userId) {
+  const db = await getDb();
+  const row = await db.getFirstAsync("SELECT id, email, avatar FROM users WHERE id = ?", [userId]);
+  return row;
 }
 
 export async function logoutUser() {

@@ -8,10 +8,12 @@ import {
   StyleSheet,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { LoginScreenStyles as styles } from '../styles/LoginScreenStyles.js';
+
 import { loginUser } from '../services/authDb';
 
 export default function LoginScreen({ navigation }) {
@@ -43,7 +45,10 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
 
       <LinearGradient
@@ -119,6 +124,6 @@ export default function LoginScreen({ navigation }) {
           </Text>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

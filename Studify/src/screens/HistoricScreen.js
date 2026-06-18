@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, SectionList, StatusBar, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserId } from '../hooks/useUserId';
@@ -35,19 +36,22 @@ export default function HistoricScreen({ navigation }) {
   const [materias, setMaterias] = useState([]);
   const [sessoes, setSessoes] = useState([]);
 
-  useEffect(() => {
-    if (!userId) return;
-    (async () => {
-      try {
-        const m = await carregarMaterias(userId);
-        setMaterias(m);
-        const s = await carregarHistorico(userId);
-        setSessoes(s);
-      } catch (e) {
-        console.error('Erro ao carregar histórico:', e);
-      }
-    })();
-  }, [userId]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!userId) return;
+      (async () => {
+        try {
+          const m = await carregarMaterias(userId);
+          setMaterias(m);
+          const s = await carregarHistorico(userId);
+          setSessoes(s);
+        } catch (e) {
+          console.error('Erro ao carregar histórico:', e);
+        }
+      })();
+      return () => {};
+    }, [userId])
+  );
 
   const filtroData = getFiltroData(filtro);
   const sessoesFiltradas = filtroData

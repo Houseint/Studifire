@@ -8,10 +8,12 @@ import {
   Image,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { RegisterScreenStyles as styles } from '../styles/RegisterScreenStyles.js';
+
 import { registerUser } from '../services/authDb';
 
 export default function StudifyRegisterScreen({ navigation }) {
@@ -53,7 +55,10 @@ export default function StudifyRegisterScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
 
       <LinearGradient
@@ -145,6 +150,6 @@ export default function StudifyRegisterScreen({ navigation }) {
           </Text>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

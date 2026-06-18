@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -8,6 +9,7 @@ import {
   Modal,
   Alert,
   StatusBar,
+  Image,
 } from 'react-native';
 
 import styles from '../styles/screens/HomeScreenStyles';
@@ -15,6 +17,7 @@ import Icon from '../components/common/Icon';
 import CardMateria from '../components/home/CardMateria';
 import Secao from '../components/home/Secao';
 import { useUserId } from '../hooks/useUserId';
+import { getSessionUser, getUserById } from '../services/authDb';
 import {
   carregarMaterias,
   criarMateria,
@@ -36,6 +39,8 @@ const TopicoItem = ({ nome, onRemove }) => (
 
 export default function HomeScreen({ navigation }) {
   const userId = useUserId();
+  const [user, setUser] = useState(null);
+  const [userAvatar, setUserAvatar] = useState(null);
   const [revisados, setRevisados] = useState([]);
   const [historico, setHistorico] = useState([]);
   const [fixados, setFixados] = useState([]);
@@ -55,19 +60,37 @@ export default function HomeScreen({ navigation }) {
   const MAX_TOPICOS = 10;
 
   useEffect(() => {
-    if (!userId) return;
-    (async () => {
-      try {
-        const materias = await carregarMaterias(userId);
-        const revisadas = materias.filter((m) => !m.fixada);
-        const fix = materias.filter((m) => m.fixada);
-        setRevisados(revisadas);
-        setFixados(fix);
-      } catch (e) {
-        console.error('Erro ao carregar matérias:', e);
-      }
-    })();
+    getSessionUser().then(setUser);
+    if (userId) {
+      (async () => {
+        try {
+          const userData = await getUserById(userId);
+          setUserAvatar(userData?.avatar ? `data:image/jpeg;base64,${userData.avatar}` : null);
+        } catch (e) {
+          console.error('Erro ao carregar avatar do usuário:', e);
+        }
+      })();
+    }
   }, [userId]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!userId) return;
+      (async () => {
+        try {
+          const materias = await carregarMaterias(userId);
+          const revisadas = materias.filter((m) => !m.fixada);
+          const fix = materias.filter((m) => m.fixada);
+          setRevisados(revisadas);
+          setFixados(fix);
+          setHistorico(materias.sort((a, b) => new Date(b.accessed_at) - new Date(a.accessed_at)).slice(0, 10));
+        } catch (e) {
+          console.error('Erro ao carregar matérias:', e);
+        }
+      })();
+      return () => {};
+    }, [userId])
+  );
 
   const adicionarMateria = async () => {
     if (!novaMateria.trim()) {
@@ -87,7 +110,12 @@ export default function HomeScreen({ navigation }) {
     setModalVisible(false);
   };
 
-  const acessarMateria = (materia) => {
+  const acessarMateria = async (materia) => {
+    try {
+      await atualizarMateria(userId, materia.id, { accessed_at: new Date().toISOString() });
+    } catch (e) {
+      console.error('Erro ao atualizar accessed_at da matéria:', e);
+    }
     setHistorico((prev) => {
       const semDuplicata = prev.filter((m) => m.id !== materia.id);
       return [materia, ...semDuplicata].slice(0, 10);
@@ -98,13 +126,13 @@ export default function HomeScreen({ navigation }) {
     const jaFixada = fixados.find((m) => m.id === materia.id);
     try {
       await toggleFixadaDb(userId, materia.id, jaFixada);
+      if (jaFixada) {
+        setFixados((prev) => prev.filter((m) => m.id !== materia.id));
+      } else {
+        setFixados((prev) => [materia, ...prev]);
+      }
     } catch (e) {
       console.error('Erro ao fixar matéria:', e);
-    }
-    if (jaFixada) {
-      setFixados((prev) => prev.filter((m) => m.id !== materia.id));
-    } else {
-      setFixados((prev) => [materia, ...prev]);
     }
   };
 
@@ -193,8 +221,8 @@ export default function HomeScreen({ navigation }) {
 
   const getEstaFixada = (materia) => !!fixados.find((m) => m.id === materia.id);
 
-  const totalTopicosGeral = revisados.reduce((acc, m) => acc + (m.topicos?.length || 0), 0);
-  const concluidosGeral = revisados.reduce(
+  const totalTopicosGeral = [...revisados, ...fixados].reduce((acc, m) => acc + (m.topicos?.length || 0), 0);
+  const concluidosGeral = [...revisados, ...fixados].reduce(
     (acc, m) => acc + (m.topicos?.filter((t) => t.estudado).length || 0),
     0
   );
@@ -302,11 +330,19 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation?.navigate('Profile')}
           >
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>US</Text>
+              {userAvatar ? (
+                <Image
+                  source={{ uri: userAvatar }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{user?.email ? user.email.charAt(0).toUpperCase() : 'US'}</Text>
+              )}
             </View>
             <View>
               <Text style={styles.saudacao}>Bom dia ☀</Text>
-              <Text style={styles.perfilNome}>Username</Text>
+              <Text style={styles.perfilNome}>{user?.email ? user.email.split('@')[0] : 'Carregando...'}</Text>
             </View>
           </TouchableOpacity>
 

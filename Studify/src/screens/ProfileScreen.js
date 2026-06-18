@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -6,12 +7,15 @@ import {
   StatusBar,
   Alert,
   ScrollView,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ProfileScreenStyles as styles } from '../styles/ProfileScreenStyles';
+
 import { useUserId } from '../hooks/useUserId';
-import { logoutUser, getSessionUser } from '../services/authDb';
+import { logoutUser, getSessionUser, atualizarAvatar, getUserById } from '../services/authDb';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
+import * as ImagePicker from 'expo-image-picker';
+import { ProfileScreenStyles as styles } from '../styles/ProfileScreenStyles.js';
 
 function calcularSequencia(sessoes) {
   const datas = [...new Set(
@@ -46,6 +50,7 @@ function contarRevisoesSemana(sessoes) {
 export default function ProfileScreen({ navigation }) {
   const userId = useUserId();
   const [user, setUser] = useState(null);
+  const [userAvatar, setUserAvatar] = useState(null);
   const [totalMaterias, setTotalMaterias] = useState(0);
   const [totalAcessos, setTotalAcessos] = useState(0);
   const [fixadosCount, setFixadosCount] = useState(0);
@@ -54,25 +59,38 @@ export default function ProfileScreen({ navigation }) {
 
   useEffect(() => {
     getSessionUser().then(setUser);
-  }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-    (async () => {
-      try {
-        const materias = await carregarMaterias(userId);
-        const sessoes = await carregarHistorico(userId);
-
-        setTotalMaterias(materias.length);
-        setTotalAcessos(sessoes.length);
-        setFixadosCount(materias.filter(m => m.fixada).length);
-        setRevisoesSemana(contarRevisoesSemana(sessoes));
-        setDiasConsecutivos(calcularSequencia(sessoes));
-      } catch (e) {
-        console.error('Erro ao carregar dados do perfil:', e);
-      }
-    })();
+    if (userId) {
+      (async () => {
+        try {
+          const userData = await getUserById(userId);
+          setUserAvatar(userData?.avatar ? `data:image/jpeg;base64,${userData.avatar}` : null);
+        } catch (e) {
+          console.error('Erro ao carregar avatar do usuário:', e);
+        }
+      })();
+    }
   }, [userId]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!userId) return;
+      (async () => {
+        try {
+          const materias = await carregarMaterias(userId);
+          const sessoes = await carregarHistorico(userId);
+
+          setTotalMaterias(materias.length);
+          setTotalAcessos(sessoes.length);
+          setFixadosCount(materias.filter(m => m.fixada).length);
+          setRevisoesSemana(contarRevisoesSemana(sessoes));
+          setDiasConsecutivos(calcularSequencia(sessoes));
+        } catch (e) {
+          console.error('Erro ao carregar dados do perfil:', e);
+        }
+      })();
+      return () => {};
+    }, [userId])
+  );
 
   const handleLogout = () => {
     Alert.alert('Sair', 'Tem certeza que deseja sair da sua conta?', [
@@ -86,6 +104,33 @@ export default function ProfileScreen({ navigation }) {
         },
       },
     ]);
+  };
+
+  const handleAvatarChange = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+
+    const base64 =
+      result.base64 ||
+      result.assets?.[0]?.base64;
+
+    if (!result.cancelled && base64) {
+      try {
+        await atualizarAvatar(userId, base64);
+        setUserAvatar(`data:image/jpeg;base64,${base64}`);
+        Alert.alert('Sucesso', 'Avatar atualizado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao atualizar avatar:', error);
+        Alert.alert('Erro', 'Não foi possível atualizar o avatar.');
+      }
+    } else {
+      Alert.alert('Erro', 'Não foi possível obter a imagem. Tente novamente.');
+    }
   };
 
   const initials = user?.email
@@ -133,7 +178,22 @@ export default function ProfileScreen({ navigation }) {
       >
         <View style={styles.profileHeader}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitials}>{initials}</Text>
+            {userAvatar ? (
+              <Image
+                source={{ uri: userAvatar }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            )}
+            <TouchableOpacity
+              style={styles.editAvatarButton}
+              activeOpacity={0.8}
+              onPress={handleAvatarChange}
+            >
+              <Text style={styles.editAvatarText}>📷</Text>
+            </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{displayName}</Text>
           <Text style={styles.userEmail}>{user?.email || '...'}</Text>
