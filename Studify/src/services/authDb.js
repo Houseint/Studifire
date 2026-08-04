@@ -60,8 +60,45 @@ async function getDb() {
   return db;
 }
 
-async function hashPassword(senha) {
-  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, senha);
+const SALT_BYTES = 16;
+
+async function gerarSalt() {
+  const bytes = await Crypto.getRandomBytesAsync(SALT_BYTES);
+  return Crypto.encoding.Base64.encode(bytes);
+}
+
+async function createHashComSalt(salt, senha) {
+  const hash = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    `${salt}${senha}`,
+  );
+  return `${salt}:${hash}`;
+}
+
+export async function hashPassword(senha) {
+  const salt = await gerarSalt();
+  return createHashComSalt(salt, senha);
+}
+
+export async function verifyPassword(senha, storedHash) {
+  if (!storedHash) return false;
+  if (storedHash.includes(':')) {
+    const [salt, hash] = storedHash.split(':');
+    const candidate = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      `${salt}${senha}`,
+    );
+    return candidate === hash;
+  }
+  const legacy = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    senha,
+  );
+  return legacy === storedHash;
+}
+
+export function isLegacyHash(storedHash) {
+  return !!storedHash && !storedHash.includes(':');
 }
 
 export async function registerUser(email, senha) {
@@ -88,19 +125,32 @@ export async function registerUser(email, senha) {
 export async function loginUser(email, senha) {
   const db = await getDb();
   const normalizedEmail = email.trim().toLowerCase();
-  const senhaHash = await hashPassword(senha);
 
   const user = await db.getFirstAsync(
-    "SELECT id, email FROM users WHERE email = ? AND senha_hash = ? LIMIT 1;",
-    [normalizedEmail, senhaHash],
+    "SELECT id, email, senha_hash FROM users WHERE email = ? LIMIT 1;",
+    [normalizedEmail],
   );
 
   if (!user) {
     return null;
   }
 
-  await setSessionUser(user);
-  return user;
+  const ok = await verifyPassword(senha, user.senha_hash);
+  if (!ok) {
+    return null;
+  }
+
+  if (isLegacyHash(user.senha_hash)) {
+    const novoHash = await hashPassword(senha);
+    await db.runAsync("UPDATE users SET senha_hash = ? WHERE id = ?;", [
+      novoHash,
+      user.id,
+    ]);
+  }
+
+  const sessionUser = { id: user.id, email: user.email };
+  await setSessionUser(sessionUser);
+  return sessionUser;
 }
 
 export async function setSessionUser(user) {

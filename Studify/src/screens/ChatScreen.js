@@ -29,12 +29,24 @@ export default function ChatScreen({ navigation }) {
   const [conversasLista, setConversasLista] = useState([]);
   const flatRef = useRef(null);
   const tituloSalvoRef = useRef(false);
+  const reqTokenRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      reqTokenRef.current += 1;
+    };
+  }, []);
 
   const carregarConversa = useCallback(async (id) => {
     if (!userId) return;
+    const token = ++reqTokenRef.current;
     setConversaId(id);
     setStatus('conectando');
     const msgs = await carregarMensagens(userId, id);
+    if (!mountedRef.current || token !== reqTokenRef.current) return;
     if (msgs.length === 0) {
       setMensagens([{
         _id: 'welcome',
@@ -58,14 +70,19 @@ export default function ChatScreen({ navigation }) {
 
   useEffect(() => {
     if (!userId) return;
+    let mounted = true;
     (async () => {
       const ultima = await listarConversas(userId);
+      if (!mounted) return;
       if (ultima.length > 0) {
         await carregarConversa(ultima[0].id);
       } else {
         await novaConversa();
       }
     })();
+    return () => {
+      mounted = false;
+    };
   }, [carregarConversa, novaConversa, userId]);
 
   const abrirHistorico = async () => {

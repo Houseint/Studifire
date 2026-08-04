@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 
 import { registerUser } from '../services/authDb';
+import { AuthScreenStyles as styles } from '../styles/AuthScreenStyles.js';
 
 export default function StudifyRegisterScreen({ navigation }) {
   const [email, setEmail] = useState("");

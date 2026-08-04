@@ -6,7 +6,24 @@
     "start": "expo start --localhost",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFiles": [
+      "react-native-gesture-handler/jestSetup"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/jest.setup.js"
+    ],
+    "moduleNameMapper": {
+      "^.+\\.(png|jpg|jpeg|gif|webp|ttf|woff|woff2)$": "<rootDir>/test/assetStub.js"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|expo-constants|expo-crypto|expo-sqlite|expo-linear-gradient|expo-image-picker|expo-blur|expo-status-bar|@react-native-async-storage/async-storage)"
+    ]
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
@@ -31,7 +48,12 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
-    "dotenv": "^17.4.2"
+    "@testing-library/react-native": "^13.3.0",
+    "dotenv": "^17.4.2",
+    "jest": "~29.7.0",
+    "jest-expo": "~53.0.0",
+    "react-test-renderer": "19.0.0",
+    "sql.js": "^1.14.1"
   },
   "private": true
 }

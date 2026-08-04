@@ -5,9 +5,19 @@ export function useUserId() {
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    getSessionUser().then(user => {
-      if (user?.id) setUserId(user.id);
-    });
+    let mounted = true;
+
+    getSessionUser()
+      .then((user) => {
+        if (mounted && user?.id) setUserId(user.id);
+      })
+      .catch(() => {
+        if (mounted) setUserId(null);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return userId;

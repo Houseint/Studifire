@@ -59,6 +59,14 @@ async function getDb() {
       await db.execAsync("ALTER TABLE chat_conversations ADD COLUMN user_id INTEGER DEFAULT 1;");
     }
 
+    await db.execAsync(`
+      CREATE INDEX IF NOT EXISTS idx_subjects_user_accessed ON subjects (user_id, accessed_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_sessions_user_started ON sessions (user_id, started_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_sessions_subject ON sessions (subject_id);
+      CREATE INDEX IF NOT EXISTS idx_chat_conversations_user ON chat_conversations (user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages (conversation_id, created_at ASC);
+    `);
+
     initialized = true;
   }
 
@@ -100,30 +108,32 @@ export async function criarMateria(userId, nome, topicos) {
   };
 }
 
-export async function atualizarMateria(userId, id, updates) {
-  const db = await getDb();
+const UPDATE_WHITELIST = {
+  nome: { sql: 'nome = ?', value: (v) => v },
+  topicos: { sql: 'topicos = ?', value: (v) => JSON.stringify(v) },
+  fixada: { sql: 'fixada = ?', value: (v) => (v ? 1 : 0) },
+  accessed_at: { sql: 'accessed_at = ?', value: (v) => v },
+};
+
+export function buildUpdateSql(updates) {
   const sets = [];
   const vals = [];
-  if (updates.nome !== undefined) {
-    sets.push('nome = ?');
-    vals.push(updates.nome);
-  }
-  if (updates.topicos !== undefined) {
-    sets.push('topicos = ?');
-    vals.push(JSON.stringify(updates.topicos));
-  }
-  if (updates.fixada !== undefined) {
-    sets.push('fixada = ?');
-    vals.push(updates.fixada ? 1 : 0);
-  }
-  if (updates.accessed_at !== undefined) {
-    sets.push('accessed_at = ?');
-    vals.push(updates.accessed_at);
-  }
-  if (sets.length === 0) return;
+  Object.keys(updates || {}).forEach((key) => {
+    const column = UPDATE_WHITELIST[key];
+    if (!column) return;
+    sets.push(column.sql);
+    vals.push(column.value(updates[key]));
+  });
+  return { sql: sets.join(', '), vals };
+}
+
+export async function atualizarMateria(userId, id, updates) {
+  const db = await getDb();
+  const { sql, vals } = buildUpdateSql(updates);
+  if (!sql) return;
   vals.push(id, userId);
   await db.runAsync(
-    `UPDATE subjects SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`,
+    `UPDATE subjects SET ${sql} WHERE id = ? AND user_id = ?`,
     vals
   );
 }

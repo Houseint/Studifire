@@ -1,6 +1,4 @@
-import Constants from 'expo-constants';
-
-const API_KEY = Constants.expoConfig?.extra?.GROQ_API_KEY || '';
+const API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY || '';
 const MODEL = 'llama-3.3-70b-versatile';
 const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 

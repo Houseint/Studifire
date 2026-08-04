@@ -10,11 +10,20 @@ import HistoricScreen from './src/screens/HistoricScreen';
 import DetailScreen from './src/screens/DetailScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import HelpScreen from './src/screens/HelpScreen';
-import { getSessionUser } from './src/services/authDb';
+import { getSessionUser, getUserById, logoutUser } from './src/services/authDb';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 const Stack = createStackNavigator();
 
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
   const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {
@@ -23,8 +32,18 @@ export default function App() {
     async function bootstrapSession() {
       try {
         const user = await getSessionUser();
+        let hasSession = !!user;
+
+        if (user?.id) {
+          const dbUser = await getUserById(user.id);
+          hasSession = !!dbUser;
+          if (!dbUser) {
+            await logoutUser();
+          }
+        }
+
         if (mounted) {
-          setInitialRoute(user ? 'Home' : 'Login');
+          setInitialRoute(hasSession ? 'Home' : 'Login');
         }
       } catch {
         if (mounted) {
