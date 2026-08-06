@@ -260,4 +260,13 @@ export const ProfileScreenStyles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 6,
   },
+  scrollView: {
+    flex: 1,
+  },
+  flameEmoji: {
+    fontSize: 22,
+  },
+  buttonEmoji: {
+    fontSize: 18,
+  },
 });

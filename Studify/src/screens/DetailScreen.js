@@ -13,23 +13,6 @@ export default function DetailScreen({ route, navigation }) {
   const [paused, setPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const intervalRef = useRef(null);
-  const elapsedRef = useRef(0);
-  const studyingRef = useRef(false);
-  const userIdRef = useRef(null);
-  const idRef = useRef(null);
-
-  useEffect(() => {
-    elapsedRef.current = elapsedSeconds;
-  }, [elapsedSeconds]);
-
-  useEffect(() => {
-    studyingRef.current = studying;
-  }, [studying]);
-
-  useEffect(() => {
-    userIdRef.current = userId;
-    idRef.current = id;
-  }, [userId, id]);
 
   const clearTimer = () => {
     if (intervalRef.current) {
@@ -69,7 +52,6 @@ export default function DetailScreen({ route, navigation }) {
   useEffect(() => {
     return () => {
       clearTimer();
-      studyingRef.current = false;
     };
   }, []);
 
@@ -90,12 +72,10 @@ export default function DetailScreen({ route, navigation }) {
 
   const stopStudy = async () => {
     clearTimer();
-    const minutos = Math.round(elapsedRef.current / 60);
-    const uid = userIdRef.current;
-    const sid = idRef.current;
-    if (minutos > 0 && uid && sid) {
-      await registrarSessao(uid, sid, minutos);
-      const s = await carregarSessoesPorMateria(uid, sid);
+    const minutos = Math.round(elapsedSeconds / 60);
+    if (minutos > 0 && userId && id) {
+      await registrarSessao(userId, id, minutos);
+      const s = await carregarSessoesPorMateria(userId, id);
       setSessoes(s);
     }
     setStudying(false);
@@ -117,11 +97,12 @@ export default function DetailScreen({ route, navigation }) {
         'Estudo em andamento',
         'Você tem uma sessão ativa. Deseja salvar o tempo parcial antes de sair?',
         [
-          { text: 'Sair sem salvar', style: 'destructive', onPress: () => navigation.goBack() },
+          { text: 'Sair sem salvar', style: 'destructive', onPress: () => { clearTimer(); navigation.goBack(); } },
           { text: 'Salvar e sair', onPress: async () => { await stopStudy(); navigation.goBack(); } },
         ]
       );
     } else {
+      clearTimer();
       navigation.goBack();
     }
   };

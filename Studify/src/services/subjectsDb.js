@@ -140,10 +140,6 @@ export async function atualizarMateria(userId, id, updates) {
 
 export async function deletarMateria(userId, id) {
   const db = await getDb();
-  await db.runAsync(
-    'DELETE FROM sessions WHERE subject_id = ? AND subject_id IN (SELECT id FROM subjects WHERE user_id = ?)',
-    [id, userId]
-  );
   await db.runAsync('DELETE FROM subjects WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
@@ -231,8 +227,16 @@ export async function deletarConversa(userId, id) {
   );
 }
 
-export async function salvarMensagem(conversationId, role, content) {
+export async function salvarMensagem(userId, conversationId, role, content) {
   const db = await getDb();
+  const conv = await db.getFirstAsync(
+    'SELECT 1 FROM chat_conversations WHERE id = ? AND user_id = ?',
+    [conversationId, userId]
+  );
+  if (!conv) throw new Error('CONVERSATION_NOT_OWNED');
+  if (role !== 'user' && role !== 'assistant') {
+    throw new Error('INVALID_ROLE');
+  }
   const now = new Date().toISOString();
   const result = await db.runAsync(
     'INSERT INTO chat_messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)',

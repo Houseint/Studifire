@@ -37,7 +37,7 @@ async function getDb() {
 
     if (hasSenhaPlain) {
       const users = await db.getAllAsync(
-        'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \"\";',
+        'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \'\';',
       );
       for (const user of users) {
         if (user.senha) {
@@ -161,12 +161,26 @@ export async function getSessionUser() {
   const raw = await AsyncStorage.getItem(SESSION_KEY);
   if (!raw) return null;
 
+  let parsed;
   try {
-    return JSON.parse(raw);
+    parsed = JSON.parse(raw);
   } catch {
     await AsyncStorage.removeItem(SESSION_KEY);
     return null;
   }
+
+  const shapeOk = parsed !== null &&
+    typeof parsed === 'object' &&
+    !Array.isArray(parsed) &&
+    typeof parsed.id === 'number' &&
+    typeof parsed.email === 'string';
+
+  if (!shapeOk) {
+    await AsyncStorage.removeItem(SESSION_KEY);
+    return null;
+  }
+
+  return parsed;
 }
 
 export async function atualizarAvatar(userId, avatarBase64) {

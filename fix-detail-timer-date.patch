@@ -1,0 +1,67 @@
+--- a/src/screens/DetailScreen.js
++++ b/src/screens/DetailScreen.js
+@@ -11,13 +11,12 @@ export default function DetailScreen({ route, navigation }) {
+   const [materia, setMateria] = useState(null);
+   const [sessoes, setSessoes] = useState([]);
+   const [studying, setStudying] = useState(false);
+   const [paused, setPaused] = useState(false);
+   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+   const intervalRef = useRef(null);
+-  const startTimeRef = useRef(null);
+ 
+   const clearTimer = () => {
+     if (intervalRef.current) {
+       clearInterval(intervalRef.current);
+       intervalRef.current = null;
+     }
+-    startTimeRef.current = null;
+   };
+ 
+   useEffect(() => {
+@@ -40,17 +39,18 @@ export default function DetailScreen({ route, navigation }) {
+   }, [id, userId]);
+ 
+   useEffect(() => {
+     if (studying && !paused) {
+-      startTimeRef.current = startTimeRef.current ?? Date.now();
+       intervalRef.current = setInterval(() => {
+-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+-        setElapsedSeconds(elapsed);
++        setElapsedSeconds((prev) => prev + 1);
+       }, 1000);
+     } else {
+       clearTimer();
+     }
+     return clearTimer;
+   }, [studying, paused]);
+ 
+   const stopStudy = async () => {
+     clearTimer();
+-    const minutos = Math.round(elapsedSeconds / 60);
++    const minutos = Math.round(elapsedSeconds / 60);
+     if (minutos > 0 && userId && id) {
+       await registrarSessao(userId, id, minutos);
+       const s = await carregarSessoesPorMateria(userId, id);
+       setSessoes(s);
+     }
+     setStudying(false);
+     setPaused(false);
+     setElapsedSeconds(0);
+   };
+ 
++  const clearTimerAndGoBack = () => { clearTimer(); navigation.goBack(); };
++
+   const handleBack = () => {
+     if (studying) {
+       Alert.alert(
+@@ -101,7 +101,7 @@ export default function DetailScreen({ route, navigation }) {
+           { text: 'Salvar e sair', onPress: async () => { await stopStudy(); navigation.goBack(); } },
+         ]
+       );
+     } else {
+-      navigation.goBack();
++      clearTimerAndGoBack();
+     }
+   };
+ 
+   if (!materia) {

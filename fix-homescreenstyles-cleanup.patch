@@ -1,0 +1,36 @@
+--- a/src/styles/screens/HomeScreenStyles.js
++++ b/src/styles/screens/HomeScreenStyles.js
+@@ -1,361 +1,36 @@
+ import { StyleSheet } from 'react-native';
+ 
+ export default StyleSheet.create({
+   main: {
+     flex: 1,
+     backgroundColor: '#090E1F',
+   },
+   scroll: {
+     flex: 1,
+     paddingHorizontal: 14,
+   },
+   buscaWrapper: {
+     height: 44,
+     borderRadius: 12,
+     backgroundColor: '#111832',
+     borderWidth: 1,
+     borderColor: '#27315B',
+     flexDirection: 'row',
+     alignItems: 'center',
+     paddingHorizontal: 12,
+     marginBottom: 14,
+   },
+   buscaInput: {
+     flex: 1,
+     color: '#E6EAFF',
+     marginLeft: 8,
+     fontSize: 13,
+     fontWeight: '600',
+   },
+   scrollBottomSpace: {
+     height: 86,
+   },
+ });

@@ -1,0 +1,12 @@
+--- a/src/services/authDb.js
++++ b/src/services/authDb.js
+@@ -37,7 +37,7 @@ async function getDb() {
+     }
+ 
+     if (hasSenhaPlain) {
+       const users = await db.getAllAsync(
+-        'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \"\";',
++        'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \'\';',
+       );
+       for (const user of users) {
+         if (user.senha) {

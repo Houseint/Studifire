@@ -32,21 +32,16 @@ export default function ChatScreen({ navigation }) {
   const reqTokenRef = useRef(0);
   const mountedRef = useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      reqTokenRef.current += 1;
-    };
-  }, []);
-
   const carregarConversa = useCallback(async (id) => {
     if (!userId) return;
     const token = ++reqTokenRef.current;
+    mountedRef.current = true;
     setConversaId(id);
     setStatus('conectando');
     const msgs = await carregarMensagens(userId, id);
-    if (!mountedRef.current || token !== reqTokenRef.current) return;
+    if (!mountedRef.current || token !== reqTokenRef.current) {
+      return;
+    }
     if (msgs.length === 0) {
       setMensagens([{
         _id: 'welcome',
@@ -59,6 +54,11 @@ export default function ChatScreen({ navigation }) {
     setStatus('online');
     tituloSalvoRef.current = msgs.length > 0;
   }, [userId]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const novaConversa = useCallback(async () => {
     if (!userId) return;
@@ -98,7 +98,15 @@ export default function ChatScreen({ navigation }) {
     setInput('');
     setStatus('digitando');
 
-    const userMsg = await salvarMensagem(conversaId, 'user', texto);
+    let userMsg;
+    try {
+      userMsg = await salvarMensagem(userId, conversaId, 'user', texto);
+    } catch (e) {
+      console.error('Erro ao salvar mensagem do usuário:', e);
+      Alert.alert('Erro', 'Não foi possível enviar a mensagem.');
+      setStatus('online');
+      return;
+    }
 
     if (!tituloSalvoRef.current) {
       const titulo = texto.length > 40 ? texto.slice(0, 40) + '…' : texto;
@@ -115,7 +123,15 @@ export default function ChatScreen({ navigation }) {
       msgsAtualizadas.map((m) => ({ role: m.role, text: m.content }))
     );
 
-    const assistMsg = await salvarMensagem(conversaId, 'assistant', resposta);
+    let assistMsg;
+    try {
+      assistMsg = await salvarMensagem(userId, conversaId, 'assistant', resposta);
+    } catch (e) {
+      console.error('Erro ao salvar resposta da IA:', e);
+      setCarregando(false);
+      setStatus('online');
+      return;
+    }
     setMensagens((prev) => [
       ...prev,
       { _id: String(assistMsg.id), ...assistMsg },

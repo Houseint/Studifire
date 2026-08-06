@@ -1,0 +1,14 @@
+--- a/src/services/subjectsDb.js
++++ b/src/services/subjectsDb.js
+@@ -138,11 +138,7 @@ export async function toggleFixada(userId, id, atualmenteFixada) {
+   return atualizarMateria(userId, id, { fixada: !atualmenteFixada });
+ }
+ 
+ export async function deletarMateria(userId, id) {
+   const db = await getDb();
+-  await db.runAsync(
+-    'DELETE FROM sessions WHERE subject_id = ? AND subject_id IN (SELECT id FROM subjects WHERE user_id = ?)',
+-    [id, userId]
+-  );
+   await db.runAsync('DELETE FROM subjects WHERE id = ? AND user_id = ?', [id, userId]);
+ }

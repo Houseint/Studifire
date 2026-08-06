@@ -1,0 +1,65 @@
+--- a/src/screens/HomeScreen.js
++++ b/src/screens/HomeScreen.js
+@@ -56,40 +56,34 @@ export default function HomeScreen({ navigation }) {
+   const MAX_TOPICOS = 10;
+ 
+   useEffect(() => {
+     getSessionUser().then(setUser);
+     if (userId) {
+       (async () => {
+         try {
+           const userData = await getUserById(userId);
+           setUserAvatar(userData?.avatar ? `data:image/jpeg;base64,${userData.avatar}` : null);
+         } catch (e) {
+           console.error('Erro ao carregar avatar do usuário:', e);
+         }
+       })();
+     }
+   }, [userId]);
+ 
+-  const loadData = async () => {
+-    if (!userId) return;
+-    try {
+-      const materias = await carregarMaterias(userId);
+-      const revisadas = materias.filter((m) => !m.fixada);
+-      const fix = materias.filter((m) => m.fixada);
+-      setRevisados(revisadas);
+-      setFixados(fix);
+-      setHistorico(materias.sort((a, b) => new Date(b.accessed_at) - new Date(a.accessed_at)).slice(0, 10));
+-    } catch (e) {
+-      console.error('Erro ao carregar matérias:', e);
+-    }
+-  };
+-
+   useEffect(() => {
+     if (!userId) return;
+     const unsub = navigation.addListener('focus', loadHomeData);
+     loadHomeData(); // carga inicial
+     return unsub;
+   }, [userId]);
+ 
++  const loadHomeData = async () => {
++    if (!userId) return;
++    try {
++      const [materias, userData] = await Promise.all([
++        carregarMaterias(userId),
++        getUserById(userId),
++      ]);
++      const revisadas = materias.filter((m) => !m.fixada);
++      const fix = materias.filter((m) => m.fixada);
++      setRevisados(revisadas);
++      setFixados(fix);
++      setHistorico(materias.sort((a, b) => new Date(b.accessed_at) - new Date(a.accessed_at)).slice(0, 10));
++      if (userData?.avatar) {
++        setUserAvatar(`data:image/jpeg;base64,${userData.avatar}`);
++      }
++    } catch (e) {
++      console.error('Erro ao carregar home:', e);
++    }
++  };
++
+   const adicionarMateria = async () => {
+     if (!novaMateria.trim()) {
+       Alert.alert('Atenção', 'Digite o nome da matéria!');
+       return;
+     }

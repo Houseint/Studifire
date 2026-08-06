@@ -1,0 +1,52 @@
+--- a/src/screens/ChatScreen.js
++++ b/src/screens/ChatScreen.js
+@@ -95,28 +95,31 @@ export default function ChatScreen({ navigation }) {
+   const enviar = async () => {
+     const texto = input.trim();
+     if (!texto || carregando || !conversaId) return;
+     setInput('');
+     setStatus('digitando');
+ 
+-    const userMsg = await salvarMensagem(userId, conversaId, 'user', texto);
++    let userMsg;
++    try {
++      userMsg = await salvarMensagem(userId, conversaId, 'user', texto);
++    } catch (e) {
++      console.error('Erro ao salvar mensagem do usuário:', e);
++      Alert.alert('Erro', 'Não foi possível enviar a mensagem.');
++      setStatus('online');
++      return;
++    }
+ 
+     if (!tituloSalvoRef.current) {
+       const titulo = texto.length > 40 ? texto.slice(0, 40) + '…' : texto;
+       await atualizarTituloConversa(userId, conversaId, titulo);
+       tituloSalvoRef.current = true;
+     }
+ 
+     const msgLocal = { _id: String(userMsg.id), ...userMsg };
+     const msgsAtualizadas = [...mensagens, msgLocal];
+     setMensagens(msgsAtualizadas);
+     setCarregando(true);
+ 
+     const resposta = await enviarMensagem(
+       msgsAtualizadas.map((m) => ({ role: m.role, text: m.content }))
+     );
+ 
+-    const assistMsg = await salvarMensagem(userId, conversaId, 'assistant', resposta);
++    let assistMsg;
++    try {
++      assistMsg = await salvarMensagem(userId, conversaId, 'assistant', resposta);
++    } catch (e) {
++      console.error('Erro ao salvar resposta da IA:', e);
++      setCarregando(false);
++      setStatus('online');
++      return;
++    }
+     setMensagens((prev) => [
+       ...prev,
+       { _id: String(assistMsg.id), ...assistMsg },
+     ]);
+     setCarregando(false);
+     setStatus('online');
+   };

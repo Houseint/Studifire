@@ -1,0 +1,22 @@
+--- a/src/services/subjectsDb.js
++++ b/src/services/subjectsDb.js
+@@ -227,13 +227,18 @@ export async function limparConversasAntigas(userId, limite = 20) {
+ }
+ 
+ export async function salvarMensagem(userId, conversationId, role, content) {
+   const db = await getDb();
+   const conv = await db.getFirstAsync(
+     'SELECT 1 FROM chat_conversations WHERE id = ? AND user_id = ?',
+     [conversationId, userId]
+   );
+   if (!conv) throw new Error('CONVERSATION_NOT_OWNED');
++  if (role !== 'user' && role !== 'assistant') {
++    throw new Error('INVALID_ROLE');
++  }
+   const now = new Date().toISOString();
+   const result = await db.runAsync(
+     'INSERT INTO chat_messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)',
+     [conversationId, role, content, now]
+   );
+   return { id: result.lastInsertRowId, conversation_id: conversationId, role, content, created_at: now };
+ }

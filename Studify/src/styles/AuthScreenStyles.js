@@ -49,4 +49,40 @@ export const AuthScreenStyles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 14,
   },
+  formWrap: {
+    flex: 1,
+    paddingHorizontal: 30,
+    justifyContent: 'center',
+  },
+  inputGroup: {
+    marginBottom: 18,
+  },
+  authButton: {
+    marginTop: 10,
+    borderRadius: 30,
+    backgroundColor: '#5ab8d4',
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  authButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  footerText: {
+    color: 'rgba(200, 220, 230, 0.7)',
+    fontSize: 13,
+  },
+  footerLink: {
+    color: '#00c8f0',
+    fontWeight: '700',
+  },
+  registerLogo: {
+    width: 300,
+    height: 350,
+  },
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Linking, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Linking, StatusBar, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { HELP_LINKS } from '../constants/helpLinks';
 
 
 const CORES_SECAO = ['#4CAF50', '#FF9800', '#2196F3', '#E91E63', '#9C27B0', '#FF5722'];
@@ -36,15 +37,7 @@ const SECOES = [
     icon: '🔗',
     titulo: 'LINKS ÚTEIS',
     subtitulo: 'Aprofunde-se nos temas',
-    metodos: [
-      { icon: '🌐', nome: 'International School', desc: 'Métodos Pomodoro, SQ3R, repetição espaçada e autonomia.', url: 'https://internationalschool.global/metodos-de-estudo' },
-      { icon: '🌐', nome: 'Terra', desc: 'Artigo prático sobre 4 métodos de estudo ativos incluindo SQ3R.', url: 'https://www.terra.com.br' },
-      { icon: '🌐', nome: 'Solaris', desc: 'Estratégias práticas para desenvolver autonomia nos estudos.', url: 'https://centroeducacionalsolaris.com.br/desenvolver-autonomia-nos-estudos/' },
-      { icon: '🌐', nome: 'WorldBus', desc: '7 métodos de aprendizado autodidata para qualquer idade.', url: 'https://worldbusdrivingsimulator.com.br/7-metodos-de-aprendizado-autodidata/' },
-      { icon: '🌐', nome: 'UFMA', desc: 'Artigo acadêmico sobre autodidatismo com metodologia Scaffolding.', url: 'https://portalpadrao.ufma.br' },
-      { icon: '🌐', nome: 'Moderna Compartilha', desc: 'Como criar um roteiro de estudos para reduzir ansiedade.', url: 'https://modernacompartilha.com.br/roteiro-de-estudos/' },
-      { icon: '🌐', nome: 'NAU', desc: 'Dicas de estudo online com foco em autonomia e Pomodoro.', url: 'https://nau.edu.pt' },
-    ],
+    metodos: HELP_LINKS,
   },
 ];
 
@@ -125,3 +118,60 @@ export default function HelpScreen({ navigation }) {
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#090E1F' },
+  gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
+    paddingTop: 50, paddingBottom: 12,
+  },
+  backButton: {
+    width: 40, height: 40, borderRadius: 20,
+    borderWidth: 1, borderColor: '#27315B',
+    backgroundColor: '#111832',
+    alignItems: 'center', justifyContent: 'center', marginRight: 14,
+  },
+  backButtonText: { color: '#7F8AB7', fontSize: 22 },
+  headerTitle: { color: '#F4F6FF', fontSize: 22, fontWeight: '700' },
+  body: { flex: 1, paddingHorizontal: 20 },
+  bottomSpace: { height: 40 },
+  secaoCard: {
+    backgroundColor: '#111832', borderRadius: 14,
+    borderWidth: 1, borderColor: '#27315B',
+    marginBottom: 12, overflow: 'hidden',
+  },
+  secaoBar: { height: 4 },
+  secaoHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 16,
+  },
+  secaoIconContainer: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center', marginRight: 12,
+  },
+  secaoTitleArea: { flex: 1 },
+  secaoTitulo: { fontSize: 14, fontWeight: '700', letterSpacing: 0.8 },
+  secaoSubtitulo: { color: '#8E97C4', fontSize: 12, marginTop: 2 },
+  secaoArrow: { fontSize: 12, marginLeft: 8 },
+  secaoContent: { paddingHorizontal: 16, paddingBottom: 12 },
+  linkItem: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#0D1428', borderRadius: 12,
+    padding: 12, marginTop: 8,
+  },
+  linkIcon: { fontSize: 18, marginRight: 10 },
+  linkInfo: { flex: 1 },
+  linkNome: { color: '#F4F6FF', fontSize: 14, fontWeight: '600' },
+  linkUrl: { fontSize: 12, marginTop: 2 },
+  linkArrow: { color: '#7F8AB7', fontSize: 16, marginLeft: 8 },
+  metodoItem: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#0D1428', borderRadius: 12,
+    padding: 12, marginTop: 8,
+  },
+  metodoIcon: { fontSize: 18, marginRight: 10 },
+  metodoInfo: { flex: 1 },
+  metodoNome: { fontSize: 14, fontWeight: '600' },
+  metodoDesc: { color: '#8E97C4', fontSize: 13, marginTop: 2, lineHeight: 18 },
+});

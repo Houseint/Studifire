@@ -172,7 +172,7 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -228,7 +228,7 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.progressoCardLabel}>Sequência</Text>
             <View style={styles.progressoCardSubRow}>
               <Text style={styles.progressoCardValue}>{diasConsecutivos}</Text>
-              <Text style={{ fontSize: 22 }}>🔥</Text>
+              <Text style={styles.flameEmoji}>🔥</Text>
             </View>
             <Text style={styles.progressoCardSub}>dias seguidos</Text>
           </View>
@@ -240,7 +240,7 @@ export default function ProfileScreen({ navigation }) {
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Historic')}
           >
-            <Text style={{ fontSize: 18 }}>📋</Text>
+            <Text style={styles.buttonEmoji}>📋</Text>
             <Text style={styles.historicoButtonText}>Histórico</Text>
           </TouchableOpacity>
 
@@ -249,7 +249,7 @@ export default function ProfileScreen({ navigation }) {
             activeOpacity={0.7}
             onPress={handleLogout}
           >
-            <Text style={{ fontSize: 18 }}>🚪</Text>
+            <Text style={styles.buttonEmoji}>🚪</Text>
             <Text style={styles.sairButtonText}>Sair da conta</Text>
           </TouchableOpacity>
         </View>

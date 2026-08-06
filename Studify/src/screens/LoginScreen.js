@@ -61,7 +61,7 @@ export default function LoginScreen({ navigation }) {
       <View style={styles.glowOrb1} />
       <View style={styles.glowOrb2} />
 
-      <View style={{ flex: 1, paddingHorizontal: 30, justifyContent: 'center' }}>
+      <View style={styles.formWrap}>
         <View style={[styles.logoContainer, { marginBottom: 40 }]}>
           <Image
             source={require("../../img/LogoStudifirWithDesc.png")}
@@ -69,7 +69,7 @@ export default function LoginScreen({ navigation }) {
           />
         </View>
 
-        <View style={{ marginBottom: 18 }}>
+        <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>E-mail</Text>
           <View style={styles.inputWrapper}>
             <TextInput
@@ -83,7 +83,7 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={{ marginBottom: 18 }}>
+        <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Senha</Text>
           <View style={styles.inputWrapper}>
             <TextInput
@@ -97,27 +97,21 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <TouchableOpacity
-          style={{
-            marginTop: 10,
-            borderRadius: 30,
-            backgroundColor: '#5ab8d4',
-            paddingVertical: 15,
-            alignItems: 'center',
-          }}
+          style={styles.authButton}
           activeOpacity={0.85}
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
+          <Text style={styles.authButtonText}>
             {loading ? 'Entrando...' : 'Entrar'}
           </Text>
         </TouchableOpacity>
 
-        <View style={{ alignItems: 'center', marginTop: 40 }}>
-          <Text style={{ color: 'rgba(200, 220, 230, 0.7)', fontSize: 13 }}>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
             É novo por aqui?{' '}
             <Text
-              style={{ color: '#00c8f0', fontWeight: '700' }}
+              style={styles.footerLink}
               onPress={() => navigation?.navigate("Register")}
             >
               Cadastrar

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
@@ -16,26 +14,25 @@ import styles from '../styles/screens/HomeScreenStyles';
 import Icon from '../components/common/Icon';
 import CardMateria from '../components/home/CardMateria';
 import Secao from '../components/home/Secao';
+import {
+  HomeHeader,
+  ProgressCards,
+  MateriaSections,
+  BottomNav,
+  CreateMateriaModal,
+  EditMateriaModal,
+} from '../components/home';
+import { filterRevisados, getEstaFixada, calcGlobalStats } from '../components/home/helpers';
 import { useUserId } from '../hooks/useUserId';
 import { getSessionUser, getUserById } from '../services/authDb';
 import {
   carregarMaterias,
   criarMateria,
   atualizarMateria,
+  getMateriaById,
   deletarMateria,
   toggleFixada as toggleFixadaDb,
 } from '../services/subjectsDb';
-
-const TopicoItem = ({ nome, onRemove }) => (
-  <View style={styles.topicoChip}>
-    <Text style={styles.topicoChipText}>{nome}</Text>
-    <TouchableOpacity onPress={onRemove} style={styles.topicoChipRemove}>
-      <Text style={styles.topicoChipRemoveText}>✕</Text>
-    </TouchableOpacity>
-  </View>
-);
-
-
 
 export default function HomeScreen({ navigation }) {
   const userId = useUserId();
@@ -73,24 +70,32 @@ export default function HomeScreen({ navigation }) {
     }
   }, [userId]);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!userId) return;
-      (async () => {
-        try {
-          const materias = await carregarMaterias(userId);
-          const revisadas = materias.filter((m) => !m.fixada);
-          const fix = materias.filter((m) => m.fixada);
-          setRevisados(revisadas);
-          setFixados(fix);
-          setHistorico(materias.sort((a, b) => new Date(b.accessed_at) - new Date(a.accessed_at)).slice(0, 10));
-        } catch (e) {
-          console.error('Erro ao carregar matérias:', e);
-        }
-      })();
-      return () => {};
-    }, [userId])
-  );
+  useEffect(() => {
+    if (!userId) return;
+    const unsub = navigation.addListener('focus', loadHomeData);
+    loadHomeData(); // carga inicial
+    return unsub;
+  }, [userId]);
+
+  const loadHomeData = async () => {
+    if (!userId) return;
+    try {
+      const [materias, userData] = await Promise.all([
+        carregarMaterias(userId),
+        getUserById(userId),
+      ]);
+      const revisadas = materias.filter((m) => !m.fixada);
+      const fix = materias.filter((m) => m.fixada);
+      setRevisados(revisadas);
+      setFixados(fix);
+      setHistorico(materias.sort((a, b) => new Date(b.accessed_at) - new Date(a.accessed_at)).slice(0, 10));
+      if (userData?.avatar) {
+        setUserAvatar(`data:image/jpeg;base64,${userData.avatar}`);
+      }
+    } catch (e) {
+      console.error('Erro ao carregar home:', e);
+    }
+  };
 
   const adicionarMateria = async () => {
     if (!novaMateria.trim()) {
@@ -144,6 +149,13 @@ export default function HomeScreen({ navigation }) {
     setEditModalVisible(true);
   };
 
+  const updateMateria = (id, updates) => {
+    const updateFn = (prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m));
+    setRevisados(updateFn);
+    setHistorico(updateFn);
+    setFixados(updateFn);
+  };
+
   const salvarEdicao = async () => {
     if (!editNome.trim()) {
       Alert.alert('Atenção', 'Digite o nome da matéria!');
@@ -160,13 +172,6 @@ export default function HomeScreen({ navigation }) {
     });
     setEditModalVisible(false);
     setSelectedMateria(null);
-  };
-
-  const updateMateria = (id, updates) => {
-    const updateFn = (prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m));
-    setRevisados(updateFn);
-    setHistorico(updateFn);
-    setFixados(updateFn);
   };
 
   const deleteMateria = async (id) => {
@@ -188,7 +193,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const toggleTopicoEstudado = async (materiaId, topicoIndex) => {
-    const toggleFn = (prev) =>
+    const updateFn = (prev) =>
       prev.map((m) => {
         if (m.id !== materiaId) return m;
         const novosTopicos = m.topicos.map((t, i) =>
@@ -196,36 +201,22 @@ export default function HomeScreen({ navigation }) {
         );
         return { ...m, topicos: novosTopicos };
       });
-    const materia = [...revisados, ...fixados].find((m) => m.id === materiaId);
-    if (materia) {
-      const novosTopicos = materia.topicos.map((t, i) =>
-        i === topicoIndex ? { ...t, estudado: !t.estudado } : t
-      );
-      try {
-        await atualizarMateria(userId, materiaId, { topicos: novosTopicos });
-      } catch (e) {
-        console.error('Erro ao atualizar tópico:', e);
-        return;
-      }
+
+    try {
+      const materiaAtualizada = await getMateriaById(userId, materiaId);
+      if (!materiaAtualizada) return;
+      await atualizarMateria(userId, materiaId, { topicos: materiaAtualizada.topicos });
+    } catch (e) {
+      console.error('Erro ao atualizar tópico:', e);
+      return;
     }
-    setRevisados(toggleFn);
-    setHistorico(toggleFn);
-    setFixados(toggleFn);
+
+    setRevisados(updateFn);
+    setHistorico(updateFn);
+    setFixados(updateFn);
   };
 
-  const revisadosFiltrados = revisados.filter((m) => {
-    const q = busca.toLowerCase();
-    if (m.nome.toLowerCase().includes(q)) return true;
-    return m.topicos?.some((t) => t.nome.toLowerCase().includes(q));
-  });
-
-  const getEstaFixada = (materia) => !!fixados.find((m) => m.id === materia.id);
-
-  const totalTopicosGeral = [...revisados, ...fixados].reduce((acc, m) => acc + (m.topicos?.length || 0), 0);
-  const concluidosGeral = [...revisados, ...fixados].reduce(
-    (acc, m) => acc + (m.topicos?.filter((t) => t.estudado).length || 0),
-    0
-  );
+  const revisadosFiltrados = filterRevisados(revisados, busca);
 
   const resetCreateModal = () => {
     setNovaMateria('');
@@ -234,85 +225,7 @@ export default function HomeScreen({ navigation }) {
     setModalVisible(true);
   };
 
-  const renderTopicoInput = (value, onChangeText, onAdd, list, setList) => (
-    <View>
-      <Text style={styles.modalLabel}>
-        Tópicos ({list.length}/{MAX_TOPICOS})
-      </Text>
-      <View style={styles.topicoInputRow}>
-        <TextInput
-          style={[styles.modalInput, styles.topicoInputField]}
-          placeholder="Ex: Álgebra Linear"
-          placeholderTextColor="#5a6a7a"
-          value={value}
-          onChangeText={onChangeText}
-          selectionColor="#6c8ebf"
-          onSubmitEditing={onAdd}
-          returnKeyType="next"
-        />
-        <TouchableOpacity
-          style={[styles.topicoAddBtn, list.length >= MAX_TOPICOS && styles.topicoAddBtnDisabled]}
-          onPress={onAdd}
-          disabled={list.length >= MAX_TOPICOS}
-        >
-          <Text style={styles.topicoAddBtnText}>+</Text>
-        </TouchableOpacity>
-      </View>
-      {list.length > 0 && (
-        <View style={styles.topicoChipsContainer}>
-          {list.map((t, i) => (
-            <TopicoItem
-              key={i}
-              nome={t.nome || `Tópico ${i + 1}`}
-              onRemove={() => setList((prev) => prev.filter((_, idx) => idx !== i))}
-            />
-          ))}
-        </View>
-      )}
-    </View>
-  );
-
-  const renderEditTopicoInput = () => (
-    <View>
-      <Text style={styles.modalLabel}>
-        Tópicos ({editTopicos.length}/{MAX_TOPICOS})
-      </Text>
-      <View style={styles.topicoInputRow}>
-        <TextInput
-          style={[styles.modalInput, styles.topicoInputField]}
-          placeholder="Ex: Álgebra Linear"
-          placeholderTextColor="#5a6a7a"
-          value={editTopicoInput}
-          onChangeText={setEditTopicoInput}
-          selectionColor="#6c8ebf"
-          returnKeyType="next"
-        />
-        <TouchableOpacity
-          style={[styles.topicoAddBtn, editTopicos.length >= MAX_TOPICOS && styles.topicoAddBtnDisabled]}
-          onPress={() => {
-            if (editTopicoInput.trim() && editTopicos.length < MAX_TOPICOS) {
-              setEditTopicos((prev) => [...prev, { nome: editTopicoInput.trim(), estudado: false }]);
-              setEditTopicoInput('');
-            }
-          }}
-          disabled={editTopicos.length >= MAX_TOPICOS}
-        >
-          <Text style={styles.topicoAddBtnText}>+</Text>
-        </TouchableOpacity>
-      </View>
-      {editTopicos.length > 0 && (
-        <View style={styles.topicoChipsContainer}>
-          {editTopicos.map((t, i) => (
-            <TopicoItem
-              key={i}
-              nome={t.nome || `Tópico ${i + 1}`}
-              onRemove={() => setEditTopicos((prev) => prev.filter((_, idx) => idx !== i))}
-            />
-          ))}
-        </View>
-      )}
-    </View>
-  );
+  const { totalTopicosGeral, concluidosGeral } = calcGlobalStats(revisados, fixados);
 
   return (
     <View style={styles.main}>
@@ -323,37 +236,12 @@ export default function HomeScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.topo}>
-          <TouchableOpacity
-            style={styles.perfilBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation?.navigate('Profile')}
-          >
-            <View style={styles.avatarCircle}>
-              {userAvatar ? (
-                <Image
-                  source={{ uri: userAvatar }}
-                  style={styles.avatarImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text style={styles.avatarText}>{user?.email ? user.email.charAt(0).toUpperCase() : 'US'}</Text>
-              )}
-            </View>
-            <View>
-              <Text style={styles.saudacao}>Bom dia ☀</Text>
-              <Text style={styles.perfilNome}>{user?.email ? user.email.split('@')[0] : 'Carregando...'}</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.helpBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation?.navigate('Help')}
-          >
-            <Icon name="question" size={15} color="#9AA7D7" />
-          </TouchableOpacity>
-        </View>
+        <HomeHeader
+          user={user}
+          userAvatar={userAvatar}
+          onProfilePress={() => navigation?.navigate('Profile')}
+          onHelpPress={() => navigation?.navigate('Help')}
+        />
 
         <View style={styles.buscaWrapper}>
           <Icon name="search" size={14} color="#5E6994" />
@@ -367,220 +255,57 @@ export default function HomeScreen({ navigation }) {
           />
         </View>
 
-        <Text style={styles.sectionHeading}>SEU PROGRESSO</Text>
-        <View style={styles.progressoRow}>
-          <View style={[styles.progressoCard, styles.progressoCardRoxo]}>
-            <Text style={styles.progressoLabel}>Conteúdos vistos</Text>
-            <Text style={styles.progressoValor}>{historico.length}</Text>
-            <Text style={styles.progressoMeta}>esta semana</Text>
-            <View style={styles.progressoLinha} />
-          </View>
+        <ProgressCards
+          historico={historico}
+          revisados={revisados}
+          fixados={fixados}
+          busca={busca}
+        />
 
-          <View style={[styles.progressoCard, styles.progressoCardLaranja]}>
-            <Text style={styles.progressoLabel}>Para revisar</Text>
-            <Text style={styles.progressoValor}>
-              {totalTopicosGeral > 0
-                ? `${Math.round((concluidosGeral / totalTopicosGeral) * 100)}%`
-                : '0%'}
-            </Text>
-            <Text style={styles.progressoMeta}>
-              {concluidosGeral}/{totalTopicosGeral} tópicos
-            </Text>
-            <View style={styles.progressoLinha}>
-              <View
-                style={[
-                  styles.progressoLinhaFill,
-                  {
-                    width: totalTopicosGeral > 0 ? `${(concluidosGeral / totalTopicosGeral) * 100}%` : '0%',
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        </View>
-
-        <Secao titulo="ULTIMOS ACESSADOS">
-          {historico.length === 0 ? (
-            <Text style={styles.vazio}>Nenhum conteúdo acessado ainda.</Text>
-          ) : (
-            historico.map((m) => (
-              <CardMateria
-                key={m.id}
-                materia={m}
-                onCardPress={openEditModal}
-                estaFixada={getEstaFixada(m)}
-                onPinPress={() => fixarMateria(m)}
-              />
-            ))
-          )}
-        </Secao>
-
-        <Secao titulo="PARA REVISAR">
-          {revisadosFiltrados.length === 0 ? (
-            <Text style={styles.vazio}>
-              {busca ? 'Nenhuma matéria encontrada.' : 'Nenhuma matéria adicionada ainda.'}
-            </Text>
-          ) : (
-            revisadosFiltrados.map((m) => (
-              <CardMateria
-                key={m.id}
-                materia={m}
-                mostrarFixar
-                mostrarAcesso
-                onCardPress={() => navigation.navigate('Detail', { id: m.id })}
-                onAcesso={acessarMateria}
-                estaFixada={getEstaFixada(m)}
-                onPinPress={() => fixarMateria(m)}
-              />
-            ))
-          )}
-        </Secao>
-
-        <Secao titulo="FIXADOS">
-          {fixados.length === 0 ? (
-            <Text style={styles.vazio}>Fixe uma matéria clicando no pin.</Text>
-          ) : (
-            fixados.map((m) => (
-              <CardMateria
-                key={m.id}
-                materia={m}
-                mostrarAcesso
-                onCardPress={() => navigation.navigate('Detail', { id: m.id })}
-                onAcesso={acessarMateria}
-                estaFixada={true}
-                onPinPress={() => fixarMateria(m)}
-              />
-            ))
-          )}
-        </Secao>
+        <MateriaSections
+          historico={historico}
+          revisadosFiltrados={revisadosFiltrados}
+          fixados={fixados}
+          getEstaFixada={(m) => getEstaFixada(fixados, m)}
+          onCardPress={openEditModal}
+          onAcesso={acessarMateria}
+          onPinPress={fixarMateria}
+          navigation={navigation}
+          busca={busca}
+        />
 
         <View style={styles.scrollBottomSpace} />
       </ScrollView>
 
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Home')}>
-          <Text style={styles.navIcon}>⌂</Text>
-          <Text style={[styles.navLabel, styles.navLabelActive]}>Início</Text>
-        </TouchableOpacity>
+      <BottomNav navigation={navigation} onAddPress={resetCreateModal} />
 
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Chat')}>
-          <Text style={styles.navIcon}>🤖</Text>
-          <Text style={styles.navLabel}>IA</Text>
-        </TouchableOpacity>
+      <CreateMateriaModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={adicionarMateria}
+        novaMateria={novaMateria}
+        setNovaMateria={setNovaMateria}
+        novosTopicos={novosTopicos}
+        setNovosTopicos={setNovosTopicos}
+        topicoInput={topicoInput}
+        setTopicoInput={setTopicoInput}
+        MAX_TOPICOS={MAX_TOPICOS}
+      />
 
-        <TouchableOpacity
-          style={[styles.navItem, styles.navItemPlus]}
-          activeOpacity={0.85}
-          onPress={resetCreateModal}
-        >
-          <Text style={styles.navPlusText}>+</Text>
-          <Text style={styles.navLabel}>Adicionar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Historic')}>
-          <Text style={styles.navIcon}>↗</Text>
-          <Text style={styles.navLabel}>Progresso</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Profile')}>
-          <Text style={styles.navIcon}>◌</Text>
-          <Text style={styles.navLabel}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
-          <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitulo}>Nova Matéria</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Text style={{ color: '#5a6a7a', fontSize: 20 }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalLabel}>Nome da matéria *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Ex: Matemática, Física..."
-              placeholderTextColor="#5a6a7a"
-              value={novaMateria}
-              onChangeText={setNovaMateria}
-              selectionColor="#6c8ebf"
-            />
-
-            {renderTopicoInput(
-              topicoInput,
-              setTopicoInput,
-              () => {
-                if (topicoInput.trim() && novosTopicos.length < MAX_TOPICOS) {
-                  setNovosTopicos((prev) => [...prev, { nome: topicoInput.trim(), estudado: false }]);
-                  setTopicoInput('');
-                }
-              },
-              novosTopicos,
-              setNovosTopicos
-            )}
-
-            <TouchableOpacity style={styles.modalConfirmar} onPress={adicionarMateria}>
-              <Text style={styles.modalConfirmarText}>Adicionar</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      <Modal
+      <EditMateriaModal
         visible={editModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEditModalVisible(false)}>
-          <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitulo}>Editar {selectedMateria?.nome || 'Matéria'}</Text>
-              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                <Text style={{ color: '#5a6a7a', fontSize: 20 }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalLabel}>Nome da matéria *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Ex: Matemática, Física..."
-              placeholderTextColor="#5a6a7a"
-              value={editNome}
-              onChangeText={setEditNome}
-              selectionColor="#6c8ebf"
-            />
-
-            {renderEditTopicoInput()}
-
-            <TouchableOpacity
-              style={[styles.modalConfirmar, { backgroundColor: '#6c9fd4' }]}
-              onPress={salvarEdicao}
-            >
-              <Text style={styles.modalConfirmarText}>Salvar Alterações</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.excluirBtn}
-              onPress={() =>
-                Alert.alert('Confirmar exclusão', 'Esta matéria será removida de todas as seções.', [
-                  { text: 'Cancelar', style: 'cancel' },
-                  {
-                    text: 'Excluir',
-                    style: 'destructive',
-                    onPress: () => deleteMateria(selectedMateria.id),
-                  },
-                ])
-              }
-            >
-              <Text style={styles.excluirBtnText}>Excluir Matéria</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
+        onClose={() => setEditModalVisible(false)}
+        materia={selectedMateria}
+        onSave={salvarEdicao}
+        onDelete={deleteMateria}
+        editNome={editNome}
+        setEditNome={setEditNome}
+        editTopicos={editTopicos}
+        setEditTopicos={setEditTopicos}
+        editTopicoInput={editTopicoInput}
+        setEditTopicoInput={setEditTopicoInput}
+        MAX_TOPICOS={MAX_TOPICOS}
+      />
     </View>
   );
 }

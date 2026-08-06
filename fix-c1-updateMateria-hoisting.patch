@@ -1,0 +1,41 @@
+--- a/src/screens/HomeScreen.js
++++ b/src/screens/HomeScreen.js
+@@ -144,32 +144,32 @@ export default function HomeScreen({ navigation }) {
+     setEditTopicoInput('');
+     setEditModalVisible(true);
+   };
+ 
++  const updateMateria = (id, updates) => {
++    const updateFn = (prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m));
++    setRevisados(updateFn);
++    setHistorico(updateFn);
++    setFixados(updateFn);
++  };
++
+   const salvarEdicao = async () => {
+     if (!editNome.trim()) {
+       Alert.alert('Atenção', 'Digite o nome da matéria!');
+       return;
+     }
+     const topicosValidos = editTopicos.filter((t) => t.nome.trim());
+     await atualizarMateria(userId, selectedMateria.id, {
+       nome: editNome.trim(),
+       topicos: topicosValidos,
+     });
+-    updateMateria(selectedMateria.id, {
++    updateMateria(selectedMateria.id, {
+       nome: editNome.trim(),
+       topicos: topicosValidos,
+     });
+     setEditModalVisible(false);
+     setSelectedMateria(null);
+   };
+ 
+-  const updateMateria = (id, updates) => {
+-    const updateFn = (prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m));
+-    setRevisados(updateFn);
+-    setHistorico(updateFn);
+-    setFixados(updateFn);
+-  };
+-
+   const deleteMateria = async (id) => {

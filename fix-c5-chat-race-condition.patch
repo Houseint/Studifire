@@ -1,0 +1,40 @@
+--- a/src/screens/ChatScreen.js
++++ b/src/screens/ChatScreen.js
+@@ -32,15 +32,14 @@ export default function ChatScreen({ navigation }) {
+   const reqTokenRef = useRef(0);
+   const mountedRef = useRef(true);
+ 
+-  useEffect(() => {
+-    mountedRef.current = true;
+-    return () => {
+-      mountedRef.current = false;
+-      reqTokenRef.current += 1;
+-    };
+-  }, []);
+-
+   const carregarConversa = useCallback(async (id) => {
+     if (!userId) return;
++    const token = ++reqTokenRef.current;
++    mountedRef.current = true;
+     setConversaId(id);
+     setStatus('conectando');
+     const msgs = await carregarMensagens(userId, id);
+-    if (!mountedRef.current || token !== reqTokenRef.current) return;
++    if (!mountedRef.current || token !== reqTokenRef.current) {
++      return;
++    }
+     if (msgs.length === 0) {
+       setMensagens([{
+         _id: 'welcome',
+@@ -50,7 +49,11 @@ export default function ChatScreen({ navigation }) {
+     setStatus('online');
+     tituloSalvoRef.current = msgs.length > 0;
+   }, [userId]);
++
++  useEffect(() => {
++    mountedRef.current = true;
++    return () => { mountedRef.current = false; };
++  }, []);
+ 
+   const novaConversa = useCallback(async () => {
+EOF

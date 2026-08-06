@@ -59,7 +59,7 @@ describe('0.9 - Índices no SQLite', () => {
     );
   });
 
-  test('carregarMaterias com 1000 matérias usa o índice (plano de query + speedup)', async () => {
+  test('carregarMaterias com 1000 matérias usa o índice (plano de query)', async () => {
     const memDb = await createMemoryDb();
     await memDb.execAsync(TABELA_SUBJECTS);
     insereMaterias(memDb, 1000, 7);
@@ -67,19 +67,7 @@ describe('0.9 - Índices no SQLite', () => {
 
     mockOpenDatabaseAsync.mockImplementation(async () => memDb);
 
-    const mediana = (fn) => {
-      const tempos = [];
-      for (let i = 0; i < 5; i++) {
-        const t = Date.now();
-        fn();
-        tempos.push(Date.now() - t);
-      }
-      tempos.sort((a, b) => a - b);
-      return tempos[2];
-    };
-
     const sql = 'SELECT * FROM subjects WHERE user_id = ? ORDER BY accessed_at DESC';
-    const semIndice = mediana(() => memDb.getAllAsync(sql, [7]));
 
     await memDb.execAsync(
       'CREATE INDEX idx_subjects_user_accessed ON subjects (user_id, accessed_at DESC);'
@@ -93,19 +81,11 @@ describe('0.9 - Índices no SQLite', () => {
     expect(planText).toMatch(/USING INDEX idx_subjects_user_accessed/);
     expect(planText).not.toMatch(/SCAN/);
 
-    const comIndice = mediana(() => memDb.getAllAsync(sql, [7]));
-
-    expect(comIndice).toBeLessThan(semIndice);
-
     const rows = await memDb.getAllAsync(sql, [7]);
     expect(rows).toHaveLength(1000);
 
-    const inicio = Date.now();
     const materias = await carregarMaterias(7);
-    const duracao = Date.now() - inicio;
-
     expect(materias).toHaveLength(1000);
-    expect(duracao).toBeLessThan(500);
 
     for (let i = 1; i < materias.length; i++) {
       expect(

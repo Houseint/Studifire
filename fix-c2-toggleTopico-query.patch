@@ -1,0 +1,59 @@
+--- a/src/screens/HomeScreen.js
++++ b/src/screens/HomeScreen.js
+@@ -21,6 +21,7 @@ import {
+   carregarMaterias,
+   criarMateria,
+   atualizarMateria,
++  getMateriaById,
+   deletarMateria,
+   toggleFixada as toggleFixadaDb,
+ } from '../services/subjectsDb';
+@@ -187,27 +188,24 @@ export default function HomeScreen({ navigation }) {
+   };
+ 
+   const toggleTopicoEstudado = async (materiaId, topicoIndex) => {
+-    const toggleFn = (prev) =>
+-      prev.map((m) => {
+-        if (m.id !== materiaId) return m;
+-        const novosTopicos = m.topicos.map((t, i) =>
+-          i === topicoIndex ? { ...t, estudado: !t.estudado } : t
+-        );
+-        return { ...m, topicos: novosTopicos };
+-      });
+-    const materia = [...revisados, ...fixados].find((m) => m.id === materiaId);
+-    if (materia) {
+-      const novosTopicos = materia.topicos.map((t, i) =>
+-        i === topicoIndex ? { ...t, estudado: !t.estudado } : t
+-      );
+-      try {
+-        await atualizarMateria(userId, materiaId, { topicos: novosTopicos });
+-      } catch (e) {
+-        console.error('Erro ao atualizar tópico:', e);
+-        return;
+-      }
+-    }
+-    setRevisados(toggleFn);
+-    setHistorico(toggleFn);
+-    setFixados(toggleFn);
++    const updateFn = (prev) =>
++      prev.map((m) => {
++        if (m.id !== materiaId) return m;
++        const novosTopicos = m.topicos.map((t, i) =>
++          i === topicoIndex ? { ...t, estudado: !t.estudado } : t
++        );
++        return { ...m, topicos: novosTopicos };
++      });
++
++    try {
++      const materiaAtualizada = await getMateriaById(userId, materiaId);
++      if (!materiaAtualizada) return;
++      await atualizarMateria(userId, materiaId, { topicos: materiaAtualizada.topicos });
++    } catch (e) {
++      console.error('Erro ao atualizar tópico:', e);
++      return;
++    }
++
++    setRevisados(updateFn);
++    setHistorico(updateFn);
++    setFixados(updateFn);
+   };

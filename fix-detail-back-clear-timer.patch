@@ -1,0 +1,29 @@
+--- a/src/screens/DetailScreen.js
++++ b/src/screens/DetailScreen.js
+@@ -91,7 +91,8 @@ export default function DetailScreen({ route, navigation }) {
+         [
+           { text: 'Sair sem salvar', style: 'destructive', onPress: () => navigation.goBack() },
+           { text: 'Salvar e sair', onPress: async () => { await stopStudy(); navigation.goBack(); } },
+         ]
+       );
+     } else {
+       navigation.goBack();
+     }
+   };
+ 
++  const clearTimerAndGoBack = () => { clearTimer(); navigation.goBack(); };
++
+   const handleBack = () => {
+     if (studying) {
+       Alert.alert(
+@@ -101,7 +102,7 @@ export default function DetailScreen({ route, navigation }) {
+           { text: 'Salvar e sair', onPress: async () => { await stopStudy(); navigation.goBack(); } },
+         ]
+       );
+     } else {
+-      navigation.goBack();
++      clearTimerAndGoBack();
+     }
+   };
+ 
+   if (!materia) {
