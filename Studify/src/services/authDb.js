@@ -1,6 +1,7 @@
 import * as SQLite from "expo-sqlite";
 import * as Crypto from "expo-crypto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createServiceError } from "./errors";
 
 const DB_NAME = process.env.EXPO_PUBLIC_DB_NAME || "studify.db";
 const SESSION_KEY = process.env.EXPO_PUBLIC_SESSION_KEY || "studify_session";
@@ -10,51 +11,64 @@ let initialized = false;
 
 async function getDb() {
   if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync(DB_NAME);
+    // Se a abertura falhar, reseta a promise para que a próxima chamada
+    // tente novamente (auto-recuperação) em vez de falhar para sempre.
+    dbPromise = SQLite.openDatabaseAsync(DB_NAME).catch((error) => {
+      dbPromise = null;
+      throw error;
+    });
   }
   const db = await dbPromise;
 
   if (!initialized) {
-    await db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        senha_hash TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        avatar TEXT
-      );
-    `);
+    try {
+      await db.execAsync(`
+        PRAGMA journal_mode = WAL;
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT NOT NULL UNIQUE,
+          senha_hash TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          avatar TEXT
+        );
+      `);
 
-    const columns = await db.getAllAsync("PRAGMA table_info(users);");
-    const hasSenhaHash = columns.some((c) => c.name === "senha_hash");
-    const hasSenhaPlain = columns.some((c) => c.name === "senha");
-    const hasAvatar = columns.some((c) => c.name === "avatar");
+      const columns = await db.getAllAsync("PRAGMA table_info(users);");
+      const hasSenhaHash = columns.some((c) => c.name === "senha_hash");
+      const hasSenhaPlain = columns.some((c) => c.name === "senha");
+      const hasAvatar = columns.some((c) => c.name === "avatar");
 
-    if (!hasSenhaHash) {
-      await db.execAsync("ALTER TABLE users ADD COLUMN senha_hash TEXT;");
-    }
+      if (!hasSenhaHash) {
+        await db.execAsync("ALTER TABLE users ADD COLUMN senha_hash TEXT;");
+      }
 
-    if (hasSenhaPlain) {
-      const users = await db.getAllAsync(
-        'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \'\';',
-      );
-      for (const user of users) {
-        if (user.senha) {
-          const hash = await hashPassword(user.senha);
-          await db.runAsync("UPDATE users SET senha_hash = ? WHERE id = ?;", [
-            hash,
-            user.id,
-          ]);
+      if (hasSenhaPlain) {
+        const users = await db.getAllAsync(
+          'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \'\';',
+        );
+        for (const user of users) {
+          if (user.senha) {
+            const hash = await hashPassword(user.senha);
+            await db.runAsync("UPDATE users SET senha_hash = ? WHERE id = ?;", [
+              hash,
+              user.id,
+            ]);
+          }
         }
       }
-    }
 
-    if (!hasAvatar) {
-      await db.execAsync("ALTER TABLE users ADD COLUMN avatar TEXT;");
-    }
+      if (!hasAvatar) {
+        await db.execAsync("ALTER TABLE users ADD COLUMN avatar TEXT;");
+      }
 
-    initialized = true;
+      // Só marca como inicializado se TODAS as migrações concluírem.
+      initialized = true;
+    } catch (error) {
+      // Migração falhou: reseta para permitir nova tentativa na próxima
+      // chamada, sem deixar o schema em estado inconsistente.
+      dbPromise = null;
+      throw error;
+    }
   }
 
   return db;
@@ -102,28 +116,63 @@ export function isLegacyHash(storedHash) {
 }
 
 export async function registerUser(email, senha) {
-  const db = await getDb();
+  let db;
+  try {
+    db = await getDb();
+  } catch (error) {
+    throw createServiceError(
+      'DB_UNAVAILABLE',
+      'Não foi possível conectar ao banco de dados.',
+      error,
+    );
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
 
+  // Fast-path: evita hashear a senha quando o e-mail já existe.
   const existing = await db.getFirstAsync(
     "SELECT id FROM users WHERE email = ? LIMIT 1;",
     [normalizedEmail],
   );
-
   if (existing) {
-    throw new Error("EMAIL_EXISTS");
+    throw createServiceError('EMAIL_EXISTS', 'Este e-mail já está cadastrado.');
   }
 
   const senhaHash = await hashPassword(senha);
 
-  await db.runAsync(
-    "INSERT INTO users (email, senha_hash, created_at) VALUES (?, ?, ?);",
-    [normalizedEmail, senhaHash, new Date().toISOString()],
-  );
+  // INSERT OR IGNORE garante atomicidade: mesmo com duas requisições
+  // simultâneas do mesmo e-mail, apenas uma insere. Se `changes` for 0,
+  // a constraint UNIQUE impediu a inserção (e-mail duplicado).
+  let result;
+  try {
+    result = await db.runAsync(
+      "INSERT OR IGNORE INTO users (email, senha_hash, created_at) VALUES (?, ?, ?);",
+      [normalizedEmail, senhaHash, new Date().toISOString()],
+    );
+  } catch (error) {
+    throw createServiceError(
+      'DB_ERROR',
+      'Não foi possível salvar o usuário no banco de dados.',
+      error,
+    );
+  }
+
+  if (!result.changes) {
+    throw createServiceError('EMAIL_EXISTS', 'Este e-mail já está cadastrado.');
+  }
 }
 
 export async function loginUser(email, senha) {
-  const db = await getDb();
+  let db;
+  try {
+    db = await getDb();
+  } catch (error) {
+    throw createServiceError(
+      'DB_UNAVAILABLE',
+      'Não foi possível conectar ao banco de dados.',
+      error,
+    );
+  }
   const normalizedEmail = email.trim().toLowerCase();
 
   const user = await db.getFirstAsync(

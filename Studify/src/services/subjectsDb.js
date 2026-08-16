@@ -7,67 +7,80 @@ let initialized = false;
 
 async function getDb() {
   if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync(DB_NAME);
+    // Se a abertura falhar, reseta a promise para que a próxima chamada
+    // tente novamente (auto-recuperação) em vez de falhar para sempre.
+    dbPromise = SQLite.openDatabaseAsync(DB_NAME).catch((error) => {
+      dbPromise = null;
+      throw error;
+    });
   }
   const db = await dbPromise;
 
   if (!initialized) {
-    await db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS subjects (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        topicos TEXT NOT NULL DEFAULT '[]',
-        fixada INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        accessed_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        subject_id INTEGER NOT NULL,
-        started_at TEXT NOT NULL,
-        duration_minutes INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
-      );
-      CREATE TABLE IF NOT EXISTS chat_conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        titulo TEXT NOT NULL DEFAULT 'Nova conversa',
-        created_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        conversation_id INTEGER NOT NULL,
-        role TEXT NOT NULL,
-        content TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
-      );
-    `);
+    try {
+      await db.execAsync(`
+        PRAGMA journal_mode = WAL;
+        CREATE TABLE IF NOT EXISTS subjects (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nome TEXT NOT NULL,
+          topicos TEXT NOT NULL DEFAULT '[]',
+          fixada INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          accessed_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sessions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          subject_id INTEGER NOT NULL,
+          started_at TEXT NOT NULL,
+          duration_minutes INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS chat_conversations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          titulo TEXT NOT NULL DEFAULT 'Nova conversa',
+          created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS chat_messages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL,
+          role TEXT NOT NULL,
+          content TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+        );
+      `);
 
-    const subCols = await db.getAllAsync("PRAGMA table_info(subjects)");
-    if (!subCols.some((c) => c.name === 'user_id')) {
-      await db.execAsync("ALTER TABLE subjects ADD COLUMN user_id INTEGER DEFAULT 1;");
+      const subCols = await db.getAllAsync("PRAGMA table_info(subjects)");
+      if (!subCols.some((c) => c.name === 'user_id')) {
+        await db.execAsync("ALTER TABLE subjects ADD COLUMN user_id INTEGER DEFAULT 1;");
+      }
+
+      const sessCols = await db.getAllAsync("PRAGMA table_info(sessions)");
+      if (!sessCols.some((c) => c.name === 'user_id')) {
+        await db.execAsync("ALTER TABLE sessions ADD COLUMN user_id INTEGER DEFAULT 1;");
+      }
+
+      const chatCols = await db.getAllAsync("PRAGMA table_info(chat_conversations)");
+      if (!chatCols.some((c) => c.name === 'user_id')) {
+        await db.execAsync("ALTER TABLE chat_conversations ADD COLUMN user_id INTEGER DEFAULT 1;");
+      }
+
+      await db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_subjects_user_accessed ON subjects (user_id, accessed_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_sessions_user_started ON sessions (user_id, started_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_sessions_subject ON sessions (subject_id);
+        CREATE INDEX IF NOT EXISTS idx_chat_conversations_user ON chat_conversations (user_id, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages (conversation_id, created_at ASC);
+      `);
+
+      // Só marca como inicializado se TODAS as migrações concluírem.
+      initialized = true;
+    } catch (error) {
+      // Migração falhou: reseta para permitir nova tentativa na próxima
+      // chamada, sem deixar o schema em estado inconsistente.
+      dbPromise = null;
+      throw error;
     }
-
-    const sessCols = await db.getAllAsync("PRAGMA table_info(sessions)");
-    if (!sessCols.some((c) => c.name === 'user_id')) {
-      await db.execAsync("ALTER TABLE sessions ADD COLUMN user_id INTEGER DEFAULT 1;");
-    }
-
-    const chatCols = await db.getAllAsync("PRAGMA table_info(chat_conversations)");
-    if (!chatCols.some((c) => c.name === 'user_id')) {
-      await db.execAsync("ALTER TABLE chat_conversations ADD COLUMN user_id INTEGER DEFAULT 1;");
-    }
-
-    await db.execAsync(`
-      CREATE INDEX IF NOT EXISTS idx_subjects_user_accessed ON subjects (user_id, accessed_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_sessions_user_started ON sessions (user_id, started_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_sessions_subject ON sessions (subject_id);
-      CREATE INDEX IF NOT EXISTS idx_chat_conversations_user ON chat_conversations (user_id, created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages (conversation_id, created_at ASC);
-    `);
-
-    initialized = true;
   }
 
   return db;

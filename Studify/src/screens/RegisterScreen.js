@@ -45,10 +45,14 @@ export default function StudifyRegisterScreen({ navigation }) {
       Alert.alert('Sucesso', 'Conta criada com sucesso!');
       navigation.navigate('Login');
     } catch (error) {
-      if (error.message === 'EMAIL_EXISTS') {
+      const code = error?.code || error?.message;
+      if (code === 'EMAIL_EXISTS') {
         Alert.alert('Atenção', 'Este e-mail já está cadastrado.');
+      } else if (code === 'DB_UNAVAILABLE') {
+        Alert.alert('Erro', 'Não foi possível conectar ao banco de dados. Tente novamente.');
       } else {
-        Alert.alert('Erro', 'Não foi possível cadastrar agora.');
+        console.error('Erro ao cadastrar usuário:', error);
+        Alert.alert('Erro', 'Não foi possível cadastrar agora. Tente novamente.');
       }
     } finally {
       setLoading(false);
