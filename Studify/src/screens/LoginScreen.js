@@ -28,6 +28,16 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
+    // Validação de e-mail: deve conter @ e . e ter texto antes do @
+    const emailValido =
+      email.includes('@') &&
+      email.includes('.') &&
+      email.split('@')[0].trim().length > 0;
+    if (!emailValido) {
+      Alert.alert('Atenção', 'Digite um e-mail válido (ex: nome@exemplo.com).');
+      return;
+    }
+
     try {
       setLoading(true);
       const user = await loginUser(email, senha);

@@ -9,6 +9,37 @@ const SESSION_KEY = process.env.EXPO_PUBLIC_SESSION_KEY || "studify_session";
 let dbPromise = null;
 let initialized = false;
 
+// Base64 encoding helper (expo-crypto doesn't provide this in SDK 53+)
+function base64Encode(bytes) {
+  // Convert Uint8Array to binary string then to base64
+  const binary = String.fromCharCode(...bytes);
+  // Use btoa if available (web), otherwise implement manually
+  if (typeof btoa !== 'undefined') {
+    return btoa(binary);
+  }
+  // Manual base64 encoding for React Native
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let result = '';
+  for (let i = 0; i < binary.length; i += 3) {
+    const b1 = binary.charCodeAt(i);
+    const b2 = binary.charCodeAt(i + 1) || 0;
+    const b3 = binary.charCodeAt(i + 2) || 0;
+    const triplet = (b1 << 16) | (b2 << 8) | b3;
+    result += chars[(triplet >> 18) & 0x3F];
+    result += chars[(triplet >> 12) & 0x3F];
+    result += chars[(triplet >> 6) & 0x3F];
+    result += chars[triplet & 0x3F];
+  }
+  // Handle padding
+  const mod = binary.length % 3;
+  if (mod === 1) {
+    return result.slice(0, -2) + '==';
+  } else if (mod === 2) {
+    return result.slice(0, -1) + '=';
+  }
+  return result;
+}
+
 async function getDb() {
   if (!dbPromise) {
     // Se a abertura falhar, reseta a promise para que a próxima chamada
@@ -78,7 +109,7 @@ const SALT_BYTES = 16;
 
 async function gerarSalt() {
   const bytes = await Crypto.getRandomBytesAsync(SALT_BYTES);
-  return Crypto.encoding.Base64.encode(bytes);
+  return base64Encode(bytes);
 }
 
 async function createHashComSalt(salt, senha) {

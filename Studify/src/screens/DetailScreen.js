@@ -72,11 +72,21 @@ export default function DetailScreen({ route, navigation }) {
 
   const stopStudy = async () => {
     clearTimer();
-    const minutos = Math.round(elapsedSeconds / 60);
-    if (minutos > 0 && userId && id) {
+    // Usa Math.floor para contar apenas minutos COMPLETOS
+    // Ex: 59s = 0min, 60s = 1min, 119s = 1min, 120s = 2min
+    const minutos = Math.floor(elapsedSeconds / 60);
+    // Salva se estudou pelo menos 1 minuto completo
+    if (minutos >= 1 && userId && id) {
       await registrarSessao(userId, id, minutos);
       const s = await carregarSessoesPorMateria(userId, id);
       setSessoes(s);
+    } else if (elapsedSeconds > 0 && userId && id) {
+      // Feedback: estudou menos de 1 minuto
+      Alert.alert(
+        'Tempo muito curto',
+        'A sessão precisa ter pelo menos 1 minuto para ser registrada.',
+        [{ text: 'OK' }]
+      );
     }
     setStudying(false);
     setPaused(false);

@@ -29,6 +29,16 @@ export default function StudifyRegisterScreen({ navigation }) {
       return;
     }
 
+    // Validação de e-mail: deve conter @ e . e ter texto antes do @
+    const emailValido =
+      email.includes('@') &&
+      email.includes('.') &&
+      email.split('@')[0].trim().length > 0;
+    if (!emailValido) {
+      Alert.alert('Atenção', 'Digite um e-mail válido (ex: nome@exemplo.com).');
+      return;
+    }
+
     if (senha.length < 6) {
       Alert.alert('Atenção', 'A senha deve ter pelo menos 6 caracteres.');
       return;

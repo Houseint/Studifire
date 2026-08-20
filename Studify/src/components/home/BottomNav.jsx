@@ -16,8 +16,8 @@ const BottomNav = ({ navigation, onAddPress }) => (
       <Text style={styles.navPlusText}>+</Text>
       <Text style={styles.navLabel}>Adicionar</Text>
     </TouchableOpacity>
-    <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Historic')}>
-      <Text style={styles.navIcon}>↗</Text>
+    <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Progress')}>
+      <Text style={styles.navIcon}>📈</Text>
       <Text style={styles.navLabel}>Progresso</Text>
     </TouchableOpacity>
     <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Profile')}>

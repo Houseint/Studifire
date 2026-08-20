@@ -48,6 +48,30 @@ async function getDb() {
           created_at TEXT NOT NULL,
           FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
         );
+        -- Novas tabelas para Profile
+        CREATE TABLE IF NOT EXISTS user_settings (
+          user_id INTEGER PRIMARY KEY,
+          weekly_goal_minutes INTEGER NOT NULL DEFAULT 300, -- 5h default
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS badge_definitions (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT NOT NULL,
+          icon TEXT NOT NULL,
+          color TEXT NOT NULL,
+          trigger_type TEXT NOT NULL, -- 'total_minutes', 'streak_days', 'topics_completed', 'subjects_count', 'sessions_count'
+          trigger_value INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS user_badges (
+          user_id INTEGER NOT NULL,
+          badge_id TEXT NOT NULL,
+          unlocked_at TEXT NOT NULL,
+          PRIMARY KEY (user_id, badge_id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (badge_id) REFERENCES badge_definitions(id) ON DELETE CASCADE
+        );
       `);
 
       const subCols = await db.getAllAsync("PRAGMA table_info(subjects)");
@@ -71,7 +95,29 @@ async function getDb() {
         CREATE INDEX IF NOT EXISTS idx_sessions_subject ON sessions (subject_id);
         CREATE INDEX IF NOT EXISTS idx_chat_conversations_user ON chat_conversations (user_id, created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages (conversation_id, created_at ASC);
+        CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges (user_id);
       `);
+
+      // Seed badge definitions
+      const badgeCount = await db.getFirstAsync('SELECT COUNT(*) as count FROM badge_definitions');
+      if (badgeCount.count === 0) {
+        const badges = [
+          ['first_session', 'Primeiros Passos', 'Complete sua primeira sessão de estudos', '👣', '#8E97C4', 'sessions_count', 1],
+          ['one_hour', 'Uma Hora', 'Acumule 60 minutos de estudo', '⏱', '#6F52FF', 'total_minutes', 60],
+          ['week_active', 'Semana Ativa', 'Estude em 7 dias diferentes', '📅', '#4A90E2', 'sessions_count', 7],
+          ['streak_7', 'Streak 7 Dias', 'Mantenha 7 dias consecutivos de estudo', '🔥', '#FFAA00', 'streak_days', 7],
+          ['streak_30', 'Streak 30 Dias', 'Mantenha 30 dias consecutivos de estudo', '🔥✨', '#FF4444', 'streak_days', 30],
+          ['collector', 'Colecionador', 'Crie 10 matérias', '📚', '#6F52FF', 'subjects_count', 10],
+          ['topic_master', 'Mestre dos Tópicos', 'Conclua 50 tópicos', '✅', '#4CAF50', 'topics_completed', 50],
+          ['marathoner', 'Maratonista', 'Estude 10 horas em uma semana', '🏃', '#FFD700', 'weekly_minutes', 600],
+        ];
+        for (const b of badges) {
+          await db.runAsync(
+            'INSERT INTO badge_definitions (id, name, description, icon, color, trigger_type, trigger_value) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            b
+          );
+        }
+      }
 
       // Só marca como inicializado se TODAS as migrações concluírem.
       initialized = true;
@@ -280,6 +326,224 @@ export async function limparConversasAntigas(userId, limite = 20) {
       await deletarConversa(userId, todas[i].id);
     }
   }
+}
+
+// ===== NOVAS FUNCTIONS PARA PROFILE =====
+
+// User Settings
+export async function getUserSettings(userId) {
+  const db = await getDb();
+  let settings = await db.getFirstAsync(
+    'SELECT * FROM user_settings WHERE user_id = ?',
+    [userId]
+  );
+  if (!settings) {
+    // Cria settings padrão
+    const now = new Date().toISOString();
+    await db.runAsync(
+      'INSERT INTO user_settings (user_id, weekly_goal_minutes, updated_at) VALUES (?, ?, ?)',
+      [userId, 300, now]
+    );
+    settings = { user_id: userId, weekly_goal_minutes: 300, updated_at: now };
+  }
+  return settings;
+}
+
+export async function updateWeeklyGoal(userId, minutes) {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO user_settings (user_id, weekly_goal_minutes, updated_at) VALUES (?, ?, ?)',
+    [userId, minutes, now]
+  );
+  return { weekly_goal_minutes: minutes };
+}
+
+// Badges
+export async function getBadgeDefinitions() {
+  const db = await getDb();
+  return db.getAllAsync('SELECT * FROM badge_definitions');
+}
+
+export async function getUserBadges(userId) {
+  const db = await getDb();
+  return db.getAllAsync(
+    `SELECT ub.*, bd.name, bd.description, bd.icon, bd.color, bd.trigger_type, bd.trigger_value
+     FROM user_badges ub
+     JOIN badge_definitions bd ON ub.badge_id = bd.id
+     WHERE ub.user_id = ?
+     ORDER BY ub.unlocked_at DESC`,
+    [userId]
+  );
+}
+
+export async function checkAndAwardBadges(userId) {
+  const db = await getDb();
+  
+  // Busca stats atuais do usuário
+  const materias = await carregarMaterias(userId);
+  const sessoes = await carregarHistorico(userId);
+  
+  const totalMinutos = sessoes.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+  const totalTopicos = materias.reduce((acc, m) => acc + (m.topicos?.filter(t => t.estudado).length || 0), 0);
+  const totalMaterias = materias.length;
+  const totalSessoes = sessoes.length;
+  
+  // Calcula streak
+  const datasUnicas = [...new Set(sessoes.map(s => new Date(s.started_at).toDateString()))]
+    .map(d => new Date(d)).sort((a, b) => b - a);
+  let streak = 0;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  for (let i = 0; i < datasUnicas.length; i++) {
+    const esperado = new Date(hoje); esperado.setDate(hoje.getDate() - i);
+    if (datasUnicas[i].toDateString() === esperado.toDateString()) streak++;
+    else break;
+  }
+  
+  // Calcula minutos esta semana
+  const inicioSemana = new Date(); 
+  inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+  inicioSemana.setHours(0,0,0,0);
+  const minutosSemana = sessoes
+    .filter(s => new Date(s.started_at) >= inicioSemana)
+    .reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+  
+  const stats = {
+    total_minutes: totalMinutos,
+    topics_completed: totalTopicos,
+    subjects_count: totalMaterias,
+    sessions_count: totalSessoes,
+    streak_days: streak,
+    weekly_minutes: minutosSemana,
+  };
+  
+  // Busca badges não desbloqueados
+  const allBadges = await getBadgeDefinitions();
+  const userBadges = await getUserBadges(userId);
+  const unlockedIds = new Set(userBadges.map(b => b.badge_id));
+  
+  const newlyUnlocked = [];
+  const now = new Date().toISOString();
+  
+  for (const badge of allBadges) {
+    if (unlockedIds.has(badge.id)) continue;
+    
+    let earned = false;
+    switch (badge.trigger_type) {
+      case 'total_minutes': earned = stats.total_minutes >= badge.trigger_value; break;
+      case 'topics_completed': earned = stats.topics_completed >= badge.trigger_value; break;
+      case 'subjects_count': earned = stats.subjects_count >= badge.trigger_value; break;
+      case 'sessions_count': earned = stats.sessions_count >= badge.trigger_value; break;
+      case 'streak_days': earned = stats.streak_days >= badge.trigger_value; break;
+      case 'weekly_minutes': earned = stats.weekly_minutes >= badge.trigger_value; break;
+    }
+    
+    if (earned) {
+      await db.runAsync(
+        'INSERT INTO user_badges (user_id, badge_id, unlocked_at) VALUES (?, ?, ?)',
+        [userId, badge.id, now]
+      );
+      newlyUnlocked.push(badge);
+    }
+  }
+  
+  return newlyUnlocked;
+}
+
+// Métricas para Profile
+export async function getProfileStats(userId) {
+  const db = await getDb();
+  const materias = await carregarMaterias(userId);
+  const sessoes = await carregarHistorico(userId);
+  
+  const totalMinutos = sessoes.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+  const totalHoras = Math.round(totalMinutos / 60 * 10) / 10;
+  
+  const totalTopicos = materias.reduce((acc, m) => acc + (m.topicos?.length || 0), 0);
+  const topicosConcluidos = materias.reduce((acc, m) => acc + (m.topicos?.filter(t => t.estudado).length || 0), 0);
+  
+  // Matéria mais estudada (por minutos)
+  let materiaTop = null;
+  let maxMinutos = 0;
+  for (const m of materias) {
+    const mins = sessoes
+      .filter(s => s.subject_id === m.id)
+      .reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+    if (mins > maxMinutos) {
+      maxMinutos = mins;
+      materiaTop = { nome: m.nome, minutos: mins };
+    }
+  }
+  
+  // Melhor dia da semana
+  const diaMap = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
+  const diaStats = {};
+  for (const s of sessoes) {
+    const dia = new Date(s.started_at).getDay();
+    diaStats[dia] = (diaStats[dia] || 0) + (s.duration_minutes || 0);
+  }
+  let melhorDia = null;
+  let maxDiaMin = 0;
+  for (const [dia, mins] of Object.entries(diaStats)) {
+    if (mins > maxDiaMin) {
+      maxDiaMin = mins;
+      melhorDia = diaMap[dia];
+    }
+  }
+  
+  // Média por sessão
+  const mediaSessao = sessoes.length > 0 
+    ? Math.round(totalMinutos / sessoes.length) 
+    : 0;
+  
+  // Streak
+  const datasUnicas = [...new Set(sessoes.map(s => new Date(s.started_at).toDateString()))]
+    .map(d => new Date(d)).sort((a, b) => b - a);
+  let streak = 0;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  for (let i = 0; i < datasUnicas.length; i++) {
+    const esperado = new Date(hoje); esperado.setDate(hoje.getDate() - i);
+    if (datasUnicas[i].toDateString() === esperado.toDateString()) streak++;
+    else break;
+  }
+  
+  // Minutos esta semana
+  const inicioSemana = new Date(); 
+  inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+  inicioSemana.setHours(0,0,0,0);
+  const minutosSemana = sessoes
+    .filter(s => new Date(s.started_at) >= inicioSemana)
+    .reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+  
+  return {
+    totalHoras,
+    totalMinutos,
+    totalTopicos,
+    topicosConcluidos,
+    totalMaterias: materias.length,
+    totalSessoes: sessoes.length,
+    materiaTop,
+    melhorDia,
+    mediaSessao,
+    streak,
+    minutosSemana,
+  };
+}
+
+// Meta semanal progress
+export async function getWeeklyGoalProgress(userId) {
+  const settings = await getUserSettings(userId);
+  const stats = await getProfileStats(userId);
+  const goal = settings.weekly_goal_minutes;
+  const current = stats.minutosSemana;
+  const percent = goal > 0 ? Math.min(Math.round((current / goal) * 100), 100) : 0;
+  return {
+    goalMinutes: goal,
+    currentMinutes: current,
+    percent,
+    goalHours: Math.round(goal / 60 * 10) / 10,
+    currentHours: Math.round(current / 60 * 10) / 10,
+  };
 }
 
 function parseRow(row) {
