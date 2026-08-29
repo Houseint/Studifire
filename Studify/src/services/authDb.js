@@ -1,13 +1,9 @@
-import * as SQLite from "expo-sqlite";
 import * as Crypto from "expo-crypto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createServiceError } from "./errors";
+import { getDb } from "../core/db/client";
 
-const DB_NAME = process.env.EXPO_PUBLIC_DB_NAME || "studify.db";
 const SESSION_KEY = process.env.EXPO_PUBLIC_SESSION_KEY || "studify_session";
-
-let dbPromise = null;
-let initialized = false;
 
 // Base64 encoding helper (expo-crypto doesn't provide this in SDK 53+)
 function base64Encode(bytes) {
@@ -38,71 +34,6 @@ function base64Encode(bytes) {
     return result.slice(0, -1) + '=';
   }
   return result;
-}
-
-async function getDb() {
-  if (!dbPromise) {
-    // Se a abertura falhar, reseta a promise para que a próxima chamada
-    // tente novamente (auto-recuperação) em vez de falhar para sempre.
-    dbPromise = SQLite.openDatabaseAsync(DB_NAME).catch((error) => {
-      dbPromise = null;
-      throw error;
-    });
-  }
-  const db = await dbPromise;
-
-  if (!initialized) {
-    try {
-      await db.execAsync(`
-        PRAGMA journal_mode = WAL;
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          email TEXT NOT NULL UNIQUE,
-          senha_hash TEXT NOT NULL,
-          created_at TEXT NOT NULL,
-          avatar TEXT
-        );
-      `);
-
-      const columns = await db.getAllAsync("PRAGMA table_info(users);");
-      const hasSenhaHash = columns.some((c) => c.name === "senha_hash");
-      const hasSenhaPlain = columns.some((c) => c.name === "senha");
-      const hasAvatar = columns.some((c) => c.name === "avatar");
-
-      if (!hasSenhaHash) {
-        await db.execAsync("ALTER TABLE users ADD COLUMN senha_hash TEXT;");
-      }
-
-      if (hasSenhaPlain) {
-        const users = await db.getAllAsync(
-          'SELECT id, senha FROM users WHERE senha_hash IS NULL OR senha_hash = \'\';',
-        );
-        for (const user of users) {
-          if (user.senha) {
-            const hash = await hashPassword(user.senha);
-            await db.runAsync("UPDATE users SET senha_hash = ? WHERE id = ?;", [
-              hash,
-              user.id,
-            ]);
-          }
-        }
-      }
-
-      if (!hasAvatar) {
-        await db.execAsync("ALTER TABLE users ADD COLUMN avatar TEXT;");
-      }
-
-      // Só marca como inicializado se TODAS as migrações concluírem.
-      initialized = true;
-    } catch (error) {
-      // Migração falhou: reseta para permitir nova tentativa na próxima
-      // chamada, sem deixar o schema em estado inconsistente.
-      dbPromise = null;
-      throw error;
-    }
-  }
-
-  return db;
 }
 
 const SALT_BYTES = 16;

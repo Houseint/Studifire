@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { calcGlobalStats as calcGlobalStatsShared } from '../../shared/utils/formatTime';
 
 export const pickTheme = (materia) => {
   const THEMES = [
@@ -32,12 +33,7 @@ export const filterRevisados = (revisados, busca) => {
 
 export const getEstaFixada = (fixados, materia) => !!fixados.find((m) => m.id === materia.id);
 
-export const calcGlobalStats = (revisados, fixados) => {
-  const all = [...revisados, ...fixados];
-  const totalTopicos = all.reduce((acc, m) => acc + (m.topicos?.length || 0), 0);
-  const concluidos = all.reduce((acc, m) => acc + (m.topicos?.filter((t) => t.estudado).length || 0), 0);
-  return { totalTopicos, concluidos };
-};
+export const calcGlobalStats = calcGlobalStatsShared;
 
 const TopicoItem = ({ nome, onRemove, styles }) => (
   <View style={styles.topicoChip}>

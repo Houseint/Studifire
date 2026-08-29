@@ -5,7 +5,7 @@ import {
   Modal, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { enviarMensagem } from '../services/aiService';
+import * as AiService from '../services/aiService';
 import { useUserId } from '../hooks/useUserId';
 import {
   criarConversa,
@@ -119,9 +119,14 @@ export default function ChatScreen({ navigation }) {
     setMensagens(msgsAtualizadas);
     setCarregando(true);
 
-    const resposta = await enviarMensagem(
-      msgsAtualizadas.map((m) => ({ role: m.role, text: m.content }))
-    );
+    // Passo 1.1: usa contextual quando disponível, fallback para mock legado (enviarMensagem) em testes
+    const msgsPayload = msgsAtualizadas.map((m) => ({ role: m.role, text: m.content }));
+    let resposta;
+    if (typeof AiService.enviarMensagemContextual === 'function') {
+      resposta = await AiService.enviarMensagemContextual(userId, msgsPayload);
+    } else {
+      resposta = await AiService.enviarMensagem(msgsPayload);
+    }
 
     let assistMsg;
     try {
