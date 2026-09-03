@@ -39,10 +39,14 @@ export async function groqChatCompletion(messages, options = {}) {
     return 'Configure sua chave da API Groq no arquivo .env';
   }
 
-  const { temperature = 0.7, max_tokens = 512, response_format } = options;
+  const { temperature = 0.7, max_tokens = 512, response_format, reasoning_effort, max_completion_tokens } = options;
+
+  // gpt-oss consome tokens de raciocínio oculto -> usa low para não estourar max_tokens em JSON mode
+  const effectiveReasoning = reasoning_effort || (model.includes('gpt-oss') ? 'low' : undefined);
+  const effectiveMax = max_completion_tokens || max_tokens;
 
   // --- Rate limiter hard (nunca paga) ---
-  const estimated = estimateTokens(messages, max_tokens);
+  const estimated = estimateTokens(messages, effectiveMax);
   const check = await canProceed(estimated);
   if (!check.allowed) {
     return `⏳ Limite gratuito da IA atingido. ${check.reason} Se precisar, tente novamente em alguns segundos. Nenhum custo foi gerado.`;
@@ -52,11 +56,12 @@ export async function groqChatCompletion(messages, options = {}) {
     model,
     messages,
     temperature,
-    max_tokens,
+    max_tokens: effectiveMax,
   };
   if (response_format) {
     body.response_format = response_format;
   }
+  if (effectiveReasoning) body.reasoning_effort = effectiveReasoning;
 
   try {
     const resp = await fetch(baseUrl, {

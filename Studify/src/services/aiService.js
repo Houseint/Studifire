@@ -21,6 +21,7 @@ export async function enviarMensagem(mensagens) {
   return groqChatCompletion(messages, {
     temperature: 0.7,
     max_tokens: 512,
+    reasoning_effort: 'low',
   });
 }
 
@@ -58,6 +59,7 @@ export async function enviarMensagemContextual(userId, mensagens) {
   return groqChatCompletion(messages, {
     temperature: 0.7,
     max_tokens: 512,
+    reasoning_effort: 'low',
   });
 }
 
@@ -116,4 +118,119 @@ export async function buildUserContext(userId) {
   );
 
   return linhas.join('\n');
+}
+
+// --- Utils ---
+function normalizeTopico(s) {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * 1.2 Gerador híbrido (C 1,2,3) — gera tópicos complementares com IA.
+ * Exige >=1 tópico existente para contextualizar (trava de UX).
+ * Dedup por normalize, limita ao MAX_TOPICOS (10) e preview editável fora.
+ *
+ * @param {string} nomeMateria
+ * @param {Array<string|{nome:string}>} topicosExistentes
+ * @param {Object} opts
+ * @param {number} [opts.maxTotal=10]
+ * @returns {Promise<{topicos:Array<{nome:string,estudado:boolean}>, raw:string}>}
+ */
+export async function gerarTopicosComplementares(nomeMateria, topicosExistentes = [], opts = {}) {
+  const maxTotal = opts.maxTotal || 10;
+  const existentesNomes = (topicosExistentes || [])
+    .map((t) => (typeof t === 'string' ? t : t?.nome || t?.titulo || ''))
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const existentesSet = new Set(existentesNomes.map(normalizeTopico));
+  const slots = maxTotal - existentesNomes.length;
+  if (slots <= 0) {
+    return { topicos: [], reason: 'limite_atingido', raw: '' };
+  }
+  if (!nomeMateria || nomeMateria.trim().length < 3) {
+    throw new Error('NOME_INVALIDO');
+  }
+  if (existentesNomes.length < 1) {
+    throw new Error('PRECISA_1_TOPICO');
+  }
+
+  const qtd = Math.min(slots, 7);
+  const system = `Você é um curador especialista que quebra matérias em tópicos atômicos e acionáveis para estudo.
+Regras:
+- Gere exatamente ${qtd} tópicos COMPLEMENTARES (não repita nenhum existente).
+- Tópicos curtos (2-5 palavras), específicos, sem numeração, sem repetição, em PT-BR.
+- Evite generalidades; prefira subtópicos acionáveis que um estudante pode marcar como feito em 1 sessão.
+- Retorne APENAS JSON válido no formato {"topicos": ["nome1", "nome2", ...]}.`;
+
+  const user = `Matéria: "${nomeMateria.trim()}"
+Tópicos já existentes: [${existentesNomes.join(', ')}]
+Gere ${qtd} complementares:`;
+
+  let raw = await groqChatCompletion(
+    [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+    { temperature: 0.6, max_tokens: 600, response_format: { type: 'json_object' }, reasoning_effort: 'low' },
+  );
+  if (typeof raw === 'string' && raw.startsWith('Erro na API') && raw.includes('Failed to generate JSON')) {
+    console.warn('[aiService] retry topicos por json_validate_failed');
+    raw = await groqChatCompletion(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { temperature: 0.5, max_tokens: 900, response_format: { type: 'json_object' }, reasoning_effort: 'low' },
+    );
+  }
+
+  // rate limiter guard retorna mensagem com ⏳
+  if (typeof raw === 'string' && raw.startsWith('⏳')) {
+    throw new Error(raw);
+  }
+  if (typeof raw === 'string' && raw.startsWith('Configure')) {
+    throw new Error(raw);
+  }
+  if (typeof raw === 'string' && raw.startsWith('Erro na API')) {
+    throw new Error('Não foi possível gerar tópicos, tente novamente em alguns segundos.');
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_) {
+    // tenta extrair JSON de dentro do texto
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        parsed = JSON.parse(m[0]);
+      } catch (_) {}
+    }
+  }
+
+  let lista = [];
+  if (parsed) {
+    if (Array.isArray(parsed.topicos)) lista = parsed.topicos;
+    else if (Array.isArray(parsed.topics)) lista = parsed.topics;
+    else if (Array.isArray(parsed)) lista = parsed;
+  }
+
+  const filtrados = [];
+  const seen = new Set(existentesSet);
+  for (const item of lista) {
+    const nome = typeof item === 'string' ? item.trim() : (item?.nome || item?.titulo || '').trim();
+    if (!nome || nome.length < 2 || nome.length > 60) continue;
+    const norm = normalizeTopico(nome);
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    filtrados.push({ nome, estudado: false });
+    if (filtrados.length >= qtd) break;
+  }
+
+  return { topicos: filtrados, raw };
 }

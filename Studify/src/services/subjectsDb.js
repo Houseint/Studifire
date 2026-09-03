@@ -414,6 +414,47 @@ export async function getWeeklyGoalProgress(userId) {
   };
 }
 
+// ===== Topic Coach Cache (Detail Study Coach) =====
+function topicKeyFromName(nome) {
+  return (nome || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .slice(0, 80);
+}
+
+export async function getTopicCoachCache(userId, subjectId, topicName) {
+  const db = await getDb();
+  const key = topicKeyFromName(topicName);
+  const row = await db.getFirstAsync(
+    'SELECT payload FROM topic_coach_cache WHERE user_id = ? AND subject_id = ? AND topic_key = ?',
+    [userId, subjectId, key],
+  );
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveTopicCoachCache(userId, subjectId, topicName, payload) {
+  const db = await getDb();
+  const key = topicKeyFromName(topicName);
+  const now = new Date().toISOString();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO topic_coach_cache (user_id, subject_id, topic_key, payload, updated_at) VALUES (?, ?, ?, ?, ?)',
+    [userId, subjectId, key, JSON.stringify(payload), now],
+  );
+  return payload;
+}
+
+export async function clearTopicCoachCache(userId, subjectId) {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM topic_coach_cache WHERE user_id = ? AND subject_id = ?', [userId, subjectId]);
+}
+
 function parseRow(row) {
   return {
     id: row.id,
