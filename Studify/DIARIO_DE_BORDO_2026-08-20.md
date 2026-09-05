@@ -428,3 +428,56 @@ Críticos PASS: subjectsdb crud, authdb, aiservice, chat contextual
 
 **Fim do relatório 28/08** ✅  
 *Fundação sólida, IA contextual funcionando com matérias reais, guard anti-custo ativo. Próximo: gerador de tópicos + FSRS.*
+
+---
+
+## 📓 Relatório 04/09/2026 — 1.2/1.3 Detail + 1.4 Home (branch `Teste/correções`)
+
+### Commit `90ab997` — feat(detail): gerador híbrido + study coach + pomodoro revitalizado (+956/-91, 8 arquivos)
+**1.2 Gerador híbrido de tópicos (aprovado: híbrido C, trava 1 tópico + preview dedup):**
+- `aiService.gerarTopicosComplementares(nome, existentes)` — normalize dedup, limite 10, fallback
+- `CreateMateriaModal.jsx` reescrito stateful: botão "Completar com IA" + preview checkboxes + Regenerar/Adicionar
+- `DetailScreen`: botão "Expandir com IA" (mesmo gerador, p/ matérias existentes)
+
+**1.3 Study Coach por tópico:**
+- `studyCoachService.getTopicAssist` — 1 call Groq `json_object` `{explicacao, recursos, metodo, quiz}`, cache 7d (`topic_coach_cache` em `core/db/client.js` + `get/save/clearTopicCoachCache` em `subjectsDb.js`)
+- `TopicCoachCard.jsx` expansível (tópico): explicação, recursos (YouTube/Google via `buildSearchUrl`), método com botão "Usar Pomodoro", quiz, Regenerar/Fechar
+- `DetailScreen` revitalizado: tópicos checkbox + ✦ expand, timer Livre/Pomodoro 25–50 countdown + barra, `onUseMetodo` liga coach → pomodoro
+
+**Hotfixes Groq `openai/gpt-oss-20b`:**
+1. `json_validate_failed` (reasoning oculto estourava 700 tokens) → `groqClient` com `reasoning_effort` low/medium, max 1200–1400 + retry 1600, prompt enxuto
+2. Quiz alucinando (`√13=5`) → prompt hardening + temp 0.3 + reasoning medium
+3. Quiz pesado p/ celular → quiz leve só inteiros (CACHE_VERSION 3: quadrados perfeitos, Pitágoras 3-4-5, conceitual)
+
+### Commit `edabd92` — feat(home): anel de meta semanal + próximo passo inteligente (1.4) (+194, 4 arquivos)
+- `WeeklyGoalRing.jsx` (novo, RN puro, sem `react-native-svg` de propósito — evita rebuild + mocks jest): círculo meta semanal, count-up 0→% 600ms, cor semântica `<30 🔴 <70 🟡 <100 🟣 =100 🟢`, `X/Y h` + barra
+- `SmartNextSteps.jsx` (novo): `getNextStep()` puro/testável — sem matéria → criar primeira; streak 0 → recuperar 🔥; matéria 0% → começar X; menor % → continuar X; senão faltam N min p/ meta
+- `HomeScreen.js`: carrega `weeklyGoal + streak` no `loadHomeData` (try/catch isolado), renderiza os 2 cards entre busca e `ProgressCards` (intocado — testes esperam `33%`/`1/3 tópicos`)
+- Validado pelo usuário no device ("o círculo está funcionando")
+
+### Animação entre telas — TENTADO E REVERTIDO (adiado)
+1. Tentativa 1: interpolador custom Stack JS (slide 30% + fade 280ms) → usuário achou "pausadinha" (diagnóstico: fade em tela cheia + duração longa = troca visível; opacity full-screen é caro)
+2. Tentativa 2: migração p/ `createNativeStackNavigator` (`slide_from_right`, pacote já instalado) → ida OK, mas **volta mostrava tela branca arrastando** (tela de baixo desmontada por `detachInactiveScreens`)
+3. Tentativa 3: `detachInactiveScreens={false}` + `contentStyle #090E1F` → branco persistiu → **revert total do `App.js`**
+- Suspeita registrada p/ retomada: fundo da janela Android (`windowBackground` branco no tema nativo) — fix via `app.json` (`android.backgroundColor`/tema) ou `styles.xml`, não no navigator. Reanimated/AnimatedView vetados pelo usuário (quebram o device dele).
+
+### 1.5 Heatmap — DESCARTADO pelo usuário
+- Grade GitHub 90 dias em mobile = poluído. Opções oferecidas (faixa 30 dias 1-linha, padrão semanal, pular) → usuário escolheu **pular**. `ProgressScreen` atual (barras 7d + stats) cumpre o papel.
+
+### Ideia futura registrada (PESQUISA doc §5.1, 04/09)
+- **Dificuldade por matéria** (fácil/médio/difícil/extremo) → acento no card (badge/borda, NÃO card inteiro): `#10B981/#F59E0B/#EF4444`/branco luminoso. Começa `subjects.difficulty 1-4`, evolui p/ tópico no FSRS. Peso entra em notificação/planner (`prioridade = dificuldade × dias_sem_revisar`) e no `getNextStep`.
+
+### Testes (todos os passos)
+```
+Test Suites: 4 failed, 19 passed, 23 total  (baseline preservado)
+Tests:       5 failed, 147 passed, 152 total
+Falhas = as mesmas 4 pré-existentes (via git stash): fase0-08-sqlinjection, fase0-05-bootstrap, fase0-11-homerefactor (só BottomNav), fase0-16-plano-basico
+```
+
+### Status Fase 1 / Fase 2 (04/09 noite)
+- **Fase 1 FECHADA** (menos heatmap, descartado). Fase 2 apresentada ao usuário (2.1 FSRS-lite → 2.2 quiz+log → 2.3 planner → 2.4 modularização diluída). **Retomada amanhã (05/09)** — usuário escolhe FSRS ("esqueço o que estudei") ou planner ("não sei o que estudar hoje").
+
+---
+
+**Fim do relatório 04/09** ✅  
+*Detail com IA + Home com momentum. Animação adiada (suspeita: windowBackground nativo). Próximo: Fase 2.*

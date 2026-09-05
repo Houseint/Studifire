@@ -368,6 +368,12 @@ export default ({config}) => ({
 - [ ] **Planner adaptativo** (`study_plan` table + `checkAndReplan()` com Groq)
 - [ ] **Migrar `features/study` modular** + `TanStack Query` (substitui `addListener('focus')`)
 
+#### 5.1 Dificuldade por matéria (ideia do Gustavo, 04/09/2026 — futura)
+- **O que é:** usuário marca dificuldade da matéria: fácil / médio / difícil / extremo.
+- **Visual:** card sinaliza a dificuldade por **acento (badge/borda)**, não pintando o card inteiro — paleta: fácil `#10B981` verde, médio `#F59E0B` amarelo, difícil `#EF4444` vermelho, extremo branco luminoso (glow, combina com o dark theme). Card inteiro colorido poluiria; acento mantém a identidade roxo/laranja atual.
+- **Schema:** começar com `difficulty` por matéria (`subjects.difficulty 1-4`); evoluir para por tópico quando o FSRS entrar (o algoritmo modela dificuldade por card).
+- **Notificações/IA:** peso da dificuldade entra na priorização — revisão/notificação foca nas de maior nível (`prioridade = dificuldade × dias_sem_revisar`). Alimenta o planner adaptativo e o `getNextStep` do Smart Next Steps.
+
 ### FASE 3 — 2 meses (diferencial de mercado, só se validar retenção)
 - [ ] **PDF/Foto → tópicos** (`expo-document-picker` + `expo-image-picker` + Groq Vision/OCR)
 - [ ] **Tutor hints-first** + progressive disclosure (revelar resposta em partes)
