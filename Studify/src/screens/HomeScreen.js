@@ -17,6 +17,8 @@ import Secao from '../components/home/Secao';
 import {
   HomeHeader,
   ProgressCards,
+  WeeklyGoalRing,
+  SmartNextSteps,
   MateriaSections,
   BottomNav,
   CreateMateriaModal,
@@ -32,6 +34,8 @@ import {
   getMateriaById,
   deletarMateria,
   toggleFixada as toggleFixadaDb,
+  getWeeklyGoalProgress,
+  getProfileStats,
 } from '../services/subjectsDb';
 
 export default function HomeScreen({ navigation }) {
@@ -42,6 +46,8 @@ export default function HomeScreen({ navigation }) {
   const [historico, setHistorico] = useState([]);
   const [fixados, setFixados] = useState([]);
   const [busca, setBusca] = useState('');
+  const [weeklyGoal, setWeeklyGoal] = useState({ goalMinutes: 300, currentMinutes: 0, percent: 0 });
+  const [streak, setStreak] = useState(0);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [novaMateria, setNovaMateria] = useState('');
@@ -91,6 +97,16 @@ export default function HomeScreen({ navigation }) {
       setHistorico(materias.sort((a, b) => new Date(b.accessed_at) - new Date(a.accessed_at)).slice(0, 10));
       if (userData?.avatar) {
         setUserAvatar(`data:image/jpeg;base64,${userData.avatar}`);
+      }
+      try {
+        const [goal, stats] = await Promise.all([
+          getWeeklyGoalProgress(userId),
+          getProfileStats(userId),
+        ]);
+        setWeeklyGoal(goal);
+        setStreak(stats?.streak || 0);
+      } catch (e) {
+        console.error('Erro ao carregar meta/streak:', e);
       }
     } catch (e) {
       console.error('Erro ao carregar home:', e);
@@ -254,6 +270,19 @@ export default function HomeScreen({ navigation }) {
             selectionColor="#7A6BFF"
           />
         </View>
+
+        <WeeklyGoalRing
+          percent={weeklyGoal.percent}
+          currentMinutes={weeklyGoal.currentMinutes}
+          goalMinutes={weeklyGoal.goalMinutes}
+        />
+
+        <SmartNextSteps
+          streak={streak}
+          materias={[...revisados, ...fixados]}
+          weeklyPercent={weeklyGoal.percent}
+          weeklyRemaining={Math.max(0, weeklyGoal.goalMinutes - weeklyGoal.currentMinutes)}
+        />
 
         <ProgressCards
           historico={historico}
