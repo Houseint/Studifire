@@ -2,6 +2,7 @@ export { default as HomeHeader } from './HomeHeader';
 export { default as ProgressCards } from './ProgressCards';
 export { default as WeeklyGoalRing } from './WeeklyGoalRing';
 export { default as SmartNextSteps } from './SmartNextSteps';
+export { default as StudyPlanCard } from './StudyPlanCard';
 export { default as MateriaSections } from './MateriaSections';
 export { default as BottomNav } from './BottomNav';
 export { default as CreateMateriaModal } from './modals/CreateMateriaModal';

@@ -5,8 +5,8 @@
  * Usa topic_coach_cache (SQLite) para não re-gastar tokens.
  * Rate limiter já no groqClient (free guard).
  */
-import { groqChatCompletion } from '../core/api/groqClient';
-import { getTopicCoachCache, saveTopicCoachCache } from './subjectsDb';
+import { groqChatCompletion } from '../../core/api/groqClient';
+import { getTopicCoachCache, saveTopicCoachCache } from '../subjects/subjectsDb';
 
 const CACHE_TTL_DAYS = 7;
 const CACHE_VERSION = 3; // bump: 2 era decimal exato (√13≈3,6), 3 prefere inteiros leves

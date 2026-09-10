@@ -2,7 +2,7 @@ import React from 'react';
 import { TextInput, Alert } from 'react-native';
 import { render, waitFor, fireEvent, act } from '@testing-library/react-native';
 
-jest.mock('../src/services/authDb', () => ({
+jest.mock('../src/features/auth/authDb', () => ({
   getSessionUser: jest.fn(),
   getUserById: jest.fn(),
   logoutUser: jest.fn(),
@@ -15,7 +15,7 @@ import {
   getUserById,
   logoutUser,
   loginUser,
-} from '../src/services/authDb';
+} from '../src/features/auth/authDb';
 
 const App = require('../App').default;
 const LoginScreen = require('../src/screens/LoginScreen').default;
@@ -95,7 +95,7 @@ describe('fluxo de sessão nas telas (sem reload do app)', () => {
         <ProfileScreen navigation={navigation} />
       </NavigationContainer>
     );
-    const sair = await screen.findByText('Sair da conta');
+    const sair = await screen.findByText('Sair');
     await act(async () => {
       fireEvent.press(sair);
     });

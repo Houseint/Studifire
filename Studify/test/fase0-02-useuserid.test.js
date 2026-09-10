@@ -1,11 +1,11 @@
 import { renderHook, act } from '@testing-library/react-native';
 
-jest.mock('../src/services/authDb', () => ({
+jest.mock('../src/features/auth/authDb', () => ({
   getSessionUser: jest.fn(),
 }));
 
-import { getSessionUser } from '../src/services/authDb';
-import { useUserId } from '../src/hooks/useUserId';
+import { getSessionUser } from '../src/features/auth/authDb';
+import { useUserId } from '../src/features/auth';
 
 let resolveSession;
 let rejectSession;

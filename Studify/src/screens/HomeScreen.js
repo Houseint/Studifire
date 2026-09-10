@@ -19,6 +19,7 @@ import {
   ProgressCards,
   WeeklyGoalRing,
   SmartNextSteps,
+  StudyPlanCard,
   MateriaSections,
   BottomNav,
   CreateMateriaModal,
@@ -282,6 +283,12 @@ export default function HomeScreen({ navigation }) {
           materias={[...revisados, ...fixados]}
           weeklyPercent={weeklyGoal.percent}
           weeklyRemaining={Math.max(0, weeklyGoal.goalMinutes - weeklyGoal.currentMinutes)}
+        />
+
+        <StudyPlanCard
+          materias={[...revisados, ...fixados]}
+          goalMinutes={weeklyGoal.goalMinutes}
+          currentMinutes={weeklyGoal.currentMinutes}
         />
 
         <ProgressCards

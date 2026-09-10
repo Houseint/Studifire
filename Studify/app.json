@@ -8,9 +8,9 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./img/LogoStudifirWithDesc.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0a0f1e"
     },
     "ios": {
       "supportsTablet": true
@@ -26,7 +26,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0a0f1e",
+          "image": "./img/LogoStudifirWithDesc.png",
+          "imageWidth": 260
+        }
+      ]
     ]
   }
 }

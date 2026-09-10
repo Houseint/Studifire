@@ -10,6 +10,7 @@ jest.mock('../src/services/subjectsDb', () => ({
   atualizarMateria: jest.fn(),
   registrarSessao: jest.fn(),
   carregarSessoesPorMateria: jest.fn(),
+  registrarQuizAttempt: jest.fn(),
 }));
 
 import {
@@ -103,8 +104,11 @@ describe('DetailScreen — A2: timer unificado sem refs', () => {
     fireEvent.press(screen.getByText('Álgebra'));
 
     await waitFor(() => {
+      // FASE 2.1 FSRS-lite: marcar feito agenda due_date (não quebra o check).
       expect(atualizarMateria).toHaveBeenCalledWith(1, 1, {
-        topicos: [{ nome: 'Álgebra', estudado: true }],
+        topicos: [
+          expect.objectContaining({ nome: 'Álgebra', estudado: true, difficulty: 2, reps: 1 }),
+        ],
       });
     });
     await waitFor(() => {

@@ -132,7 +132,7 @@ describe('0.16 - Plano básico (M5 + L1 + L2 + L3)', () => {
     const SCREENS = [
       'src/screens/LoginScreen.js',
       'src/screens/RegisterScreen.js',
-      'src/screens/ProfileScreen.js',
+      'src/features/profile/ProfileScreen.js',
       'src/screens/HistoricScreen.js',
     ];
 

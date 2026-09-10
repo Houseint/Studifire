@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, StatusBar, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getMateriaById, atualizarMateria, registrarSessao, carregarSessoesPorMateria } from '../services/subjectsDb';
+import { getMateriaById, atualizarMateria, registrarSessao, carregarSessoesPorMateria, registrarQuizAttempt } from '../services/subjectsDb';
 import { useUserId } from '../hooks/useUserId';
 import { formatarTempo, formatarCronometro } from '../shared/utils/formatTime';
-import { gerarTopicosComplementares } from '../services/aiService';
+import { toggleTopicoWithFsrs, aplicarResultadoQuiz } from '../shared/utils/fsrs';
+import { gerarTopicosComplementares, gerarQuiz } from '../services/aiService';
 import TopicCoachCard from '../components/TopicCoachCard';
+import { QuizModal } from '../features/study';
 
 export default function DetailScreen({ route, navigation }) {
   const userId = useUserId();
@@ -90,9 +92,8 @@ export default function DetailScreen({ route, navigation }) {
 
   const toggleTopico = async (index) => {
     if (!materia) return;
-    const novosTopicos = materia.topicos.map((t, i) =>
-      i === index ? { ...t, estudado: !t.estudado } : t
-    );
+    // FASE 2.1 FSRS-lite: marcar feito agenda a próxima revisão (due_date no JSON).
+    const novosTopicos = toggleTopicoWithFsrs(materia.topicos, index);
     await atualizarMateria(userId, id, { topicos: novosTopicos });
     setMateria({ ...materia, topicos: novosTopicos });
   };
@@ -137,6 +138,62 @@ export default function DetailScreen({ route, navigation }) {
 
   const pauseStudy = () => setPaused(true);
   const resumeStudy = () => setPaused(false);
+
+  // Quiz pós-sessão (FASE 2.2): testa o tópico em foco e ajusta o FSRS.
+  const [quizVisible, setQuizVisible] = useState(false);
+  const [quizQuestoes, setQuizQuestoes] = useState([]);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizTopicIndex, setQuizTopicIndex] = useState(0);
+
+  const iniciarQuiz = async () => {
+    if (!materia || !materia.topicos?.length) {
+      Alert.alert('Sem tópicos', 'Adicione tópicos à matéria para gerar o quiz.');
+      return;
+    }
+    // Foco: primeiro tópico ainda não estudado, senão o primeiro.
+    const pendente = materia.topicos.findIndex((t) => !t.estudado);
+    const idx = pendente >= 0 ? pendente : 0;
+    const foco = materia.topicos[idx];
+    setQuizLoading(true);
+    try {
+      const { questoes } = await gerarQuiz(materia.nome, [foco.nome || foco.titulo || 'tópico']);
+      if (!questoes || questoes.length === 0) {
+        Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente de novo.');
+        return;
+      }
+      setQuizTopicIndex(idx);
+      setQuizQuestoes(questoes);
+      setQuizVisible(true);
+    } catch (e) {
+      Alert.alert('Quiz indisponível', e?.message || 'Erro ao gerar quiz.');
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
+  const finalizarQuiz = async ({ total, correct }) => {
+    const idx = quizTopicIndex;
+    const foco = materia?.topicos?.[idx];
+    try {
+      if (userId && id && foco) {
+        await registrarQuizAttempt(userId, {
+          subject_id: id,
+          topic_index: idx,
+          topic_nome: foco.nome || foco.titulo || 'tópico',
+          questions_total: total,
+          questions_correct: correct,
+        });
+        // Resultado alimenta o FSRS: erro endurece (revisa antes), acerto facilita.
+        const { topicos: novosTopicos } = aplicarResultadoQuiz(materia.topicos, idx, { total, correct });
+        await atualizarMateria(userId, id, { topicos: novosTopicos });
+        setMateria({ ...materia, topicos: novosTopicos });
+      }
+    } catch (e) {
+      console.warn('Quiz: falha ao salvar resultado', e?.message || e);
+    } finally {
+      setQuizVisible(false);
+    }
+  };
 
   const handleIaGenerate = async () => {
     if (!materia || materia.topicos.length < 1 || materia.topicos.length >= 10) return;
@@ -285,6 +342,18 @@ export default function DetailScreen({ route, navigation }) {
             <TouchableOpacity style={s.startButton} activeOpacity={0.8} onPress={startStudy}>
               <Text style={s.startButtonText}>{timerMode === 'pomodoro' ? `▶ Iniciar Pomodoro ${pomodoroDuration} min` : '▶ Iniciar Estudos'}</Text>
             </TouchableOpacity>
+            {materia.topicos.length > 0 && (
+              <TouchableOpacity
+                onPress={iniciarQuiz}
+                disabled={quizLoading}
+                activeOpacity={0.8}
+                style={{ backgroundColor: '#111832', borderWidth: 1, borderColor: '#6F52FF', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 20, opacity: quizLoading ? 0.6 : 1 }}
+              >
+                {quizLoading
+                  ? <ActivityIndicator color="#8A68FF" size="small" />
+                  : <Text style={{ color: '#8A68FF', fontWeight: '800', fontSize: 15 }}>🧠 Quiz rápido</Text>}
+              </TouchableOpacity>
+            )}
           </>
         )}
 
@@ -399,6 +468,13 @@ export default function DetailScreen({ route, navigation }) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <QuizModal
+        visible={quizVisible}
+        questoes={quizQuestoes}
+        onFinish={finalizarQuiz}
+        onClose={() => setQuizVisible(false)}
+      />
     </View>
   );
 }

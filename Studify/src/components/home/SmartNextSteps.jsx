@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { getDueTopics } from '../../shared/utils/fsrs';
 
 // Lógica pura e testável: decide o próximo passo a partir de dados que o Home já tem.
+// FASE 2.1: revisão vencida (FSRS) tem prioridade — aparece aqui sem prop nova.
 export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, weeklyRemaining = 0 } = {}) {
   const all = Array.isArray(materias) ? materias : [];
   if (all.length === 0) {
@@ -9,6 +11,12 @@ export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, week
   }
   if (!streak || streak === 0) {
     return { emoji: '🔥', text: 'Volte hoje e recupere seu streak!' };
+  }
+  const due = getDueTopics(all);
+  if (due.length > 0) {
+    const first = due[0];
+    const extra = due.length > 1 ? ` (+${due.length - 1})` : '';
+    return { emoji: '⏰', text: `Revisar: ${first.topicoNome} (${first.materiaNome})${extra}` };
   }
   const withPct = all.map((m) => {
     const tops = Array.isArray(m.topicos) ? m.topicos : [];

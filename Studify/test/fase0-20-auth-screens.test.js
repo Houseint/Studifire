@@ -2,12 +2,12 @@ import React from 'react';
 import { TextInput, Alert } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
-jest.mock('../src/services/authDb', () => ({
+jest.mock('../src/features/auth/authDb', () => ({
   registerUser: jest.fn(),
   loginUser: jest.fn(),
 }));
 
-import { registerUser, loginUser } from '../src/services/authDb';
+import { registerUser, loginUser } from '../src/features/auth/authDb';
 
 const RegisterScreen = require('../src/screens/RegisterScreen').default;
 const LoginScreen = require('../src/screens/LoginScreen').default;

@@ -1,24 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getSessionUser } from '../services/authDb';
-
-export function useUserId() {
-  const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    getSessionUser()
-      .then((user) => {
-        if (mounted && user?.id) setUserId(user.id);
-      })
-      .catch(() => {
-        if (mounted) setUserId(null);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  return userId;
-}
+/**
+ * Re-export de compatibilidade: useUserId agora mora em features/auth.
+ * Import canônico: `import { useUserId } from '../features/auth'`.
+ */
+export * from '../features/auth/useUserId';

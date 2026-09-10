@@ -157,6 +157,19 @@ export async function getDb() {
           FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS quiz_attempts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          subject_id INTEGER NOT NULL,
+          topic_index INTEGER,
+          topic_nome TEXT,
+          questions_total INTEGER NOT NULL DEFAULT 0,
+          questions_correct INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
       `);
 
       // --- Migrações users ---
@@ -221,6 +234,7 @@ export async function getDb() {
         CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages (conversation_id, created_at ASC);
         CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges (user_id);
         CREATE INDEX IF NOT EXISTS idx_topic_coach_cache_user_subject ON topic_coach_cache (user_id, subject_id, topic_key);
+        CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_subject ON quiz_attempts (user_id, subject_id, created_at DESC);
       `);
 
       // --- Seed badges (idempotente) ---

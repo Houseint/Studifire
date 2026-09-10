@@ -283,7 +283,7 @@ describe('BottomNav (extraído)', () => {
     expect(nav.navigate).toHaveBeenCalledWith('Chat');
 
     fireEvent.press(screen.getByText('Progresso'));
-    expect(nav.navigate).toHaveBeenCalledWith('Historic');
+    expect(nav.navigate).toHaveBeenCalledWith('Progress');
 
     fireEvent.press(screen.getByText('Perfil'));
     expect(nav.navigate).toHaveBeenCalledWith('Profile');

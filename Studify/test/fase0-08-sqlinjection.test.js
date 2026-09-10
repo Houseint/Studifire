@@ -106,7 +106,9 @@ describe('0.8 - SQL injection em atualizarMateria', () => {
 
     const runSpy = jest.spyOn(memDb, 'runAsync');
     await atualizarMateria(1, 1, { 'DROP TABLE subjects': true });
-    expect(runSpy).not.toHaveBeenCalled();
+    // getDb() roda seeds no init — o que importa é não encostar em subjects.
+    const subjectCalls = runSpy.mock.calls.filter(([sql]) => /subjects/i.test(String(sql)));
+    expect(subjectCalls).toEqual([]);
     runSpy.mockRestore();
   });
 });

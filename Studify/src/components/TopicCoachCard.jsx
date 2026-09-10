@@ -12,7 +12,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
-import { getTopicAssist, buildSearchUrl } from '../services/studyCoachService';
+import { getTopicAssist, buildSearchUrl } from '../features/study/studyCoachService';
 
 export default function TopicCoachCard({
   userId, subjectId, materiaNome, topicoNome, outrosTopicos,

@@ -11,6 +11,7 @@ jest.mock('../src/services/subjectsDb', () => ({
   atualizarMateria: jest.fn(),
   registrarSessao: jest.fn(),
   carregarSessoesPorMateria: jest.fn(),
+  registrarQuizAttempt: jest.fn(),
 }));
 
 import {

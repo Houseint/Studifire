@@ -14,7 +14,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 
 
-import { loginUser } from '../services/authDb';
+import { loginUser } from '../features/auth/authDb';
 import { AuthScreenStyles as styles } from '../styles/AuthScreenStyles.js';
 
 export default function LoginScreen({ navigation }) {
