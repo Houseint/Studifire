@@ -1,0 +1,304 @@
+{
+  "session_id": "ses_7e82dpde",
+  "browser_session_id": "ses_l46m6yvm",
+  "request": "Fix registration issues in Studify app - user gets 'não foi possível realizar o cadastro' error. Deep analysis of auth components, SQLite relations, and user hooks.",
+  "created_at": 1786909704835,
+  "updated_at": 1786910057918,
+  "branches": {
+    "db-init-fix": {
+      "id": "db-init-fix",
+      "scope": "Fix database initialization in authDb.js - handle SQLite openDatabaseAsync failures, add retry logic, prevent initialized flag from being set on migration failures",
+      "status": "exploring",
+      "questions": [
+        {
+          "id": "q_3j6zbqbd",
+          "type": "show_options",
+          "text": "How should we fix the database initialization race condition and error handling?",
+          "config": {
+            "question": "How should we fix the database initialization race condition and error handling?",
+            "options": [
+              {
+                "id": "retry-with-backoff",
+                "label": "Retry with exponential backoff",
+                "description": "Retry SQLite openDatabaseAsync up to 3 times with increasing delays",
+                "pros": [
+                  "Handles transient failures",
+                  "Simple to implement"
+                ],
+                "cons": [
+                  "Doesn't fix root cause if DB is corrupted"
+                ]
+              },
+              {
+                "id": "lazy-init-with-reset",
+                "label": "Lazy init with promise reset on failure",
+                "description": "Reset dbPromise to null on failure so next call retries",
+                "pros": [
+                  "Self-healing",
+                  "No complex retry logic"
+                ],
+                "cons": [
+                  "Could retry indefinitely on permanent failures"
+                ]
+              },
+              {
+                "id": "init-once-with-validation",
+                "label": "Initialize once with schema validation",
+                "description": "Run migrations in transaction, only set initialized=true after all succeed",
+                "pros": [
+                  "Guarantees consistent schema",
+                  "Atomic migrations"
+                ],
+                "cons": [
+                  "More complex",
+                  "SQLite ALTER TABLE can't be in transaction"
+                ]
+              }
+            ],
+            "context": "Current getDb() has race condition: if openDatabaseAsync fails, dbPromise stays rejected forever. Also initialized=true is set even if ALTER TABLE statements fail."
+          },
+          "answer": {
+            "selected": "init-once-with-validation"
+          },
+          "answeredAt": 1786909929585
+        }
+      ],
+      "finding": null
+    },
+    "atomic-registration": {
+      "id": "atomic-registration",
+      "scope": "Make registerUser atomic using SQLite transactions to prevent check-then-act race condition",
+      "status": "exploring",
+      "questions": [
+        {
+          "id": "q_vfo7omae",
+          "type": "show_options",
+          "text": "How to make registration atomic and prevent duplicate email race condition?",
+          "config": {
+            "question": "How to make registration atomic and prevent duplicate email race condition?",
+            "options": [
+              {
+                "id": "insert-or-ignore",
+                "label": "INSERT OR IGNORE + check changes",
+                "description": "Use INSERT OR IGNORE and check db.changes to detect duplicates",
+                "pros": [
+                  "Single query",
+                  "Atomic",
+                  "No race condition"
+                ],
+                "cons": [
+                  "Need to verify user was actually created"
+                ]
+              },
+              {
+                "id": "transaction-with-select",
+                "label": "Transaction with SELECT FOR UPDATE",
+                "description": "Wrap SELECT + INSERT in transaction",
+                "pros": [
+                  "Explicit control",
+                  "Standard pattern"
+                ],
+                "cons": [
+                  "SQLite doesn't support SELECT FOR UPDATE",
+                  "More complex"
+                ]
+              },
+              {
+                "id": "unique-constraint-catch",
+                "label": "Catch UNIQUE constraint error",
+                "description": "Let INSERT fail on UNIQUE constraint, catch specific SQLite error code",
+                "pros": [
+                  "Simplest",
+                  "Leverages DB constraint"
+                ],
+                "cons": [
+                  "Need to parse SQLite error codes"
+                ]
+              }
+            ],
+            "context": "Current code: SELECT to check email exists, then INSERT. Two concurrent requests can both pass SELECT and fail on INSERT with UNIQUE constraint error, which shows as generic 'não foi possível cadastrar'."
+          },
+          "answer": {
+            "selected": "insert-or-ignore"
+          },
+          "answeredAt": 1786909953502
+        }
+      ],
+      "finding": null
+    },
+    "error-handling-improvement": {
+      "id": "error-handling-improvement",
+      "scope": "Improve error handling in RegisterScreen and authDb to surface real SQLite errors instead of generic message",
+      "status": "exploring",
+      "questions": [
+        {
+          "id": "q_k4194w0h",
+          "type": "show_options",
+          "text": "How to improve error handling to show meaningful messages to users?",
+          "config": {
+            "question": "How to improve error handling to show meaningful messages to users?",
+            "options": [
+              {
+                "id": "parse-sqlite-errors",
+                "label": "Parse SQLite error codes",
+                "description": "Catch specific SQLite error codes (UNIQUE_CONSTRAINT, DISK_FULL, etc.) and map to user messages",
+                "pros": [
+                  "Precise error messages",
+                  "Helps debugging"
+                ],
+                "cons": [
+                  "Need to know all SQLite error codes"
+                ]
+              },
+              {
+                "id": "structured-error-objects",
+                "label": "Throw structured error objects",
+                "description": "Create custom error classes (EmailExistsError, DatabaseError, etc.) with codes",
+                "pros": [
+                  "Type-safe",
+                  "Extensible",
+                  "Better DX"
+                ],
+                "cons": [
+                  "More boilerplate"
+                ]
+              },
+              {
+                "id": "log-and-generic",
+                "label": "Log full error, show user-friendly generic",
+                "description": "Console.error the real error, show user a friendly message with error ID for support",
+                "pros": [
+                  "Security (no info leak)",
+                  "Debuggable via logs"
+                ],
+                "cons": [
+                  "User doesn't know exact cause"
+                ]
+              }
+            ],
+            "context": "Current catch block only checks for 'EMAIL_EXISTS' string. All other errors (constraint violation, disk full, corruption, timeout) show identical generic message."
+          },
+          "answer": {
+            "selected": "structured-error-objects"
+          },
+          "answeredAt": 1786910012082
+        }
+      ],
+      "finding": null
+    },
+    "password-hashing-upgrade": {
+      "id": "password-hashing-upgrade",
+      "scope": "Upgrade password hashing from SHA256 to proper KDF (bcrypt/scrypt/Argon2)",
+      "status": "exploring",
+      "questions": [
+        {
+          "id": "q_ginkvuml",
+          "type": "show_options",
+          "text": "Which password hashing algorithm should replace SHA256?",
+          "config": {
+            "question": "Which password hashing algorithm should replace SHA256?",
+            "options": [
+              {
+                "id": "bcrypt",
+                "label": "bcrypt (via expo-bcrypt or similar)",
+                "description": "Battle-tested, widely used, adjustable cost factor",
+                "pros": [
+                  "Mature",
+                  "Wide support",
+                  "Adjustable work factor"
+                ],
+                "cons": [
+                  "Native module needed",
+                  "Larger bundle"
+                ]
+              },
+              {
+                "id": "scrypt",
+                "label": "scrypt (via expo-crypto)",
+                "description": "Memory-hard KDF, available via expo-crypto",
+                "pros": [
+                  "No extra deps",
+                  "Memory-hard",
+                  "Expo compatible"
+                ],
+                "cons": [
+                  "Less common in React Native"
+                ]
+              },
+              {
+                "id": "argon2",
+                "label": "Argon2 (via expo-argon2)",
+                "description": "Winner of Password Hashing Competition, most secure",
+                "pros": [
+                  "Most secure",
+                  "Memory + time hard"
+                ],
+                "cons": [
+                  "Native module",
+                  "Larger bundle",
+                  "May not work on Expo Go"
+                ]
+              }
+            ],
+            "context": "Current implementation uses SHA256 with salt. SHA256 is fast - vulnerable to GPU brute force. Need proper KDF with work factor."
+          },
+          "answer": {
+            "selected": "bcrypt"
+          },
+          "answeredAt": 1786910036541
+        }
+      ],
+      "finding": null
+    },
+    "init-flag-fix": {
+      "id": "init-flag-fix",
+      "scope": "Fix initialized flag logic - only set to true after ALL migrations succeed",
+      "status": "exploring",
+      "questions": [
+        {
+          "id": "q_yrr8muj5",
+          "type": "confirm",
+          "text": "Should initialized flag only be set after all ALTER TABLE statements succeed?",
+          "config": {
+            "question": "Should initialized flag only be set after all ALTER TABLE statements succeed?",
+            "context": "Currently initialized=true is set at the end of getDb() regardless of whether ALTER TABLE statements succeeded. If any migration fails, the flag is still true, preventing retries and leaving schema inconsistent."
+          },
+          "answer": {
+            "choice": "yes"
+          },
+          "answeredAt": 1786910049378
+        }
+      ],
+      "finding": null
+    },
+    "subjectsdb-parity": {
+      "id": "subjectsdb-parity",
+      "scope": "Apply same fixes to subjectsDb.js which has identical initialization pattern",
+      "status": "exploring",
+      "questions": [
+        {
+          "id": "q_n5zivln8",
+          "type": "confirm",
+          "text": "Should subjectsDb.js get the same initialization fixes as authDb.js?",
+          "config": {
+            "question": "Should subjectsDb.js get the same initialization fixes as authDb.js?",
+            "context": "subjectsDb.js uses the exact same singleton pattern with dbPromise and initialized flag. Same race conditions and error handling issues apply."
+          },
+          "answer": {
+            "choice": "yes"
+          },
+          "answeredAt": 1786910057918
+        }
+      ],
+      "finding": null
+    }
+  },
+  "branch_order": [
+    "db-init-fix",
+    "atomic-registration",
+    "error-handling-improvement",
+    "password-hashing-upgrade",
+    "init-flag-fix",
+    "subjectsdb-parity"
+  ]
+}
