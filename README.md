@@ -88,7 +88,5 @@ Studify/
 
 ## 👥 Integrantes
 
-Gustavo · Gabriel Rodrigues Melo · José Eduardo
-
-- 🎬 Vídeo (Gabriel): https://youtu.be/W5O-ZwsB1UQ
-- 🎬 Vídeo (Gustavo): https://youtu.be/Pf_40fCNKCY?feature=shared
+Gustavo · Gabriel Rodrigues Melo 
+LINK VIDEO: https://youtu.be/fUrLfJRPRxs
