@@ -4,6 +4,8 @@
     "@tarquinen/opencode-dcp@latest",
     "@zenobius/opencode-skillful",
     "opencode-supermemory",
-    "opencode-websearch-cited"
+    "opencode-websearch-cited",
+    "micode",
+    "octto"
   ]
 }
