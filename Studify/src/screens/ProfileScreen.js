@@ -12,6 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -19,11 +20,18 @@ import { useUserId } from '../hooks/useUserId';
 import { logoutUser, getSessionUser, atualizarAvatar, getUserById } from '../services/authDb';
 import { 
   updateWeeklyGoal,
+  getUserSettings,
+  updateReminderSettings,
   getUserBadges,
   checkAndAwardBadges,
   getProfileStats,
   getWeeklyGoalProgress,
 } from '../services/subjectsDb';
+import {
+  requestReminderPermission,
+  enableDailyReminder,
+  disableDailyReminder,
+} from '../services/reminderService';
 import * as ImagePicker from 'expo-image-picker';
 import { ProfileScreenStyles as s } from '../styles/ProfileScreenStyles.js';
 
@@ -59,6 +67,7 @@ export default function ProfileScreen({ navigation }) {
   const [newBadges, setNewBadges] = useState([]);
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [goalInput, setGoalInput] = useState('');
+  const [reminder, setReminder] = useState({ enabled: false, hour: 20, minute: 0 });
 
   useEffect(() => {
     getSessionUser().then(setUser);
@@ -88,16 +97,22 @@ export default function ProfileScreen({ navigation }) {
           }
 
           // Carrega dados em paralelo
-          const [profileStats, goalProgress, userBadges] = await Promise.all([
+          const [profileStats, goalProgress, userBadges, settings] = await Promise.all([
             getProfileStats(userId),
             getWeeklyGoalProgress(userId),
             getUserBadges(userId),
+            getUserSettings(userId),
           ]);
 
           if (mounted) {
             setStats(profileStats);
             setWeeklyGoal(goalProgress);
             setBadges(userBadges);
+            setReminder({
+              enabled: !!settings.reminder_enabled,
+              hour: settings.reminder_hour ?? 20,
+              minute: settings.reminder_minute ?? 0,
+            });
           }
         } catch (e) {
           console.error('Erro ao carregar dados do perfil:', e);
@@ -122,28 +137,208 @@ export default function ProfileScreen({ navigation }) {
     ]);
   };
 
-  const handleAvatarChange = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      base64: true,
-    });
+  // ============================================================
+  // COMO FUNCIONA (Nível Júnior — permissões de câmera/galeria):
+  // 1. O usuário escolhe a origem da foto (câmera ou galeria).
+  // 2. Antes de abrir, pedimos a permissão ao SO
+  //    (requestCameraPermissionsAsync / requestMediaLibraryPermissionsAsync).
+  // 3. O retorno vem como { status, granted, canAskAgain } e tem 3 caminhos:
+  //    a) granted → segue o fluxo normal (abre câmera/galeria);
+  //    b) negado MAS canAskAgain true → alerta amigável (o SO ainda
+  //       permite perguntar de novo numa próxima tentativa);
+  //    c) negado E canAskAgain false → o usuário marcou "Não perguntar
+  //       novamente": o app NÃO pode pedir de novo, então mostramos o
+  //       passo a passo + botão que abre as Configurações do sistema
+  //       (Linking.openSettings) para liberar manualmente.
+  // 4. Tudo com try/catch (RNF01): sem câmera ou galeria com erro, o app
+  //    avisa em vez de quebrar.
+  // Orienta o usuário a liberar a permissão manual quando ele marcou
+  // "Não perguntar novamente" (canAskAgain: false) — Nível Júnior.
+  const showBlockedPermissionGuide = (nomeRecurso, passoPermissao) => {
+    Alert.alert(
+      'Permissão bloqueada',
+      `Você escolheu "Não perguntar novamente" para ${nomeRecurso}. Para liberar:\n\n1. Toque em "Abrir configurações"\n2. Vá em "Permissões"\n3. Ative "${passoPermissao}"`,
+      [
+        { text: 'Agora não', style: 'cancel' },
+        { text: 'Abrir configurações', onPress: () => Linking.openSettings() },
+      ]
+    );
+  };
 
-    const base64 = result.base64 || result.assets?.[0]?.base64;
-
-    if (!result.cancelled && base64) {
-      try {
-        await atualizarAvatar(userId, base64);
-        setUserAvatar(`data:image/jpeg;base64,${base64}`);
-        Alert.alert('Sucesso', 'Avatar atualizado com sucesso!');
-      } catch (error) {
-        console.error('Erro ao atualizar avatar:', error);
-        Alert.alert('Erro', 'Não foi possível atualizar o avatar.');
+  // Valida o retorno do pedido de permissão. Retorna true se liberado.
+  const ensureImagePermission = async (requestFn, nomeRecurso, passoPermissao) => {
+    try {
+      const res = await requestFn();
+      if (res?.granted || res?.status === 'granted') return true;
+      if (res?.canAskAgain === false) {
+        showBlockedPermissionGuide(nomeRecurso, passoPermissao);
+      } else {
+        Alert.alert(
+          'Permissão necessária',
+          `O Studify precisa de acesso ${nomeRecurso} para trocar o avatar.`
+        );
       }
-    } else {
-      Alert.alert('Erro', 'Não foi possível obter a imagem. Tente novamente.');
+      return false;
+    } catch (e) {
+      console.error('Erro ao pedir permissão:', e);
+      Alert.alert('Recurso indisponível', 'Não foi possível acessar esse recurso neste aparelho.');
+      return false;
+    }
+  };
+
+  const saveAvatarBase64 = async (base64) => {
+    try {
+      await atualizarAvatar(userId, base64);
+      setUserAvatar(`data:image/jpeg;base64,${base64}`);
+      Alert.alert('Sucesso', 'Avatar atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar avatar:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar o avatar.');
+    }
+  };
+
+  const pickFromGallery = async () => {
+    const ok = await ensureImagePermission(
+      () => ImagePicker.requestMediaLibraryPermissionsAsync(),
+      'à galeria',
+      'Arquivos e mídia'
+    );
+    if (!ok) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+      const canceled = result.canceled ?? result.cancelled;
+      const base64 = result.assets?.[0]?.base64 || result.base64;
+      if (!canceled && base64) {
+        await saveAvatarBase64(base64);
+      } else if (!canceled) {
+        Alert.alert('Erro', 'Não foi possível obter a imagem. Tente novamente.');
+      }
+    } catch (e) {
+      console.error('Erro ao abrir galeria:', e);
+      Alert.alert('Erro', 'Não foi possível abrir a galeria neste aparelho.');
+    }
+  };
+
+  const takePhoto = async () => {
+    const ok = await ensureImagePermission(
+      () => ImagePicker.requestCameraPermissionsAsync(),
+      'à câmera',
+      'Câmera'
+    );
+    if (!ok) return;
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+      const canceled = result.canceled ?? result.cancelled;
+      const base64 = result.assets?.[0]?.base64 || result.base64;
+      if (!canceled && base64) {
+        await saveAvatarBase64(base64);
+      } else if (!canceled) {
+        Alert.alert('Erro', 'Não foi possível obter a foto. Tente novamente.');
+      }
+    } catch (e) {
+      console.error('Erro ao abrir câmera:', e);
+      Alert.alert(
+        'Câmera indisponível',
+        'Não foi possível abrir a câmera (aparelho sem câmera ou em uso por outro app).'
+      );
+    }
+  };
+
+  const handleAvatarChange = () => {
+    Alert.alert('Trocar avatar', 'Escolha de onde virá a foto:', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: '📷 Tirar foto', onPress: takePhoto },
+      { text: '🖼️ Galeria', onPress: pickFromGallery },
+    ]);
+  };
+
+  // ============================================================
+  // COMO FUNCIONA (Lembrete diário — notificações + persistência):
+  // 1. Ao ATIVAR, pedimos permissão ao SO (requestReminderPermission).
+  //    Mesmo padrão da câmera: bloqueado 2x → guia para Configurações.
+  // 2. Com permissão, agendamos 1 notificação local RECORRENTE com trigger
+  //    de calendário { hour, minute, repeats: true } — o próprio Android/iOS
+  //    dispara todo dia, mesmo com o app fechado.
+  // 3. O par (ativo, horário) é salvo no user_settings do SQLite (RF01):
+  //    sobrevive a fechar o app e a ficar sem internet.
+  // 4. No boot do app (App.js), restoreDailyReminder() lê o SQLite e
+  //    reagenda se estava ativo — por isso o lembrete nunca "se perde".
+  // 5. Trocar o chip com o lembrete ativo = cancela o anterior e agenda
+  //    o novo (só existe 1 agendamento por vez).
+  const formatReminderTime = (h, m) =>
+    `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+  const handleToggleReminder = async () => {
+    if (!userId) return;
+    if (reminder.enabled) {
+      try {
+        await disableDailyReminder(userId);
+        setReminder((r) => ({ ...r, enabled: false }));
+        Alert.alert('Lembrete desligado', 'Você não receberá mais o aviso diário.');
+      } catch (e) {
+        console.error('Erro ao desligar lembrete:', e);
+        Alert.alert('Erro', 'Não foi possível desligar o lembrete.');
+      }
+      return;
+    }
+    // Ligando: valida permissão de notificação primeiro
+    const perm = await requestReminderPermission();
+    if (!perm.granted) {
+      if (!perm.canAskAgain) {
+        Alert.alert(
+          'Notificações bloqueadas',
+          'Você escolheu "Não perguntar novamente" para notificações. Para liberar:\n\n1. Toque em "Abrir configurações"\n2. Vá em "Notificações"\n3. Ative "Permitir notificações"',
+          [
+            { text: 'Agora não', style: 'cancel' },
+            { text: 'Abrir configurações', onPress: () => Linking.openSettings() },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Permissão necessária',
+          'Ative as notificações para receber o lembrete diário de estudo.'
+        );
+      }
+      return;
+    }
+    try {
+      await enableDailyReminder(userId, reminder.hour, reminder.minute);
+      setReminder((r) => ({ ...r, enabled: true }));
+      Alert.alert(
+        'Lembrete ativado',
+        `Todo dia às ${formatReminderTime(reminder.hour, reminder.minute)} 🔔`
+      );
+    } catch (e) {
+      console.error('Erro ao ativar lembrete:', e);
+      Alert.alert('Erro', 'Não foi possível agendar o lembrete neste aparelho.');
+    }
+  };
+
+  const handlePickReminderTime = async (hour, minute) => {
+    if (!userId) return;
+    const next = { hour, minute };
+    // Se já está ativo, reagenda na hora; se não, só persiste o horário
+    try {
+      if (reminder.enabled) {
+        await enableDailyReminder(userId, hour, minute);
+      } else {
+        await updateReminderSettings(userId, { enabled: false, hour, minute });
+      }
+      setReminder((r) => ({ ...r, ...next }));
+    } catch (e) {
+      console.error('Erro ao salvar horário:', e);
+      Alert.alert('Erro', 'Não foi possível salvar o horário.');
     }
   };
 
@@ -308,6 +503,45 @@ export default function ProfileScreen({ navigation }) {
             <Text style={s.goalSubtext}>
               {weeklyGoal.percent >= 100 ? '🎉 Meta atingida! Continue assim!' : 'Continue estudando para atingir sua meta'}
             </Text>
+          </View>
+        </View>
+
+        {/* Lembrete diário */}
+        <View style={s.sectionContainer}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>🔔 Lembrete diário</Text>
+            <TouchableOpacity style={s.goalEditBtn} activeOpacity={0.7} onPress={handleToggleReminder}>
+              <Text style={s.goalEditText}>{reminder.enabled ? 'Desligar' : 'Ativar'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.goalCard}>
+            <Text style={s.reminderStatus}>
+              {reminder.enabled
+                ? `Ativo • todo dia às ${formatReminderTime(reminder.hour, reminder.minute)}`
+                : 'Desligado — ative para receber um aviso diário'}
+            </Text>
+            <View style={s.reminderChips}>
+              {[
+                { h: 8, m: 0 },
+                { h: 12, m: 0 },
+                { h: 19, m: 0 },
+                { h: 20, m: 0 },
+              ].map((t) => {
+                const selected = reminder.hour === t.h && reminder.minute === t.m;
+                return (
+                  <TouchableOpacity
+                    key={`${t.h}:${t.m}`}
+                    style={[s.reminderChip, selected && s.reminderChipActive]}
+                    activeOpacity={0.7}
+                    onPress={() => handlePickReminderTime(t.h, t.m)}
+                  >
+                    <Text style={[s.reminderChipText, selected && s.reminderChipTextActive]}>
+                      {formatReminderTime(t.h, t.m)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         </View>
 

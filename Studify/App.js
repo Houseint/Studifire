@@ -12,6 +12,7 @@ import DetailScreen from './src/screens/DetailScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import HelpScreen from './src/screens/HelpScreen';
 import { getSessionUser, getUserById, logoutUser } from './src/services/authDb';
+import { restoreDailyReminder } from './src/services/reminderService';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
 const Stack = createStackNavigator();
@@ -40,6 +41,9 @@ function AppContent() {
           hasSession = !!dbUser;
           if (!dbUser) {
             await logoutUser();
+          } else {
+            // Reagenda o lembrete diário a partir do persistido (fire-and-forget)
+            restoreDailyReminder(user.id);
           }
         }
 

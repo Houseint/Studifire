@@ -120,6 +120,9 @@ export async function getDb() {
         CREATE TABLE IF NOT EXISTS user_settings (
           user_id INTEGER PRIMARY KEY,
           weekly_goal_minutes INTEGER NOT NULL DEFAULT 300,
+          reminder_enabled INTEGER NOT NULL DEFAULT 0,
+          reminder_hour INTEGER NOT NULL DEFAULT 20,
+          reminder_minute INTEGER NOT NULL DEFAULT 0,
           updated_at TEXT NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
@@ -195,6 +198,18 @@ export async function getDb() {
       const chatCols = await db.getAllAsync('PRAGMA table_info(chat_conversations)');
       if (!chatCols.some((c) => c.name === 'user_id')) {
         await db.execAsync('ALTER TABLE chat_conversations ADD COLUMN user_id INTEGER DEFAULT 1;');
+      }
+
+      // --- Migração user_settings (lembrete diário) ---
+      const setCols = await db.getAllAsync('PRAGMA table_info(user_settings)');
+      if (!setCols.some((c) => c.name === 'reminder_enabled')) {
+        await db.execAsync('ALTER TABLE user_settings ADD COLUMN reminder_enabled INTEGER NOT NULL DEFAULT 0;');
+      }
+      if (!setCols.some((c) => c.name === 'reminder_hour')) {
+        await db.execAsync('ALTER TABLE user_settings ADD COLUMN reminder_hour INTEGER NOT NULL DEFAULT 20;');
+      }
+      if (!setCols.some((c) => c.name === 'reminder_minute')) {
+        await db.execAsync('ALTER TABLE user_settings ADD COLUMN reminder_minute INTEGER NOT NULL DEFAULT 0;');
       }
 
       // --- Índices ---

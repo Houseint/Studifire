@@ -481,3 +481,35 @@ Falhas = as mesmas 4 pré-existentes (via git stash): fase0-08-sqlinjection, fas
 
 **Fim do relatório 04/09** ✅  
 *Detail com IA + Home com momentum. Animação adiada (suspeita: windowBackground nativo). Próximo: Fase 2.*
+---
+
+## Relatório 09/09 — Atividade faculdade (Nível Júnior + notificações)
+
+### Escopo escolhido (não é branch descartável — fica no app)
+- Atividade prática (entrega 11/09): Nível Júnior + RF01/RF02/RNF01/RNF02. Usuário cortou: **só permissão câmera/galeria + notificação com horário + persistência existente**. RF02 (GPS) e RNF02 (landscape) ficaram de fora por decisão dele.
+- Nível Júnior era o único honesto: Pleno (trava de auditoria) e Sênior (contatos 5k) não existem no Studify. Notificações = passo 0 do "revisões vencem hoje" da Fase 2.
+
+### Nível Júnior — permissões câmera/galeria (`ProfileScreen.js`)
+- Antes: avatar abria a galeria sem pedir/tratar permissão. Agora: Alert "Tirar foto / Galeria".
+- `ensureImagePermission()`: valida retorno `{ status, granted, canAskAgain }` → 3 caminhos: granted segue; negado c/ canAskAgain → alerta amigável; **canAskAgain false → guia passo a passo + `Linking.openSettings()`**.
+- `takePhoto`/`pickFromGallery` com try/catch (sem câmera → msg amigável, RNF01). Normalizado `canceled ?? cancelled` (API nova/antiga do image-picker).
+
+### Notificações + horário + persistência
+- `expo-notifications@~0.31.5` (`npx expo install`; funciona no Expo Go p/ alarme local).
+- Novo `src/services/reminderService.js`: canal Android, `requestReminderPermission` (mesmo padrão canAskAgain→settings), trigger calendário `{ hour, minute, repeats: true }` (dispara pelo SO, app fechado), `enable/disable/restoreDailyReminder`. Lazy-require do módulo nativo p/ manter jest verde (fase0-05 renderiza ProfileScreen no Node).
+- Persistência no `user_settings` existente (RF01): migração `reminder_enabled/hour/minute` (default 20:00) em `core/db/client.js` (CREATE + ALTER via `PRAGMA table_info`); `updateReminderSettings()` novo; `updateWeeklyGoal` virou UPDATE+fallback INSERT (o INSERT OR REPLACE antigo apagaria as colunas do lembrete).
+- UI Profile: seção 🔔 Ativar/Desligar + chips 08:00/12:00/19:00/20:00; trocar chip c/ ativo reagenda. Boot (`App.js`): `restoreDailyReminder()` fire-and-forget.
+- Comentários "COMO FUNCIONA" escritos no código (ProfileScreen + service) p/ o usuário explicar no vídeo de 3 min.
+
+### Demo no Expo Go (sem esperar o horário)
+- Ativar → chip 20:00 → relógio do SO em manual 19:59 → app em 2º plano → notificação "📚 Hora de estudar!" chega → voltar relógio p/ automático. Não forçar parada do Expo Go; OEM agressiva pode exigir liberar 2º plano.
+
+### Testes
+```
+Test Suites: 4 failed, 19 passed, 23 total  (baseline preservado)
+Tests:       5 failed, 147 passed, 152 total
+Falhas = as mesmas 4 pré-existentes (confirmado via git stash). Um run isolado deu 8 por flake de cache frio pós-install; rerun normalizou.
+```
+
+### Status (09/09)
+- Pendente p/ entrega: README (como rodar + o que foi feito) e vídeo 3 min. Commit deste passo abaixo.

@@ -255,6 +255,40 @@ export const ProfileScreenStyles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Lembrete diário
+  reminderStatus: {
+    color: '#F4F6FF',
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  reminderChips: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  reminderChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#1A2340',
+    borderWidth: 1,
+    borderColor: '#27315B',
+  },
+  reminderChipActive: {
+    backgroundColor: 'rgba(138, 104, 255, 0.2)',
+    borderColor: '#8A68FF',
+  },
+  reminderChipText: {
+    color: '#7F8AB7',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reminderChipTextActive: {
+    color: '#F4F6FF',
+  },
+
   // Badges
   emptyBadges: {
     alignItems: 'center',

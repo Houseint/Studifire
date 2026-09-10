@@ -206,13 +206,13 @@ export async function getUserSettings(userId) {
     [userId]
   );
   if (!settings) {
-    // Cria settings padrão
+    // Cria settings padrão (inclui lembrete diário desligado às 20:00)
     const now = new Date().toISOString();
     await db.runAsync(
-      'INSERT INTO user_settings (user_id, weekly_goal_minutes, updated_at) VALUES (?, ?, ?)',
-      [userId, 300, now]
+      'INSERT INTO user_settings (user_id, weekly_goal_minutes, reminder_enabled, reminder_hour, reminder_minute, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, 300, 0, 20, 0, now]
     );
-    settings = { user_id: userId, weekly_goal_minutes: 300, updated_at: now };
+    settings = { user_id: userId, weekly_goal_minutes: 300, reminder_enabled: 0, reminder_hour: 20, reminder_minute: 0, updated_at: now };
   }
   return settings;
 }
@@ -220,11 +220,40 @@ export async function getUserSettings(userId) {
 export async function updateWeeklyGoal(userId, minutes) {
   const db = await getDb();
   const now = new Date().toISOString();
-  await db.runAsync(
-    'INSERT OR REPLACE INTO user_settings (user_id, weekly_goal_minutes, updated_at) VALUES (?, ?, ?)',
-    [userId, minutes, now]
+  // UPDATE (não REPLACE) para preservar as colunas do lembrete diário
+  const res = await db.runAsync(
+    'UPDATE user_settings SET weekly_goal_minutes = ?, updated_at = ? WHERE user_id = ?',
+    [minutes, now, userId]
   );
+  if (res.changes === 0) {
+    await db.runAsync(
+      'INSERT INTO user_settings (user_id, weekly_goal_minutes, reminder_enabled, reminder_hour, reminder_minute, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, minutes, 0, 20, 0, now]
+    );
+  }
   return { weekly_goal_minutes: minutes };
+}
+
+// Lembrete diário (notificações) — persistido no user_settings existente (RF01)
+export async function updateReminderSettings(userId, { enabled, hour, minute }) {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const flag = enabled ? 1 : 0;
+  const res = await db.runAsync(
+    'UPDATE user_settings SET reminder_enabled = ?, reminder_hour = ?, reminder_minute = ?, updated_at = ? WHERE user_id = ?',
+    [flag, hour, minute, now, userId]
+  );
+  if (res.changes === 0) {
+    const cur = await db.getFirstAsync(
+      'SELECT weekly_goal_minutes FROM user_settings WHERE user_id = ?',
+      [userId]
+    );
+    await db.runAsync(
+      'INSERT INTO user_settings (user_id, weekly_goal_minutes, reminder_enabled, reminder_hour, reminder_minute, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, cur?.weekly_goal_minutes ?? 300, flag, hour, minute, now]
+    );
+  }
+  return { reminder_enabled: flag, reminder_hour: hour, reminder_minute: minute };
 }
 
 // Badges
