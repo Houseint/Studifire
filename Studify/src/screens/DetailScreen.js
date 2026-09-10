@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, StatusBar, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getMateriaById, atualizarMateria, registrarSessao, carregarSessoesPorMateria, registrarQuizAttempt } from '../services/subjectsDb';
+import { getMateriaById, atualizarMateria, registrarSessao, carregarSessoesPorMateria, registrarQuizAttempt, carregarQuizAttempts, getSubjectGoal, setSubjectGoal, getSubjectWeekMinutes } from '../services/subjectsDb';
 import { useUserId } from '../hooks/useUserId';
 import { formatarTempo, formatarCronometro } from '../shared/utils/formatTime';
 import { toggleTopicoWithFsrs, aplicarResultadoQuiz } from '../shared/utils/fsrs';
@@ -48,6 +48,14 @@ export default function DetailScreen({ route, navigation }) {
         setMateria(m);
         const s = await carregarSessoesPorMateria(userId, id);
         setSessoes(s);
+        const q = await carregarQuizAttempts(userId, id).catch(() => []);
+        setQuizHistory(q);
+        // Meta semanal da matéria (passo 3): meta + minutos desta semana.
+        const [g, w] = await Promise.all([
+          getSubjectGoal(userId, id).catch(() => null),
+          getSubjectWeekMinutes(userId, id).catch(() => 0),
+        ]);
+        setMeta({ goal: g, week: w });
       } catch (e) {
         console.error('Erro ao carregar detalhes:', e);
       }
@@ -103,6 +111,7 @@ export default function DetailScreen({ route, navigation }) {
     else setElapsedSeconds(0);
     setPaused(false);
     setStudying(true);
+    quizOfertadoRef.current = false;
   };
 
   // internal helper for pomodoro finish
@@ -122,6 +131,16 @@ export default function DetailScreen({ route, navigation }) {
       await registrarSessao(userId, id, minutos);
       const s = await carregarSessoesPorMateria(userId, id);
       setSessoes(s);
+      // Meta da matéria anda junto com a sessão salva.
+      getSubjectWeekMinutes(userId, id).then((w) => setMeta((prev) => ({ ...prev, week: w }))).catch(() => {});
+      // Quiz automático pós-sessão: oferece 1x por sessão (sem auto-modal).
+      if (!quizOfertadoRef.current && materia?.topicos?.length) {
+        quizOfertadoRef.current = true;
+        Alert.alert('Sessão salva! 🎉', 'Fazer um quiz rápido do tópico?', [
+          { text: 'Agora não', style: 'cancel' },
+          { text: 'Fazer quiz', onPress: iniciarQuiz },
+        ]);
+      }
     } else if ((timerMode === 'free' ? elapsedSeconds : (pomodoroDuration * 60 - pomodoroLeft)) > 0) {
       // só alerta se não for fim de pomodoro já tratado
       if (!(timerMode === 'pomodoro' && pomodoroLeft === 0)) {
@@ -144,6 +163,27 @@ export default function DetailScreen({ route, navigation }) {
   const [quizQuestoes, setQuizQuestoes] = useState([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizTopicIndex, setQuizTopicIndex] = useState(0);
+  // Histórico de quizzes da matéria (últimos resultados).
+  const [quizHistory, setQuizHistory] = useState([]);
+  // Meta semanal da matéria (passo 3): goal em min/semana (null = sem meta).
+  const [meta, setMeta] = useState({ goal: null, week: 0 });
+
+  const editarMeta = () => {
+    const opcoes = [30, 60, 120, 180, 300].map((m) => ({
+      text: `${m} min/sem`,
+      onPress: async () => {
+        const g = await setSubjectGoal(userId, id, m).catch(() => null);
+        if (g != null) setMeta((prev) => ({ ...prev, goal: g }));
+      },
+    }));
+    Alert.alert('Meta semanal', 'Quanto estudar esta matéria por semana?', [
+      ...opcoes,
+      { text: 'Desligar', style: 'destructive', onPress: async () => { await setSubjectGoal(userId, id, 0).catch(() => {}); setMeta((prev) => ({ ...prev, goal: null })); } },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+  // Quiz automático: garante 1 oferta por sessão (ref é síncrono — sem duplo Alert).
+  const quizOfertadoRef = useRef(false);
 
   const iniciarQuiz = async () => {
     if (!materia || !materia.topicos?.length) {
@@ -187,6 +227,8 @@ export default function DetailScreen({ route, navigation }) {
         const { topicos: novosTopicos } = aplicarResultadoQuiz(materia.topicos, idx, { total, correct });
         await atualizarMateria(userId, id, { topicos: novosTopicos });
         setMateria({ ...materia, topicos: novosTopicos });
+        const q = await carregarQuizAttempts(userId, id).catch(() => []);
+        setQuizHistory(q);
       }
     } catch (e) {
       console.warn('Quiz: falha ao salvar resultado', e?.message || e);
@@ -446,9 +488,20 @@ export default function DetailScreen({ route, navigation }) {
           </View>
         )}
 
+                <Text style={s.sectionTitle}>META SEMANAL</Text>
+        <TouchableOpacity style={s.sessionRow} activeOpacity={0.7} onPress={editarMeta}>
+          <Text style={s.sessionDate}>
+            {meta.goal ? `${meta.week}/${meta.goal} min` : 'Sem meta · toque para definir'}
+          </Text>
+          <Text style={s.sessionDuration}>
+            {meta.goal ? `${Math.min(100, Math.round((meta.week / meta.goal) * 100))}%` : 'Definir'}
+          </Text>
+        </TouchableOpacity>
+
         {sessoes.length > 0 && (
           <>
             <Text style={s.sectionTitle}>SESSÕES DE ESTUDO</Text>
+
             {sessoes.slice(0, 20).map((sessao) => (
               <View key={sessao.id} style={s.sessionRow}>
                 <Text style={s.sessionDate}>
@@ -460,6 +513,24 @@ export default function DetailScreen({ route, navigation }) {
                 </Text>
                 <Text style={s.sessionDuration}>
                   {sessao.duration_minutes > 0 ? formatarTempo(sessao.duration_minutes) : '—'}
+                </Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {quizHistory.length > 0 && (
+          <>
+            <Text style={s.sectionTitle}>ÚLTIMOS QUIZZES</Text>
+            {quizHistory.slice(0, 3).map((q) => (
+              <View key={q.id} style={s.sessionRow}>
+                <Text style={s.sessionDate}>
+                  {q.topic_nome} · {new Date(q.created_at).toLocaleDateString('pt-BR', {
+                    day: '2-digit', month: '2-digit',
+                  })}
+                </Text>
+                <Text style={s.sessionDuration}>
+                  {q.questions_correct}/{q.questions_total}
                 </Text>
               </View>
             ))}

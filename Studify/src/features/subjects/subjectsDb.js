@@ -152,6 +152,43 @@ export async function carregarQuizAttempts(userId, subjectId = null) {
   );
 }
 
+// ===== Meta semanal por matéria (Passo 3) =====
+// Meta própria de cada matéria (min/semana). Sem meta = null (usa só a global).
+export async function getSubjectGoal(userId, subjectId) {
+  const db = await getDb();
+  const row = await db.getFirstAsync(
+    'SELECT weekly_minutes FROM subject_goals WHERE user_id = ? AND subject_id = ?',
+    [userId, subjectId]
+  );
+  return row ? row.weekly_minutes : null;
+}
+
+export async function setSubjectGoal(userId, subjectId, weeklyMinutes) {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const minutes = Math.max(0, Math.floor(Number(weeklyMinutes) || 0));
+  if (minutes <= 0) {
+    await db.runAsync('DELETE FROM subject_goals WHERE user_id = ? AND subject_id = ?', [userId, subjectId]);
+    return null;
+  }
+  await db.runAsync(
+    'INSERT INTO subject_goals (user_id, subject_id, weekly_minutes, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, subject_id) DO UPDATE SET weekly_minutes = excluded.weekly_minutes, updated_at = excluded.updated_at',
+    [userId, subjectId, minutes, now]
+  );
+  return minutes;
+}
+
+// Minutos estudados nesta matéria desde domingo 00:00 (mesma regra da meta global).
+export async function getSubjectWeekMinutes(userId, subjectId) {
+  const sessoes = await carregarSessoesPorMateria(userId, subjectId);
+  const inicioSemana = new Date();
+  inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+  inicioSemana.setHours(0, 0, 0, 0);
+  return sessoes
+    .filter((s) => new Date(s.started_at) >= inicioSemana)
+    .reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+}
+
 export async function criarConversa(userId) {
   const db = await getDb();
   const now = new Date().toISOString();

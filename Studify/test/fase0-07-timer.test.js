@@ -12,6 +12,10 @@ jest.mock('../src/services/subjectsDb', () => ({
   registrarSessao: jest.fn(),
   carregarSessoesPorMateria: jest.fn(),
   registrarQuizAttempt: jest.fn(),
+  carregarQuizAttempts: jest.fn(() => Promise.resolve([])),
+  getSubjectGoal: jest.fn(() => Promise.resolve(null)),
+  setSubjectGoal: jest.fn(),
+  getSubjectWeekMinutes: jest.fn(() => Promise.resolve(0)),
 }));
 
 import {

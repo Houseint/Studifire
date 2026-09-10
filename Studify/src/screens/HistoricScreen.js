@@ -4,6 +4,9 @@ import { View, Text, TouchableOpacity, SectionList, StatusBar, StyleSheet } from
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
+import { buildActivityHeatmap } from '../shared/utils/activity';
+
+const HEATMAP_COLORS = ['#1B2342', '#2E3A6E', '#4A569E', '#6F52FF', '#9D86FF'];
 
 const FILTROS = [
   { key: 'todos', label: 'Todos' },
@@ -65,6 +68,7 @@ export default function HistoricScreen({ navigation }) {
   ).size;
 
   const sections = agruparPorData(sessoesFiltradas);
+  const heatmap = buildActivityHeatmap(sessoes);
 
   return (
     <View style={s.container}>
@@ -106,6 +110,26 @@ export default function HistoricScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         ))}
+      </View>
+
+      <View style={s.heatmapCard}>
+        <Text style={s.heatmapTitle}>Últimos 7 dias</Text>
+        <View style={s.heatmapRow}>
+          {heatmap.map((d) => (
+            <View key={d.key} style={s.heatmapCell}>
+              <View
+                style={[
+                  s.heatmapDot,
+                  { backgroundColor: HEATMAP_COLORS[d.level] || HEATMAP_COLORS[0] },
+                  d.isToday && s.heatmapDotToday,
+                ]}
+              />
+              <Text style={[s.heatmapWeekday, d.isToday && s.heatmapWeekdayToday]}>
+                {d.weekday}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       <SectionList
@@ -195,6 +219,19 @@ const s = StyleSheet.create({
   filtroBtnAtivo: { backgroundColor: 'rgba(111,82,255,0.2)' },
   filtroBtnText: { color: '#7F8AB7', fontSize: 13, fontWeight: '600' },
   filtroBtnTextAtivo: { color: '#8A68FF' },
+  heatmapCard: {
+    backgroundColor: '#111832', borderRadius: 14,
+    borderWidth: 1, borderColor: '#27315B',
+    paddingVertical: 12, paddingHorizontal: 16,
+    marginHorizontal: 20, marginBottom: 12,
+  },
+  heatmapTitle: { color: '#8E97C4', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
+  heatmapRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  heatmapCell: { alignItems: 'center' },
+  heatmapDot: { width: 26, height: 26, borderRadius: 8, marginBottom: 6 },
+  heatmapDotToday: { borderWidth: 2, borderColor: '#F4F6FF' },
+  heatmapWeekday: { color: '#7F8AB7', fontSize: 11, fontWeight: '600' },
+  heatmapWeekdayToday: { color: '#F4F6FF' },
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionHeader: {
     color: '#8F98C2', fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
