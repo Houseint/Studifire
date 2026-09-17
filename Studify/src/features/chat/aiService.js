@@ -142,6 +142,49 @@ function normalizeTopico(s) {
 }
 
 /**
+ * Parse compartilhado do JSON de tópicos da IA (gerador digitado + via material).
+ * Extrai {"topicos": [...]} com fallback, filtra e deduplica.
+ * @param {string} raw resposta bruta da IA
+ * @param {Set<string>} existentesSet nomes já existentes (normalizados)
+ * @param {number} qtd máximo a retornar
+ * @returns {Array<{nome:string, estudado:boolean}>}
+ */
+export function extrairTopicosDoJson(raw, existentesSet, qtd) {
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_) {
+    // tenta extrair JSON de dentro do texto
+    const m = (raw || '').match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        parsed = JSON.parse(m[0]);
+      } catch (_) {}
+    }
+  }
+
+  let lista = [];
+  if (parsed) {
+    if (Array.isArray(parsed.topicos)) lista = parsed.topicos;
+    else if (Array.isArray(parsed.topics)) lista = parsed.topics;
+    else if (Array.isArray(parsed)) lista = parsed;
+  }
+
+  const filtrados = [];
+  const seen = new Set(existentesSet);
+  for (const item of lista) {
+    const nome = typeof item === 'string' ? item.trim() : (item?.nome || item?.titulo || '').trim();
+    if (!nome || nome.length < 2 || nome.length > 60) continue;
+    const norm = normalizeTopico(nome);
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    filtrados.push({ nome, estudado: false });
+    if (filtrados.length >= qtd) break;
+  }
+  return filtrados;
+}
+
+/**
  * 1.2 Gerador híbrido (C 1,2,3) — gera tópicos complementares com IA.
  * Exige >=1 tópico existente para contextualizar (trava de UX).
  * Dedup por normalize, limita ao MAX_TOPICOS (10) e preview editável fora.
@@ -212,36 +255,84 @@ Gere ${qtd} complementares:`;
     throw new Error('Não foi possível gerar tópicos, tente novamente em alguns segundos.');
   }
 
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (_) {
-    // tenta extrair JSON de dentro do texto
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (m) {
-      try {
-        parsed = JSON.parse(m[0]);
-      } catch (_) {}
-    }
+  const filtrados = extrairTopicosDoJson(raw, existentesSet, qtd);
+
+  return { topicos: filtrados, raw };
+}
+
+/**
+ * FASE 3 — Material → tópicos: lê foto do material (câmera/galeria/arquivo)
+ * com modelo vision e sugere tópicos no mesmo formato do gerador digitado.
+ * Diferença p/ gerarTopicosComplementares: NÃO exige 1 tópico existente
+ * (quem importa material pode estar começando a matéria do zero).
+ * Erros da IA viram throw com mensagem amigável — nunca botão morto.
+ *
+ * @param {string} nomeMateria
+ * @param {string} imagemBase64 foto do material em base64 (sem prefixo data:)
+ * @param {Array<string|{nome:string}>} topicosExistentes
+ * @param {Object} opts
+ * @param {number} [opts.maxTotal=10]
+ * @returns {Promise<{topicos:Array<{nome:string,estudado:boolean}>, raw:string}>}
+ */
+export const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+// Imagem não dá p/ estimar por tamanho do texto: valor fixo p/ o rate limiter free.
+export const VISION_TOKEN_ESTIMATE = 2000;
+
+export async function gerarTopicosDeMaterial(nomeMateria, imagemBase64, topicosExistentes = [], opts = {}) {
+  const maxTotal = opts.maxTotal || 10;
+  if (!nomeMateria || nomeMateria.trim().length < 3) {
+    throw new Error('NOME_INVALIDO');
+  }
+  if (!imagemBase64 || String(imagemBase64).trim().length < 100) {
+    throw new Error('IMAGEM_OBRIGATORIA');
+  }
+  const existentesNomes = (topicosExistentes || [])
+    .map((t) => (typeof t === 'string' ? t : t?.nome || t?.titulo || ''))
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const existentesSet = new Set(existentesNomes.map(normalizeTopico));
+  const slots = maxTotal - existentesNomes.length;
+  if (slots <= 0) {
+    return { topicos: [], reason: 'limite_atingido', raw: '' };
   }
 
-  let lista = [];
-  if (parsed) {
-    if (Array.isArray(parsed.topicos)) lista = parsed.topicos;
-    else if (Array.isArray(parsed.topics)) lista = parsed.topics;
-    else if (Array.isArray(parsed)) lista = parsed;
+  const qtd = Math.min(slots, 7);
+  const system = `Você é um curador especialista que quebra matérias em tópicos atômicos e acionáveis para estudo.
+Regras:
+- Leia o conteúdo da IMAGEM (foto de material de estudo) e gere exatamente ${qtd} tópicos a partir do que aparece nela.
+- Tópicos curtos (2-5 palavras), específicos, sem numeração, sem repetição, em PT-BR.
+- Evite generalidades; prefira subtópicos acionáveis que um estudante pode marcar como feito em 1 sessão.
+- Se a imagem estiver ilegível ou não for material de estudo, retorne {"topicos": []}.
+- Retorne APENAS JSON válido no formato {"topicos": ["nome1", "nome2", ...]}.`;
+
+  const raw = await groqChatCompletion(
+    [
+      { role: 'system', content: system },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `Matéria: "${nomeMateria.trim()}"\nTópicos já existentes (não repita): [${existentesNomes.join(', ')}]\nGere ${qtd} tópicos a partir da imagem:` },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imagemBase64}` } },
+        ],
+      },
+    ],
+    { temperature: 0.5, max_tokens: 900, response_format: { type: 'json_object' }, model: VISION_MODEL, tokenEstimate: VISION_TOKEN_ESTIMATE },
+  );
+
+  // rate limiter guard retorna mensagem com ⏳
+  if (typeof raw === 'string' && raw.startsWith('⏳')) {
+    throw new Error(raw);
+  }
+  if (typeof raw === 'string' && raw.startsWith('Configure')) {
+    throw new Error('Configure sua chave da API Groq no .env para importar material com IA.');
+  }
+  if (typeof raw === 'string' && (raw.startsWith('Erro de conexão') || raw.startsWith('Sem resposta') || raw.startsWith('Erro na API'))) {
+    throw new Error('Não consegui ler a imagem agora. Verifique a internet e tente de novo.');
   }
 
-  const filtrados = [];
-  const seen = new Set(existentesSet);
-  for (const item of lista) {
-    const nome = typeof item === 'string' ? item.trim() : (item?.nome || item?.titulo || '').trim();
-    if (!nome || nome.length < 2 || nome.length > 60) continue;
-    const norm = normalizeTopico(nome);
-    if (seen.has(norm)) continue;
-    seen.add(norm);
-    filtrados.push({ nome, estudado: false });
-    if (filtrados.length >= qtd) break;
+  const filtrados = extrairTopicosDoJson(raw, existentesSet, qtd);
+  if (filtrados.length === 0) {
+    throw new Error('Não consegui extrair tópicos — tente uma foto mais nítida do material.');
   }
 
   return { topicos: filtrados, raw };

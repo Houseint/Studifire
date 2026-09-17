@@ -28,8 +28,10 @@ export function isGroqConfigured() {
 
 /**
  * Chamada centralizada ao Groq com rate limiter free tier.
- * @param {Array<{role:string, content:string}>} messages
+ * @param {Array<{role:string, content:string|Array}>} messages (content pode ser array p/ vision)
  * @param {Object} options
+ * @param {string} [options.model] override do modelo (ex.: vision p/ leitura de imagem)
+ * @param {number} [options.tokenEstimate] estimativa fixa de tokens (p/ imagem, onde o base64 quebraria a estimativa)
  * @returns {Promise<string>}
  */
 export async function groqChatCompletion(messages, options = {}) {
@@ -39,21 +41,22 @@ export async function groqChatCompletion(messages, options = {}) {
     return 'Configure sua chave da API Groq no arquivo .env';
   }
 
-  const { temperature = 0.7, max_tokens = 512, response_format, reasoning_effort, max_completion_tokens } = options;
+  const { temperature = 0.7, max_tokens = 512, response_format, reasoning_effort, max_completion_tokens, model: modelOverride, tokenEstimate } = options;
+  const effectiveModel = modelOverride || model;
 
   // gpt-oss consome tokens de raciocínio oculto -> usa low para não estourar max_tokens em JSON mode
-  const effectiveReasoning = reasoning_effort || (model.includes('gpt-oss') ? 'low' : undefined);
+  const effectiveReasoning = reasoning_effort || (effectiveModel.includes('gpt-oss') ? 'low' : undefined);
   const effectiveMax = max_completion_tokens || max_tokens;
 
   // --- Rate limiter hard (nunca paga) ---
-  const estimated = estimateTokens(messages, effectiveMax);
+  const estimated = typeof tokenEstimate === 'number' ? tokenEstimate : estimateTokens(messages, effectiveMax);
   const check = await canProceed(estimated);
   if (!check.allowed) {
     return `⏳ Limite gratuito da IA atingido. ${check.reason} Se precisar, tente novamente em alguns segundos. Nenhum custo foi gerado.`;
   }
 
   const body = {
-    model,
+    model: effectiveModel,
     messages,
     temperature,
     max_tokens: effectiveMax,

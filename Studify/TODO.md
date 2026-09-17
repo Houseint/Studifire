@@ -23,6 +23,7 @@ Playbook oficial: `../GUIA_VELOCIDADE_STUDIFY.md`. Uma mudança por vez, `npm te
 - [x] Quiz rápido sempre abre (17/09): `gerarQuiz` ganhou fallback local `gerarQuizLocal` (autoavaliação por tópico, `local: true`) quando IA indisponível — sem `.env`, sem internet, limite free ou JSON vazio; antes o botão morria num Alert. Detail repassa `local` p/ badge "⚡ offline" no QuizModal (fase2-02 +3 testes)
 - [x] Revisão pós-quiz (17/09): QuizModal mostra seção REVISÃO após "Ver resultado" — cada questão com "✓/✗ Sua: X" e "Resposta certa: Y" quando erra; `onFinish` segue `{total, correct}` (fase2-03 +2 testes). Suíte: **31 suítes, 195 testes, 100% verde**
 - [x] Limpeza (17/09): removido `src/screens/Historic.js` morto (zero referências) + desinstalado `@react-navigation/native-stack` (App usa `@react-navigation/stack`). Suíte segue **31 suítes, 195 testes, 100% verde**
+- [x] FASE 3.1 — Material → tópicos (17/09): botão "📷 Importar material" na Detail (câmera/galeria via `expo-image-picker`, arquivo via `expo-document-picker`); `gerarTopicosDeMaterial` com Groq Vision (`llama-4-scout`, override `options.model` no groqClient) reaproveitando parse/dedup via helper `extrairTopicosDoJson`; `.pdf` orienta a fotografar (sem extrator de PDF no Expo Go); erros viram mensagem clara, nunca botão morto. Suíte: **32 suítes, 203 testes, 100% verde**
 
 ## Em andamento
 

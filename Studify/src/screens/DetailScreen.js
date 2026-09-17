@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, StatusBar, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, StatusBar, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { getMateriaById, atualizarMateria, registrarSessao, carregarSessoesPorMateria, registrarQuizAttempt, carregarQuizAttempts, getSubjectGoal, setSubjectGoal, getSubjectWeekMinutes } from '../services/subjectsDb';
 import { useUserId } from '../hooks/useUserId';
 import { formatarTempo, formatarCronometro } from '../shared/utils/formatTime';
 import { toggleTopicoWithFsrs, aplicarResultadoQuiz } from '../shared/utils/fsrs';
-import { gerarTopicosComplementares, gerarQuiz } from '../services/aiService';
+import { gerarTopicosComplementares, gerarTopicosDeMaterial, gerarQuiz } from '../services/aiService';
 import TopicCoachCard from '../components/TopicCoachCard';
 import { QuizModal } from '../features/study';
 
@@ -273,6 +276,83 @@ export default function DetailScreen({ route, navigation }) {
   };
   const handleIaClear = () => { setIaGenSugestoes([]); setIaGenSelected({}); setIaGenError(''); };
 
+  // FASE 3 — Material → tópicos: foto (câmera/galeria) ou arquivo → IA vision.
+  // Reaproveita a mesma lista de sugestões/preview do "Expandir com IA".
+  const processarMaterial = async (base64) => {
+    if (!materia) return;
+    setIaGenLoading(true);
+    setIaGenError('');
+    try {
+      const res = await gerarTopicosDeMaterial(materia.nome, base64, materia.topicos, { maxTotal: 10 });
+      if (res.reason === 'limite_atingido' || !res.topicos || res.topicos.length === 0) {
+        setIaGenError(res.reason === 'limite_atingido' ? 'Limite de 10 tópicos atingido.' : 'IA não retornou sugestões novas.');
+        setIaGenSugestoes([]);
+        return;
+      }
+      setIaGenSugestoes(res.topicos);
+      const sel = {};
+      res.topicos.forEach((_, i) => (sel[i] = true));
+      setIaGenSelected(sel);
+    } catch (e) {
+      setIaGenError(e?.message || 'Erro ao ler material');
+    } finally {
+      setIaGenLoading(false);
+    }
+  };
+
+  const alertSemPermissao = (nome) => Alert.alert(
+    `Permissão de ${nome} negada`,
+    `Libere o acesso nas configurações do celular para importar o material.`,
+    [{ text: 'Abrir ajustes', onPress: () => Linking.openSettings() }, { text: 'OK' }],
+  );
+
+  const importarViaCamera = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync().catch(() => null);
+    if (!perm?.granted) { alertSemPermissao('câmera'); return; }
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true }).catch(() => null);
+    if (!res || res.canceled || !res.assets?.[0]?.base64) return;
+    await processarMaterial(res.assets[0].base64);
+  };
+
+  const importarViaGaleria = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => null);
+    if (!perm?.granted) { alertSemPermissao('galeria'); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true }).catch(() => null);
+    if (!res || res.canceled || !res.assets?.[0]?.base64) return;
+    await processarMaterial(res.assets[0].base64);
+  };
+
+  const importarViaArquivo = async () => {
+    const res = await DocumentPicker.getDocumentAsync({ type: ['image/*', 'application/pdf'], copyToCacheDirectory: true }).catch(() => null);
+    if (!res || res.canceled || !res.assets?.[0]) return;
+    const file = res.assets[0];
+    const nome = (file.name || '').toLowerCase();
+    if (file.mimeType === 'application/pdf' || nome.endsWith('.pdf')) {
+      Alert.alert(
+        'PDF ainda não suportado',
+        'O app ainda não lê PDF direto. Fotografe as páginas que eu extraio os tópicos.',
+        [{ text: 'Fotografar agora', onPress: importarViaCamera }, { text: 'OK' }],
+      );
+      return;
+    }
+    try {
+      const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' });
+      await processarMaterial(base64);
+    } catch (e) {
+      setIaGenError('Não consegui abrir esse arquivo.');
+    }
+  };
+
+  const handleImportMaterial = () => {
+    if (!materia || materia.topicos.length >= 10 || iaGenLoading) return;
+    Alert.alert('Importar material', 'De onde vem o conteúdo?', [
+      { text: 'Câmera', onPress: importarViaCamera },
+      { text: 'Galeria', onPress: importarViaGaleria },
+      { text: 'Arquivo', onPress: importarViaArquivo },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
   const handleBack = () => {
     if (studying) {
       Alert.alert(
@@ -459,6 +539,15 @@ export default function DetailScreen({ route, navigation }) {
             >
               {iaGenLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: materia.topicos.length>=1 ? '#fff' : '#5a6a7a' }}>✨</Text>}
               <Text style={{ color: materia.topicos.length>=1 ? '#fff' : '#5a6a7a', fontWeight:'800', fontSize:14 }}>{iaGenLoading ? 'Gerando...' : 'Expandir com IA'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleImportMaterial}
+              disabled={iaGenLoading}
+              activeOpacity={0.8}
+              style={{ backgroundColor:'#1B2545', borderWidth:1, borderColor:'#303E70', borderRadius:12, paddingVertical:12, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:8, marginTop:8, opacity: iaGenLoading?0.5:1 }}
+            >
+              <Text style={{ color:'#C0CAE8' }}>📷</Text>
+              <Text style={{ color:'#C0CAE8', fontWeight:'800', fontSize:14 }}>{iaGenLoading ? 'Lendo material...' : 'Importar material (foto/PDF)'}</Text>
             </TouchableOpacity>
             {materia.topicos.length < 1 && <Text style={{ color:'#7F8AB7', fontSize:11, marginTop:6 }}>Adicione 1 tópico para IA completar</Text>}
             {!!iaGenError && <Text style={{ color:'#EF4444', fontSize:12, marginTop:6 }}>{iaGenError}</Text>}
