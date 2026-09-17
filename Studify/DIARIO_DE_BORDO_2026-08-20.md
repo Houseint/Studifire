@@ -513,3 +513,133 @@ Falhas = as mesmas 4 pré-existentes (confirmado via git stash). Um run isolado 
 
 ### Status (09/09)
 - Pendente p/ entrega: README (como rodar + o que foi feito) e vídeo 3 min. Commit deste passo abaixo.
+
+---
+
+## 📓 Relatório 17/09/2026 — Quiz offline + FASE 3.1 (foto→tópicos) + modo light + Obsidian
+
+**Responsável:** Gustavo (+ assistente de IA)
+**Tipo:** 3 correções, 2 features grandes, organização do segundo cérebro (Obsidian) + commits
+**Branch:** `Teste/correçoes` — tudo commitado e no GitHub (commits `ef826d3`, `2dee97e`, `9fd20d5`, `d8d9e0f`, `06f07f2`)
+
+---
+
+### 🎯 Resumo Executivo
+
+Dia cheio com 5 entregas visíveis no app + casa arrumada por fora:
+
+1. **Quiz rápido consertado** — o botão "🧠 Quiz rápido" confirmava e não abria nada; agora sempre abre, mesmo sem internet
+2. **Revisão pós-quiz** — ao ver o resultado, o app mostra cada questão com a sua resposta e a certa
+3. **FASE 3.1 do PDF — foto/arquivo vira tópico** — fotografar o caderno gera os tópicos da matéria sozinho
+4. **Modo segurança nos nomes** — não dá mais pra salvar matéria com "asdf" ou "aaaa"
+5. **Modo light completo** — Perfil, Home, Detail, Quiz, IA e Progresso claros, com botão sol/lua no Perfil
+6. **Guia de primeiro uso arquivado** — ideia guardada p/ executar quando o visual estabilizar (antes do passo 3 da FASE 3)
+7. **Obsidian sincronizando** — notas do projeto sobem sozinhas pro GitHub e aparecem em casa
+
+**Resultado:** 39 suítes, 237 testes, 100% verde. Nenhuma tela quebrou no processo.
+
+---
+
+### 🧠 1. Quiz rápido consertado + revisão pós-quiz
+
+**Problema:** tocar em "🧠 Quiz rápido" → confirmar → nada acontecia. A causa: sem chave de IA configurada no aparelho, a geração falhava silenciosamente num aviso e o quiz nunca abria.
+
+**O que mudou (visão do usuário):**
+- O quiz **sempre abre agora**. Com internet + IA, as perguntas vêm da IA; sem internet, sem chave ou com limite gratuito estourado, o app monta sozinho um quiz de autoavaliação a partir dos tópicos da matéria e mostra um selo "⚡ offline"
+- Tela de **REVISÃO** após "Ver resultado": cada pergunta mostra ✓/✗, a resposta que você marcou e a resposta certa (quando erra)
+- Nada muda no placar, streak ou dificuldade: o registro pós-quiz continua igual
+
+**Como testar:** Detail de qualquer matéria → "🧠 Quiz rápido" → responde → "Ver resultado" → confere a seção REVISÃO. Depois desliga o Wi-Fi e repete: abre com selo offline.
+
+---
+
+### 📸 2. FASE 3.1 — Foto/arquivo vira tópico (primeiro item da FASE 3 do PDF)
+
+**O que é:** botão **"Importar material"** na tela da matéria. Opções: tirar foto, escolher da galeria ou anexar arquivo. A IA lê o material e sugere os tópicos, que entram no mesmo fluxo de preview de antes (marcar/desmarcar antes de adicionar).
+
+**Detalhes de comportamento:**
+- Arquivo `.pdf` direto ainda não é lido — o app avisa e sugere fotografar as páginas (limitação assumida e comunicada na tela)
+- Funciona com a mesma chave de IA já usada no app; sem internet, avisa em vez de travar
+- Bastidor: foram testados 2 modelos de visão que a Groq recusou antes de achar um liberado na conta — o app final já vem com o modelo certo configurado
+
+**Como testar:** Detail → "Importar material" → fotografa um caderno → confere as sugestões → adiciona.
+
+---
+
+### 🛡️ 3. Modo segurança nos nomes de matéria
+
+**O que é:** o app agora barra nome sem sentido ao criar ou renomear matéria, com aviso explicando o motivo. Bloqueia: vazio/curto (menos de 3 letras), só número/símbolo ("123"), tecla presa ("aaaa"), sem vogal ("zxcv") e teste de teclado ("asdf", "qwerty"). Nomes reais passam normalmente, incluindo siglas ("EDF") e nomes com número ("Física 2").
+
+**Como testar:** Home → Adicionar → digita "asdf" → confirma → aparece o aviso e não salva. Repete editando uma matéria existente.
+
+---
+
+### 🌗 4. Modo light completo (Perfil, Home, Detail, Quiz, IA, Progresso)
+
+**O que é:** alternativa clara ao tema escuro, com fundo acinzentado-azulado claro, cards brancos, texto marinho e o mesmo roxo do app. A escolha fica salva por usuário (troca de conta não bagunça o tema do outro).
+
+**Onde troca:** ícone **☀️/🌙 no canto superior direito do Perfil** (a seção "Aparência" antiga foi removida). Um toque alterna na hora.
+
+**Decisões visuais tomadas ao longo do dia:**
+- Cards de matéria no light ganharam 4 tons de **lilás claro** (teste aprovado pelo usuário antes de aplicar) em vez de herdar os escuros — que deixavam o texto ilegível
+- Botão **Sair** no light: vermelho rosado puxado pro lilás
+- Barra inferior: rótulos travados em 1 linha ("Progresso" não quebra mais) e botão **+** realinhado (mais pra baixo e à direita)
+- Restam fora do light: telas de Login/Cadastro e splash (próximos passos T7)
+
+**Como testar:** Perfil → toca no ☀️ → navega por Home, matéria, quiz, IA e Progresso conferindo legibilidade → volta pro 🌙 e confere que o escuro segue intacto.
+
+---
+
+### 📖 5. Guia de primeiro uso — ideia arquivada (sessão extraordinária)
+
+**Decisão:** carrossel de 4 telas na primeira abertura (organizar → estudar → revisar → acompanhar) + botão "Ver guia novamente" na Ajuda. **Arquivado, não implementado:** só entra em execução antes do passo 3 da FASE 3 e quando o visual estabilizar, pra não refazer capturas de tela a cada reforma. Detalhe guardado em `thoughts/shared/designs/2026-09-17-guia-primeiro-uso-design.md` e na fila do `TODO.md`.
+
+---
+
+### 🧠 6. Obsidian como segundo cérebro (sincronizando sozinho)
+
+**O que foi feito:**
+- Estrutura do vault criada na raiz do projeto (inbox, decisões, planos, designs, registros, templates)
+- Guia de sync automático escrito (`00-Inbox/sync-automatico-obsidian.md`): instalar o plugin Obsidian Git e ligar 3 chaves — depois disso as notas sobem/descem sozinhas a cada 10 min, sem commit manual
+- Vault versionado no GitHub (commits `9fd20d5`, `d8d9e0f`, `06f07f2`, incluindo a pasta `TCC/`)
+
+**Em casa:** dar Pull (ou abrir o vault com o plugin já configurado) e tudo aparece.
+
+---
+
+### ✅ Verificações
+
+```
+Test Suites: 39 passed, 39 total
+Tests:       237 passed, 237 total (100% verde)
+```
+
+Novos testes do dia: quiz offline e revisão, validação de nomes, 6 suítes de tema (paleta, persistência, toggle, Home, Detail, Chat+Progresso). Um teste antigo do fluxo da Home foi atualizado pra nova mensagem de nome inválido — quebra legítima, comportamento intencional.
+
+---
+
+### 📦 Commits do dia (branch `Teste/correçoes`, tudo com push)
+
+| Commit | Conteúdo |
+|---|---|
+| `ef826d3` | Quiz offline + revisão + limpeza (arquivo morto e pacote não usado removidos) |
+| `de94547` | Merge da FASE 3.1 (foto→tópicos) |
+| `9fd20d5` / `d8d9e0f` | Vault Obsidian (estrutura, planos, guia de sync) |
+| `2dee97e` | FASE 3.1 + segurança de nomes + modo light T1–T6 (48 arquivos) |
+| `06f07f2` | Pasta `TCC/` versionada |
+
+---
+
+### ⚠️ Pendências / próximos passos
+
+| Item | Status |
+|---|---|
+| T7 modo light — Login/Cadastro + splash | pendente |
+| Guia de primeiro uso (sessão extraordinária) | arquivado, antes do passo 3 da FASE 3 |
+| Passo 2 da FASE 3 — tutor hints-first | próximo do PDF |
+| Sons/vibração no timer, exportar progresso em PDF | backlog do TODO |
+
+---
+
+**Fim do relatório 17/09** ✅
+*Quiz que sempre abre, foto que vira tópico, nomes protegidos, app claro/escuro e cérebro externo sincronizado. Próximo: fechar o light (T7) ou atacar o tutor hints-first.*
