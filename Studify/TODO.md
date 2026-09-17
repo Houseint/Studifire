@@ -20,6 +20,9 @@ Playbook oficial: `../GUIA_VELOCIDADE_STUDIFY.md`. Uma mudança por vez, `npm te
 - [x] Heatmap de atividade (10/09): `buildActivityHeatmap` puro (`src/shared/utils/activity.js`, níveis 0-4 por minutos/dia) + strip "Últimos 7 dias" na HistoricScreen (dado `sessoes` já carregado; `fase2-06` verde)
 - [x] Últimos quizzes na Detail (10/09): seção "ÚLTIMOS QUIZZES" (últimos 3, placar + data) via `carregarQuizAttempts` existente; recarrega após salvar (`fase2-07` verde)
 - [x] Metas por matéria (10/09): tabela `subject_goals` (PK user+matéria, `weekly_minutes`) + `get/setSubjectGoal` (upsert, ≤0 desliga) + `getSubjectWeekMinutes` (regra domingo-00:00); seção "META SEMANAL" na Detail com presets 30-300min (`fase2-08` verde). Suíte: **31 suítes, 190 testes, 100% verde**
+- [x] Quiz rápido sempre abre (17/09): `gerarQuiz` ganhou fallback local `gerarQuizLocal` (autoavaliação por tópico, `local: true`) quando IA indisponível — sem `.env`, sem internet, limite free ou JSON vazio; antes o botão morria num Alert. Detail repassa `local` p/ badge "⚡ offline" no QuizModal (fase2-02 +3 testes)
+- [x] Revisão pós-quiz (17/09): QuizModal mostra seção REVISÃO após "Ver resultado" — cada questão com "✓/✗ Sua: X" e "Resposta certa: Y" quando erra; `onFinish` segue `{total, correct}` (fase2-03 +2 testes). Suíte: **31 suítes, 195 testes, 100% verde**
+- [x] Limpeza (17/09): removido `src/screens/Historic.js` morto (zero referências) + desinstalado `@react-navigation/native-stack` (App usa `@react-navigation/stack`). Suíte segue **31 suítes, 195 testes, 100% verde**
 
 ## Em andamento
 

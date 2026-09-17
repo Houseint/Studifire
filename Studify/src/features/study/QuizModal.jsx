@@ -6,9 +6,9 @@
  * via onFinish — quem persiste e ajusta o FSRS é a DetailScreen.
  */
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
-export default function QuizModal({ visible, questoes = [], onFinish, onClose }) {
+export default function QuizModal({ visible, questoes = [], local = false, onFinish, onClose }) {
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(null);
   const [answers, setAnswers] = useState([]);
@@ -50,7 +50,7 @@ export default function QuizModal({ visible, questoes = [], onFinish, onClose })
         <View style={s.card}>
           {!done ? (
             <>
-              <Text style={s.kicker}>QUIZ DE REVISÃO · {idx + 1}/{total}</Text>
+              <Text style={s.kicker}>QUIZ DE REVISÃO · {idx + 1}/{total}{local ? ' · ⚡ offline' : ''}</Text>
               <Text style={s.question}>{q.pergunta}</Text>
               {q.alternativas.map((alt, i) => (
                 <TouchableOpacity
@@ -85,6 +85,26 @@ export default function QuizModal({ visible, questoes = [], onFinish, onClose })
                     ? 'Bom! Continue revisando 💪'
                     : 'Vamos reforçar — revisão antecipada 📚'}
               </Text>
+              <Text style={s.kicker}>REVISÃO</Text>
+              <ScrollView style={s.review} showsVerticalScrollIndicator={false}>
+                {questoes.map((questao, i) => {
+                  const mine = answers[i];
+                  const hit = mine === questao?.correta;
+                  return (
+                    <View key={i} style={s.reviewItem}>
+                      <Text style={s.reviewQ}>{i + 1}. {questao?.pergunta}</Text>
+                      <Text style={hit ? s.reviewHit : s.reviewMiss}>
+                        {hit ? '✓' : '✗'} Sua: {questao?.alternativas?.[mine] ?? '—'}
+                      </Text>
+                      {!hit && (
+                        <Text style={s.reviewHit}>
+                          Resposta certa: {questao?.alternativas?.[questao?.correta] ?? '—'}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
               <TouchableOpacity style={s.primary} activeOpacity={0.8} onPress={handleSave}>
                 <Text style={s.primaryText}>Salvar resultado</Text>
               </TouchableOpacity>
@@ -134,4 +154,16 @@ const s = StyleSheet.create({
   ghostText: { color: '#8F98C2', fontSize: 14 },
   score: { color: '#F4F6FF', fontSize: 40, fontWeight: '900', textAlign: 'center', marginTop: 8 },
   feedback: { color: '#8F98C2', fontSize: 14, textAlign: 'center', marginVertical: 12 },
+  review: { maxHeight: 260, marginTop: 8, marginBottom: 4 },
+  reviewItem: {
+    backgroundColor: '#0E1530',
+    borderWidth: 1,
+    borderColor: '#1F2A4A',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  reviewQ: { color: '#F4F6FF', fontSize: 13, fontWeight: '700', marginBottom: 6 },
+  reviewHit: { color: '#86EFAC', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  reviewMiss: { color: '#FCA5A5', fontSize: 12, fontWeight: '600', marginTop: 2 },
 });

@@ -248,6 +248,47 @@ Gere ${qtd} complementares:`;
 }
 
 /**
+ * Fallback local (offline/sem chave IA): autoavaliação honesta por tópico.
+ * Puro e testável. Garante que o botão "Quiz rápido" SEMPRE abre um quiz:
+ * sem .env, sem internet ou com limite gratuito atingido, o usuário estuda
+ * do mesmo jeito e o FSRS recebe o sinal (correta = domínio real).
+ * Cada questão carrega `local: true` para a UI sinalizar "modo offline".
+ *
+ * @param {Array<string>} foco nomes dos tópicos em foco
+ * @param {number} qtd quantidade de questões (1-5)
+ * @returns {Array<{pergunta:string, alternativas:Array<string>, correta:number, local:boolean}>}
+ */
+export function gerarQuizLocal(foco = [], qtd = 3) {
+  const n = Math.min(Math.max(Number(qtd) || 3, 1), 5);
+  const topicos = (foco || []).map((s) => String(s || '').trim()).filter(Boolean);
+  const base = topicos.length > 0 ? topicos : ['este tópico'];
+  const modelos = [
+    (t) => ({
+      pergunta: `Sobre "${t}", você consegue explicar o essencial sem olhar o material?`,
+      alternativas: ['Domino — explico sem olhar', 'Sei o básico, falta detalhe', 'Só reconheço o nome', 'Ainda não estudei'],
+      correta: 0,
+    }),
+    (t) => ({
+      pergunta: `Qual frase descreve melhor seu estudo de "${t}"?`,
+      alternativas: ['Já estudei e revisei', 'Estudei uma vez', 'Só li por cima', 'Ainda não estudei'],
+      correta: 0,
+    }),
+    (t) => ({
+      pergunta: `Se caísse uma questão sobre "${t}" agora, você...`,
+      alternativas: ['Acertaria com confiança', 'Acertaria com dúvida', 'Chutaria', 'Deixaria em branco'],
+      correta: 0,
+    }),
+  ];
+  const questoes = [];
+  for (let i = 0; i < n; i++) {
+    const t = base[i % base.length];
+    const q = modelos[i % modelos.length](t);
+    questoes.push({ ...q, local: true });
+  }
+  return questoes;
+}
+
+/**
  * 2.2 Quiz pós-sessão — gera perguntas de múltipla escolha sobre a matéria.
  * Mesmo padrão do gerador de tópicos: guards de erro + parse JSON com fallback.
  * Nunca quebra o fluxo de estudo: qualquer falha da IA vira throw com mensagem
@@ -284,23 +325,32 @@ Regras:
 Tópicos estudados: [${foco.join(', ')}]
 Gere ${qtd} questões:`;
 
-  let raw = await groqChatCompletion(
-    [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-    { temperature: 0.6, max_tokens: 900, response_format: { type: 'json_object' }, reasoning_effort: 'low' },
-  );
+  let raw;
+  try {
+    raw = await groqChatCompletion(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { temperature: 0.6, max_tokens: 900, response_format: { type: 'json_object' }, reasoning_effort: 'low' },
+    );
+  } catch (e) {
+    console.warn('[gerarQuiz] IA falhou, usando fallback local:', e?.message);
+    return { questoes: gerarQuizLocal(foco, qtd), raw: 'LOCAL_FALLBACK', local: true };
+  }
 
-  // rate limiter guard retorna mensagem com ⏳
-  if (typeof raw === 'string' && raw.startsWith('⏳')) {
-    throw new Error(raw);
-  }
-  if (typeof raw === 'string' && raw.startsWith('Configure')) {
-    throw new Error(raw);
-  }
-  if (typeof raw === 'string' && raw.startsWith('Erro na API')) {
-    throw new Error('Não foi possível gerar o quiz, tente novamente em alguns segundos.');
+  // IA indisponível (sem chave, sem internet, limite free, erro API):
+  // cai para o quiz local em vez de quebrar o fluxo de estudo.
+  if (
+    typeof raw !== 'string' ||
+    raw.startsWith('⏳') ||
+    raw.startsWith('Configure') ||
+    raw.startsWith('Erro de conexão') ||
+    raw.startsWith('Sem resposta') ||
+    raw.startsWith('Erro na API')
+  ) {
+    console.warn('[gerarQuiz] IA indisponível, usando fallback local.');
+    return { questoes: gerarQuizLocal(foco, qtd), raw: typeof raw === 'string' ? raw : 'LOCAL_FALLBACK', local: true };
   }
 
   let parsed;
@@ -340,5 +390,11 @@ Gere ${qtd} questões:`;
     if (questoes.length >= qtd) break;
   }
 
-  return { questoes, raw };
+  // IA retornou zero questões válidas: fallback local em vez de tela vazia.
+  if (questoes.length === 0) {
+    console.warn('[gerarQuiz] IA sem questões válidas, usando fallback local.');
+    return { questoes: gerarQuizLocal(foco, qtd), raw, local: true };
+  }
+
+  return { questoes, raw, local: false };
 }

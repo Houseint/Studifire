@@ -163,6 +163,7 @@ export default function DetailScreen({ route, navigation }) {
   const [quizQuestoes, setQuizQuestoes] = useState([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizTopicIndex, setQuizTopicIndex] = useState(0);
+  const [quizLocal, setQuizLocal] = useState(false);
   // Histórico de quizzes da matéria (últimos resultados).
   const [quizHistory, setQuizHistory] = useState([]);
   // Meta semanal da matéria (passo 3): goal em min/semana (null = sem meta).
@@ -196,13 +197,14 @@ export default function DetailScreen({ route, navigation }) {
     const foco = materia.topicos[idx];
     setQuizLoading(true);
     try {
-      const { questoes } = await gerarQuiz(materia.nome, [foco.nome || foco.titulo || 'tópico']);
+      const { questoes, local } = await gerarQuiz(materia.nome, [foco.nome || foco.titulo || 'tópico']);
       if (!questoes || questoes.length === 0) {
         Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente de novo.');
         return;
       }
       setQuizTopicIndex(idx);
       setQuizQuestoes(questoes);
+      setQuizLocal(!!local);
       setQuizVisible(true);
     } catch (e) {
       Alert.alert('Quiz indisponível', e?.message || 'Erro ao gerar quiz.');
@@ -543,6 +545,7 @@ export default function DetailScreen({ route, navigation }) {
       <QuizModal
         visible={quizVisible}
         questoes={quizQuestoes}
+        local={quizLocal}
         onFinish={finalizarQuiz}
         onClose={() => setQuizVisible(false)}
       />

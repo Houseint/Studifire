@@ -51,4 +51,35 @@ describe('2.2 - QuizModal: responde e salva', () => {
     );
     expect(screen.queryByText('Quanto é 2 + 2 na aritmética básica?')).toBeNull();
   });
+
+  test('resultado mostra revisão: onde errou e a resposta certa', async () => {
+    const onFinish = jest.fn();
+    const screen = render(
+      <QuizModal visible questoes={QUESTOES} onFinish={onFinish} onClose={() => {}} />
+    );
+
+    fireEvent.press(screen.getByText('3'));
+    fireEvent.press(screen.getByText('Ver resultado'));
+
+    await act(async () => {});
+    expect(screen.getByText(/Sua: 3/)).toBeTruthy();
+    expect(screen.getByText(/Resposta certa: 4/)).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Salvar resultado'));
+    expect(onFinish).toHaveBeenCalledWith({ total: 1, correct: 0 });
+  });
+
+  test('acerto mostra ✓ na revisão e badge offline quando local', async () => {
+    const screen = render(
+      <QuizModal visible questoes={QUESTOES} local onFinish={() => {}} onClose={() => {}} />
+    );
+
+    expect(screen.getByText(/⚡ offline/)).toBeTruthy();
+    fireEvent.press(screen.getByText('4'));
+    fireEvent.press(screen.getByText('Ver resultado'));
+
+    await act(async () => {});
+    expect(screen.getByText(/Sua: 4/)).toBeTruthy();
+    expect(screen.queryByText(/Resposta certa/)).toBeNull();
+  });
 });

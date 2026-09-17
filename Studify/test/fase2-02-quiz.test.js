@@ -180,4 +180,32 @@ describe('2.2 - Quiz pós-sessão: gerarQuiz (IA)', () => {
     await expect(gerarQuiz('Matemática', [])).rejects.toThrow('SEM_TOPICOS');
     expect(global.fetch).not.toHaveBeenCalled();
   });
+
+  test('sem chave IA retorna quiz local offline (botão nunca morre)', async () => {
+    delete process.env.EXPO_PUBLIC_GROQ_API_KEY;
+    const { gerarQuiz } = require('../src/services/aiService');
+    const { questoes, local } = await gerarQuiz('Matemática', ['Álgebra']);
+    expect(local).toBe(true);
+    expect(questoes).toHaveLength(3);
+    for (const q of questoes) {
+      expect(q.pergunta).toEqual(expect.stringContaining('Álgebra'));
+      expect(q.alternativas).toHaveLength(4);
+    }
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('falha de rede retorna quiz local', async () => {
+    global.fetch.mockRejectedValue(new Error('network down'));
+    const { gerarQuiz } = require('../src/services/aiService');
+    const { questoes, local } = await gerarQuiz('Matemática', ['Álgebra', 'Geometria'], { qtd: 2 });
+    expect(local).toBe(true);
+    expect(questoes).toHaveLength(2);
+  });
+
+  test('gerarQuizLocal é puro: respeita qtd e marca local', () => {
+    const { gerarQuizLocal } = require('../src/services/aiService');
+    const qs = gerarQuizLocal(['A', 'B'], 5);
+    expect(qs).toHaveLength(5);
+    expect(qs.every((q) => q.local === true && q.alternativas.length === 4)).toBe(true);
+  });
 });
