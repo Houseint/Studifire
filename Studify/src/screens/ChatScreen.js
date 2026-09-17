@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StatusBar, KeyboardAvoidingView, Platform, StyleSheet,
   Modal, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../shared/theme/ThemeContext';
+import { dark } from '../shared/theme/colors';
 import * as AiService from '../services/aiService';
 import { useUserId } from '../hooks/useUserId';
 import {
@@ -19,6 +21,8 @@ import {
 } from '../services/subjectsDb';
 
 export default function ChatScreen({ navigation }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => getChatStyles(colors), [colors]);
   const userId = useUserId();
   const [conversaId, setConversaId] = useState(null);
   const [mensagens, setMensagens] = useState([]);
@@ -193,8 +197,8 @@ export default function ChatScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-      <LinearGradient colors={['#0a0f1e', '#0d1a2e', '#0a1520']} style={s.gradient} />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
+      <LinearGradient colors={colors.bgGradient} style={s.gradient} />
 
       <View style={s.header}>
         <TouchableOpacity style={s.backButton} activeOpacity={0.7} onPress={() => navigation.goBack()}>
@@ -229,7 +233,7 @@ export default function ChatScreen({ navigation }) {
         <TextInput
           style={s.input}
           placeholder="Digite sua dúvida..."
-          placeholderTextColor="#4a5a6a"
+          placeholderTextColor={colors.textMuted}
           value={input}
           onChangeText={setInput}
           multiline
@@ -252,7 +256,7 @@ export default function ChatScreen({ navigation }) {
             <View style={s.modalHeader}>
               <Text style={s.modalTitulo}>Histórico</Text>
               <TouchableOpacity onPress={() => setHistModal(false)}>
-                <Text style={{ color: '#5a6a7a', fontSize: 20 }}>✕</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 20 }}>✕</Text>
               </TouchableOpacity>
             </View>
 
@@ -296,37 +300,37 @@ export default function ChatScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#090E1F' },
+export const getChatStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 50, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#27315B',
+    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   backButton: {
     width: 40, height: 40, borderRadius: 20,
-    borderWidth: 1, borderColor: '#27315B',
-    backgroundColor: '#111832',
+    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center', justifyContent: 'center', marginRight: 10,
   },
-  backButtonText: { color: '#7F8AB7', fontSize: 22 },
+  backButtonText: { color: colors.textMuted, fontSize: 22 },
   headerInfo: { flex: 1 },
-  headerTitle: { color: '#F4F6FF', fontSize: 17, fontWeight: '700' },
+  headerTitle: { color: colors.text, fontSize: 17, fontWeight: '700' },
   headerStatusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
-  statusOnline: { backgroundColor: '#4CAF50' },
-  statusDigitando: { backgroundColor: '#FF9800' },
-  statusOffline: { backgroundColor: '#8E97C4' },
-  headerStatus: { color: '#7F8AB7', fontSize: 12 },
+  statusOnline: { backgroundColor: colors.success },
+  statusDigitando: { backgroundColor: colors.warn },
+  statusOffline: { backgroundColor: colors.textSecondary },
+  headerStatus: { color: colors.textMuted, fontSize: 12 },
   novaBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(111,82,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
     marginLeft: 8,
   },
-  novaBtnText: { color: '#8A68FF', fontSize: 22, fontWeight: '300', lineHeight: 24 },
+  novaBtnText: { color: colors.accent, fontSize: 22, fontWeight: '300', lineHeight: 24 },
 
   lista: { paddingHorizontal: 16, paddingBottom: 8 },
   bolha: {
@@ -344,31 +348,31 @@ const s = StyleSheet.create({
   bolhaBotIconText: { fontSize: 14 },
   bolhaContent: {
     maxWidth: '78%', borderRadius: 16, padding: 13,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderBottomLeftRadius: 4,
   },
   bolhaContentUser: {
-    backgroundColor: '#6F52FF',
+    backgroundColor: colors.accentStrong,
     borderBottomRightRadius: 4,
     maxWidth: '78%', borderRadius: 16, padding: 13,
   },
   bolhaTexto: { fontSize: 15, lineHeight: 21 },
   bolhaTextoUser: { color: '#FFFFFF' },
-  bolhaTextoBot: { color: '#F4F6FF' },
+  bolhaTextoBot: { color: colors.text },
 
   inputArea: {
     flexDirection: 'row', alignItems: 'flex-end',
     paddingHorizontal: 12, paddingVertical: 10,
-    borderTopWidth: 1, borderTopColor: '#27315B',
+    borderTopWidth: 1, borderTopColor: colors.border,
   },
   input: {
-    flex: 1, backgroundColor: '#1B2545',
+    flex: 1, backgroundColor: colors.card2,
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10,
-    color: '#F4F6FF', fontSize: 15, maxHeight: 100,
+    color: colors.text, fontSize: 15, maxHeight: 100,
   },
   enviarBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: '#6F52FF',
+    backgroundColor: colors.accentStrong,
     alignItems: 'center', justifyContent: 'center',
     marginLeft: 8,
   },
@@ -380,18 +384,18 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalBox: {
-    backgroundColor: '#151D3A',
+    backgroundColor: colors.card,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, maxHeight: '70%',
-    borderWidth: 1, borderColor: '#2A3564',
+    borderWidth: 1, borderColor: colors.borderStrong,
     borderBottomWidth: 0,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 16,
   },
-  modalTitulo: { color: '#F4F6FF', fontSize: 18, fontWeight: '700' },
-  modalVazio: { color: '#8E97C4', fontSize: 14, textAlign: 'center', marginTop: 20 },
+  modalTitulo: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  modalVazio: { color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 20 },
   histItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 12,
@@ -399,8 +403,12 @@ const s = StyleSheet.create({
   },
   histItemAtiva: { backgroundColor: 'rgba(111,82,255,0.1)' },
   histItemLeft: { flex: 1, marginRight: 12 },
-  histTitulo: { color: '#F4F6FF', fontSize: 15, fontWeight: '600' },
-  histTituloAtiva: { color: '#8A68FF' },
-  histPreview: { color: '#8E97C4', fontSize: 12, marginTop: 3 },
-  histData: { color: '#7F8AB7', fontSize: 12, fontWeight: '500' },
+  histTitulo: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  histTituloAtiva: { color: colors.accent },
+  histPreview: { color: colors.textSecondary, fontSize: 12, marginTop: 3 },
+  histData: { color: colors.textMuted, fontSize: 12, fontWeight: '500' },
 });
+
+const ChatScreenStyles = getChatStyles(dark);
+
+export { ChatScreenStyles };

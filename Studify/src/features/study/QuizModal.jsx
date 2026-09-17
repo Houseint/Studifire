@@ -5,10 +5,13 @@
  * Burro de propósito: recebe `questoes` prontas, devolve {total, correct}
  * via onFinish — quem persiste e ajusta o FSRS é a DetailScreen.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useTheme } from '../../shared/theme/ThemeContext';
 
 export default function QuizModal({ visible, questoes = [], local = false, onFinish, onClose }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => getQuizModalStyles(colors), [colors]);
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(null);
   const [answers, setAnswers] = useState([]);
@@ -116,7 +119,9 @@ export default function QuizModal({ visible, questoes = [], local = false, onFin
   );
 }
 
-const s = StyleSheet.create({
+export function getQuizModalStyles(colors) {
+  const isDark = colors.mode !== 'light';
+  return StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(5, 8, 20, 0.8)',
@@ -124,25 +129,25 @@ const s = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 16,
   },
-  kicker: { color: '#8F98C2', fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
-  question: { color: '#F4F6FF', fontSize: 16, fontWeight: '800', marginTop: 8, marginBottom: 12 },
+  kicker: { color: colors.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
+  question: { color: colors.text, fontSize: 16, fontWeight: '800', marginTop: 8, marginBottom: 12 },
   alt: {
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
   },
-  altSelected: { borderColor: '#8A68FF', backgroundColor: '#1A1C4A' },
-  altText: { color: '#F4F6FF', fontSize: 14 },
+  altSelected: { borderColor: colors.accent, backgroundColor: isDark ? '#1A1C4A' : 'rgba(111,82,255,0.10)' },
+  altText: { color: colors.text, fontSize: 14 },
   primary: {
-    backgroundColor: '#8A68FF',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
@@ -151,19 +156,20 @@ const s = StyleSheet.create({
   primaryDisabled: { opacity: 0.4 },
   primaryText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   ghost: { padding: 12, alignItems: 'center' },
-  ghostText: { color: '#8F98C2', fontSize: 14 },
-  score: { color: '#F4F6FF', fontSize: 40, fontWeight: '900', textAlign: 'center', marginTop: 8 },
-  feedback: { color: '#8F98C2', fontSize: 14, textAlign: 'center', marginVertical: 12 },
+  ghostText: { color: colors.textMuted, fontSize: 14 },
+  score: { color: colors.text, fontSize: 40, fontWeight: '900', textAlign: 'center', marginTop: 8 },
+  feedback: { color: colors.textMuted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   review: { maxHeight: 260, marginTop: 8, marginBottom: 4 },
   reviewItem: {
-    backgroundColor: '#0E1530',
+    backgroundColor: colors.card2,
     borderWidth: 1,
-    borderColor: '#1F2A4A',
+    borderColor: colors.border,
     borderRadius: 10,
     padding: 10,
     marginBottom: 8,
   },
-  reviewQ: { color: '#F4F6FF', fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  reviewHit: { color: '#86EFAC', fontSize: 12, fontWeight: '600', marginTop: 2 },
-  reviewMiss: { color: '#FCA5A5', fontSize: 12, fontWeight: '600', marginTop: 2 },
-});
+  reviewQ: { color: colors.text, fontSize: 13, fontWeight: '700', marginBottom: 6 },
+  reviewHit: { color: isDark ? '#86EFAC' : colors.success, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  reviewMiss: { color: isDark ? '#FCA5A5' : colors.danger, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  });
+}

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import Secao from './Secao';
 import CardMateria from './CardMateria';
-import { MateriaSectionsStyles as styles } from '../../styles/components/home/MateriaSectionsStyles';
+import { getMateriaSectionsStyles } from '../../styles/components/home/MateriaSectionsStyles';
+import { useTheme } from '../../shared/theme/ThemeContext';
 
 const MateriaSections = ({
   historico,
@@ -14,7 +15,10 @@ const MateriaSections = ({
   onPinPress,
   navigation,
   busca,
-}) => (
+}) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getMateriaSectionsStyles(colors), [colors]);
+  return (
   <>
     <Secao titulo="ULTIMOS ACESSADOS">
       {historico.length === 0 ? (
@@ -71,6 +75,7 @@ const MateriaSections = ({
       )}
     </Secao>
   </>
-);
+  );
+};
 
 export default MateriaSections;

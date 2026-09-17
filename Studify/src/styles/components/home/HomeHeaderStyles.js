@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../../../shared/theme/colors';
 
-export const HomeHeaderStyles = StyleSheet.create({
+export const getHomeHeaderStyles = (colors) => StyleSheet.create({
   topo: {
     marginTop: 52,
     flexDirection: 'row',
@@ -16,7 +17,7 @@ export const HomeHeaderStyles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#8A68FF',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
@@ -32,12 +33,12 @@ export const HomeHeaderStyles = StyleSheet.create({
     fontSize: 12,
   },
   saudacao: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: '700',
   },
   perfilNome: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 22,
     fontWeight: '900',
     lineHeight: 24,
@@ -47,8 +48,8 @@ export const HomeHeaderStyles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: '#27315B',
-    backgroundColor: '#111832',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -56,3 +57,5 @@ export const HomeHeaderStyles = StyleSheet.create({
     fontSize: 18,
   },
 });
+
+export const HomeHeaderStyles = getHomeHeaderStyles(dark);

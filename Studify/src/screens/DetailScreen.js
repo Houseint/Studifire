@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, StatusBar, StyleSheet, ActivityIndicator, Linking } from 'react-native';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, StatusBar, StyleSheet, ActivityIndicator, Linking, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -11,8 +11,11 @@ import { toggleTopicoWithFsrs, aplicarResultadoQuiz } from '../shared/utils/fsrs
 import { gerarTopicosComplementares, gerarTopicosDeMaterial, gerarQuiz } from '../services/aiService';
 import TopicCoachCard from '../components/TopicCoachCard';
 import { QuizModal } from '../features/study';
+import { useTheme } from '../shared/theme/ThemeContext';
 
 export default function DetailScreen({ route, navigation }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => getDetailStyles(colors), [colors]);
   const userId = useUserId();
   const id = route?.params?.id;
   const [materia, setMateria] = useState(null);
@@ -26,6 +29,8 @@ export default function DetailScreen({ route, navigation }) {
   const [iaGenError, setIaGenError] = useState('');
   const [iaGenSugestoes, setIaGenSugestoes] = useState([]);
   const [iaGenSelected, setIaGenSelected] = useState({});
+  // FASE 3 — seletor de origem do material (modal próprio: sempre fechável)
+  const [matPickerVisible, setMatPickerVisible] = useState(false);
   // Coach per-topico
   const [expandedIdx, setExpandedIdx] = useState(null);
   // Timer revitalizado: Pomodoro
@@ -345,12 +350,12 @@ export default function DetailScreen({ route, navigation }) {
 
   const handleImportMaterial = () => {
     if (!materia || materia.topicos.length >= 10 || iaGenLoading) return;
-    Alert.alert('Importar material', 'De onde vem o conteúdo?', [
-      { text: 'Câmera', onPress: importarViaCamera },
-      { text: 'Galeria', onPress: importarViaGaleria },
-      { text: 'Arquivo', onPress: importarViaArquivo },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    setMatPickerVisible(true);
+  };
+
+  const escolherOrigem = (fn) => {
+    setMatPickerVisible(false);
+    fn();
   };
 
   const handleBack = () => {
@@ -372,7 +377,7 @@ export default function DetailScreen({ route, navigation }) {
   if (!materia) {
     return (
       <View style={s.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
+        <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
         <Text style={s.loadingText}>Carregando...</Text>
       </View>
     );
@@ -386,8 +391,8 @@ export default function DetailScreen({ route, navigation }) {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-      <LinearGradient colors={['#0a0f1e', '#0d1a2e', '#0a1520']} style={s.gradient} />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
+      <LinearGradient colors={colors.bgGradient} style={s.gradient} />
 
       <View style={s.header}>
         <TouchableOpacity style={s.backButton} activeOpacity={0.7} onPress={handleBack}>
@@ -414,7 +419,7 @@ export default function DetailScreen({ route, navigation }) {
               <Text style={s.timerLabel}>{paused ? 'Pausado' : timerMode === 'pomodoro' ? `Pomodoro ${pomodoroDuration}:00` : 'Estudando'}</Text>
               {timerMode === 'pomodoro' && (
                 <View style={{ backgroundColor: 'rgba(138,104,255,0.18)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ color: '#8A68FF', fontSize: 10, fontWeight: '800' }}>foco</Text>
+                  <Text style={{ color: colors.accent, fontSize: 10, fontWeight: '800' }}>foco</Text>
                 </View>
               )}
             </View>
@@ -422,8 +427,8 @@ export default function DetailScreen({ route, navigation }) {
               {timerMode === 'pomodoro' ? formatarCronometro(pomodoroLeft) : formatarCronometro(elapsedSeconds)}
             </Text>
             {timerMode === 'pomodoro' && !paused && (
-              <View style={{ width: '100%', height: 4, backgroundColor: '#1F2A4A', borderRadius: 2, overflow: 'hidden', marginBottom: 12 }}>
-                <View style={{ width: `${((pomodoroDuration * 60 - pomodoroLeft) / (pomodoroDuration * 60)) * 100}%`, height: '100%', backgroundColor: '#8A68FF' }} />
+              <View style={{ width: '100%', height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: 'hidden', marginBottom: 12 }}>
+                <View style={{ width: `${((pomodoroDuration * 60 - pomodoroLeft) / (pomodoroDuration * 60)) * 100}%`, height: '100%', backgroundColor: colors.accent }} />
               </View>
             )}
             <View style={s.timerRow}>
@@ -443,23 +448,23 @@ export default function DetailScreen({ route, navigation }) {
           </View>
         ) : (
           <>
-            <View style={{ flexDirection: 'row', backgroundColor: '#111832', borderRadius: 10, borderWidth: 1, borderColor: '#27315B', padding: 3, marginBottom: 10 }}>
-              <TouchableOpacity onPress={() => setTimerMode('free')} activeOpacity={0.8} style={{ flex: 1, backgroundColor: timerMode === 'free' ? '#6F52FF' : 'transparent', borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}>
-                <Text style={{ color: timerMode === 'free' ? '#fff' : '#7F8AB7', fontWeight: '700', fontSize: 12 }}>Livre</Text>
+            <View style={{ flexDirection: 'row', backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 3, marginBottom: 10 }}>
+              <TouchableOpacity onPress={() => setTimerMode('free')} activeOpacity={0.8} style={{ flex: 1, backgroundColor: timerMode === 'free' ? colors.accentStrong : 'transparent', borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}>
+                <Text style={{ color: timerMode === 'free' ? '#fff' : colors.textMuted, fontWeight: '700', fontSize: 12 }}>Livre</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setTimerMode('pomodoro')} activeOpacity={0.8} style={{ flex: 1, backgroundColor: timerMode === 'pomodoro' ? '#6F52FF' : 'transparent', borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}>
-                <Text style={{ color: timerMode === 'pomodoro' ? '#fff' : '#7F8AB7', fontWeight: '700', fontSize: 12 }}>Pomodoro</Text>
+              <TouchableOpacity onPress={() => setTimerMode('pomodoro')} activeOpacity={0.8} style={{ flex: 1, backgroundColor: timerMode === 'pomodoro' ? colors.accentStrong : 'transparent', borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}>
+                <Text style={{ color: timerMode === 'pomodoro' ? '#fff' : colors.textMuted, fontWeight: '700', fontSize: 12 }}>Pomodoro</Text>
               </TouchableOpacity>
             </View>
             {timerMode === 'pomodoro' && (
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                <TouchableOpacity onPress={() => setPomodoroDuration(25)} activeOpacity={0.7} style={{ flex: 1, backgroundColor: pomodoroDuration === 25 ? 'rgba(138,104,255,0.18)' : '#111832', borderWidth: 1, borderColor: pomodoroDuration === 25 ? '#6F52FF' : '#27315B', borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}>
-                  <Text style={{ color: pomodoroDuration === 25 ? '#8A68FF' : '#AAB6D9', fontWeight: '800', fontSize: 13 }}>25 / 5</Text>
-                  <Text style={{ color: '#5E6994', fontSize: 10 }}>Foco curto</Text>
+                <TouchableOpacity onPress={() => setPomodoroDuration(25)} activeOpacity={0.7} style={{ flex: 1, backgroundColor: pomodoroDuration === 25 ? 'rgba(138,104,255,0.18)' : colors.card, borderWidth: 1, borderColor: pomodoroDuration === 25 ? colors.accentStrong : colors.border, borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}>
+                  <Text style={{ color: pomodoroDuration === 25 ? colors.accent : colors.textSecondary, fontWeight: '800', fontSize: 13 }}>25 / 5</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>Foco curto</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setPomodoroDuration(50)} activeOpacity={0.7} style={{ flex: 1, backgroundColor: pomodoroDuration === 50 ? 'rgba(138,104,255,0.18)' : '#111832', borderWidth: 1, borderColor: pomodoroDuration === 50 ? '#6F52FF' : '#27315B', borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}>
-                  <Text style={{ color: pomodoroDuration === 50 ? '#8A68FF' : '#AAB6D9', fontWeight: '800', fontSize: 13 }}>50 / 10</Text>
-                  <Text style={{ color: '#5E6994', fontSize: 10 }}>Bloco longo</Text>
+                <TouchableOpacity onPress={() => setPomodoroDuration(50)} activeOpacity={0.7} style={{ flex: 1, backgroundColor: pomodoroDuration === 50 ? 'rgba(138,104,255,0.18)' : colors.card, borderWidth: 1, borderColor: pomodoroDuration === 50 ? colors.accentStrong : colors.border, borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}>
+                  <Text style={{ color: pomodoroDuration === 50 ? colors.accent : colors.textSecondary, fontWeight: '800', fontSize: 13 }}>50 / 10</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>Bloco longo</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -471,11 +476,11 @@ export default function DetailScreen({ route, navigation }) {
                 onPress={iniciarQuiz}
                 disabled={quizLoading}
                 activeOpacity={0.8}
-                style={{ backgroundColor: '#111832', borderWidth: 1, borderColor: '#6F52FF', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 20, opacity: quizLoading ? 0.6 : 1 }}
+                style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.accentStrong, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 20, opacity: quizLoading ? 0.6 : 1 }}
               >
                 {quizLoading
-                  ? <ActivityIndicator color="#8A68FF" size="small" />
-                  : <Text style={{ color: '#8A68FF', fontWeight: '800', fontSize: 15 }}>🧠 Quiz rápido</Text>}
+                  ? <ActivityIndicator color={colors.accent} size="small" />
+                  : <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 15 }}>🧠 Quiz rápido</Text>}
               </TouchableOpacity>
             )}
           </>
@@ -502,11 +507,11 @@ export default function DetailScreen({ route, navigation }) {
                 activeOpacity={0.7}
                 style={{
                   width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: expandedIdx === index ? '#6F52FF' : '#1B2545', borderWidth: 1, borderColor: expandedIdx === index ? '#6F52FF' : '#27315B',
+                  backgroundColor: expandedIdx === index ? colors.accentStrong : colors.card2, borderWidth: 1, borderColor: expandedIdx === index ? colors.accentStrong : colors.border,
                   marginLeft: 8,
                 }}
               >
-                <Text style={{ color: expandedIdx === index ? '#fff' : '#8A68FF', fontSize: 14, fontWeight: '700' }}>✦</Text>
+                <Text style={{ color: expandedIdx === index ? '#fff' : colors.accent, fontSize: 14, fontWeight: '700' }}>✦</Text>
               </TouchableOpacity>
             </View>
             {expandedIdx === index && (
@@ -535,47 +540,69 @@ export default function DetailScreen({ route, navigation }) {
               onPress={handleIaGenerate}
               disabled={materia.topicos.length < 1 || iaGenLoading}
               activeOpacity={0.8}
-              style={{ backgroundColor: materia.topicos.length >=1 ? '#8A68FF' : '#1B2545', borderWidth:1, borderColor: materia.topicos.length>=1 ? '#8A68FF' : '#303E70', borderRadius:12, paddingVertical:12, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:8, opacity: materia.topicos.length>=1 ? 1 : 0.6 }}
+              style={{ backgroundColor: materia.topicos.length >=1 ? colors.accent : colors.card2, borderWidth:1, borderColor: materia.topicos.length>=1 ? colors.accent : colors.borderStrong, borderRadius:12, paddingVertical:12, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:8, opacity: materia.topicos.length>=1 ? 1 : 0.6 }}
             >
-              {iaGenLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: materia.topicos.length>=1 ? '#fff' : '#5a6a7a' }}>✨</Text>}
-              <Text style={{ color: materia.topicos.length>=1 ? '#fff' : '#5a6a7a', fontWeight:'800', fontSize:14 }}>{iaGenLoading ? 'Gerando...' : 'Expandir com IA'}</Text>
+              {iaGenLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: materia.topicos.length>=1 ? '#fff' : colors.textMuted }}>✨</Text>}
+              <Text style={{ color: materia.topicos.length>=1 ? '#fff' : colors.textMuted, fontWeight:'800', fontSize:14 }}>{iaGenLoading ? 'Gerando...' : 'Expandir com IA'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleImportMaterial}
               disabled={iaGenLoading}
               activeOpacity={0.8}
-              style={{ backgroundColor:'#1B2545', borderWidth:1, borderColor:'#303E70', borderRadius:12, paddingVertical:12, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:8, marginTop:8, opacity: iaGenLoading?0.5:1 }}
+              style={{ backgroundColor:colors.card2, borderWidth:1, borderColor:colors.borderStrong, borderRadius:12, paddingVertical:12, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:8, marginTop:8, opacity: iaGenLoading?0.5:1 }}
             >
-              <Text style={{ color:'#C0CAE8' }}>📷</Text>
-              <Text style={{ color:'#C0CAE8', fontWeight:'800', fontSize:14 }}>{iaGenLoading ? 'Lendo material...' : 'Importar material (foto/PDF)'}</Text>
+              <Text style={{ color:colors.textSecondary }}>📷</Text>
+              <Text style={{ color:colors.textSecondary, fontWeight:'800', fontSize:14 }}>{iaGenLoading ? 'Lendo material...' : 'Importar material (foto/PDF)'}</Text>
             </TouchableOpacity>
-            {materia.topicos.length < 1 && <Text style={{ color:'#7F8AB7', fontSize:11, marginTop:6 }}>Adicione 1 tópico para IA completar</Text>}
-            {!!iaGenError && <Text style={{ color:'#EF4444', fontSize:12, marginTop:6 }}>{iaGenError}</Text>}
+            {materia.topicos.length < 1 && <Text style={{ color:colors.textMuted, fontSize:11, marginTop:6 }}>Adicione 1 tópico para IA completar</Text>}
+            {!!iaGenError && <Text style={{ color:colors.danger, fontSize:12, marginTop:6 }}>{iaGenError}</Text>}
           </View>
         )}
+        {/* FASE 3 — seletor de origem: fecha no Cancelar, fora ou botão voltar */}
+        <Modal visible={matPickerVisible} transparent animationType="fade" onRequestClose={() => setMatPickerVisible(false)}>
+          <Pressable style={{ flex:1, backgroundColor:'rgba(0,0,0,0.6)', justifyContent:'flex-end' }} onPress={() => setMatPickerVisible(false)}>
+            <Pressable style={{ backgroundColor:colors.card, borderTopLeftRadius:16, borderTopRightRadius:16, padding:16, borderWidth:1, borderColor:colors.border }} onPress={(e) => e.stopPropagation()}>
+              <Text style={{ color:colors.text, fontWeight:'800', fontSize:16 }}>Importar material</Text>
+              <Text style={{ color:colors.textMuted, fontSize:12, marginTop:2, marginBottom:12 }}>De onde vem o conteúdo?</Text>
+              {[
+                ['📷', 'Câmera', importarViaCamera],
+                ['🖼️', 'Galeria', importarViaGaleria],
+                ['📄', 'Arquivo (imagem/PDF)', importarViaArquivo],
+              ].map(([emoji, label, fn]) => (
+                <TouchableOpacity key={label} onPress={() => escolherOrigem(fn)} activeOpacity={0.7} style={{ flexDirection:'row', alignItems:'center', backgroundColor:colors.card2, borderWidth:1, borderColor:colors.borderStrong, borderRadius:12, paddingVertical:12, paddingHorizontal:14, marginBottom:8 }}>
+                  <Text style={{ fontSize:18, marginRight:10 }}>{emoji}</Text>
+                  <Text style={{ color:colors.text, fontWeight:'700', fontSize:14 }}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity onPress={() => setMatPickerVisible(false)} activeOpacity={0.7} style={{ backgroundColor:'transparent', borderWidth:1, borderColor:colors.danger, borderRadius:12, paddingVertical:12, alignItems:'center', marginTop:4 }}>
+                <Text style={{ color:colors.danger, fontWeight:'800', fontSize:14 }}>Cancelar</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
         {iaGenSugestoes.length > 0 && (
-          <View style={{ backgroundColor:'#111832', borderWidth:1, borderColor:'#27315B', borderRadius:12, padding:12, marginBottom:16 }}>
-            <Text style={{ color:'#F4F6FF', fontWeight:'700', marginBottom:8 }}>Sugestões da IA ({iaGenSugestoes.length})</Text>
+          <View style={{ backgroundColor:colors.card, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:12, marginBottom:16 }}>
+            <Text style={{ color:colors.text, fontWeight:'700', marginBottom:8 }}>Sugestões da IA ({iaGenSugestoes.length})</Text>
             {iaGenSugestoes.map((t, idx) => (
               <TouchableOpacity key={idx} onPress={() => toggleIaSelect(idx)} activeOpacity={0.7} style={{ flexDirection:'row', alignItems:'center', paddingVertical:6 }}>
-                <View style={{ width:22, height:22, borderRadius:6, borderWidth:2, borderColor: iaGenSelected[idx] ? '#6F52FF' : '#303E70', backgroundColor: iaGenSelected[idx] ? '#6F52FF' : 'transparent', alignItems:'center', justifyContent:'center', marginRight:10 }}>
+                <View style={{ width:22, height:22, borderRadius:6, borderWidth:2, borderColor: iaGenSelected[idx] ? colors.accentStrong : colors.borderStrong, backgroundColor: iaGenSelected[idx] ? colors.accentStrong : 'transparent', alignItems:'center', justifyContent:'center', marginRight:10 }}>
                   {iaGenSelected[idx] && <Text style={{ color:'#fff', fontSize:12, fontWeight:'700' }}>✓</Text>}
                 </View>
-                <Text style={{ color:'#C0CAE8', flex:1 }}>{t.nome}</Text>
+                <Text style={{ color:colors.textSecondary, flex:1 }}>{t.nome}</Text>
               </TouchableOpacity>
             ))}
             <View style={{ flexDirection:'row', gap:8, marginTop:10 }}>
-              <TouchableOpacity onPress={handleIaClear} style={{ flex:1, backgroundColor:'#1B2545', borderRadius:10, paddingVertical:10, alignItems:'center', borderWidth:1, borderColor:'#303E70' }}>
-                <Text style={{ color:'#AAB6D9', fontWeight:'700' }}>Limpar</Text>
+              <TouchableOpacity onPress={handleIaClear} style={{ flex:1, backgroundColor:colors.card2, borderRadius:10, paddingVertical:10, alignItems:'center', borderWidth:1, borderColor:colors.borderStrong }}>
+                <Text style={{ color:colors.textSecondary, fontWeight:'700' }}>Limpar</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleIaGenerate} disabled={iaGenLoading} style={{ flex:1, backgroundColor:'#1B2545', borderRadius:10, paddingVertical:10, alignItems:'center', borderWidth:1, borderColor:'#303E70', opacity: iaGenLoading?0.5:1 }}>
-                <Text style={{ color:'#AAB6D9', fontWeight:'700' }}>Regenerar</Text>
+              <TouchableOpacity onPress={handleIaGenerate} disabled={iaGenLoading} style={{ flex:1, backgroundColor:colors.card2, borderRadius:10, paddingVertical:10, alignItems:'center', borderWidth:1, borderColor:colors.borderStrong, opacity: iaGenLoading?0.5:1 }}>
+                <Text style={{ color:colors.textSecondary, fontWeight:'700' }}>Regenerar</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleIaAddSelected} style={{ flex:2, backgroundColor:'#6F52FF', borderRadius:10, paddingVertical:10, alignItems:'center' }}>
+              <TouchableOpacity onPress={handleIaAddSelected} style={{ flex:2, backgroundColor:colors.accentStrong, borderRadius:10, paddingVertical:10, alignItems:'center' }}>
                 <Text style={{ color:'#fff', fontWeight:'800' }}>Adicionar ({Object.values(iaGenSelected).filter(Boolean).length})</Text>
               </TouchableOpacity>
             </View>
-            <Text style={{ color:'#5E6994', fontSize:11, marginTop:8 }}>Vagas: {10 - materia.topicos.length} • Total max 10</Text>
+            <Text style={{ color:colors.textMuted, fontSize:11, marginTop:8 }}>Vagas: {10 - materia.topicos.length} • Total max 10</Text>
           </View>
         )}
 
@@ -642,80 +669,82 @@ export default function DetailScreen({ route, navigation }) {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#090E1F' },
+export function getDetailStyles(colors) {
+  const isDark = colors.mode !== 'light';
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  loadingText: { color: '#7F8AB7', fontSize: 16, textAlign: 'center', marginTop: 100 },
+  loadingText: { color: colors.textMuted, fontSize: 16, textAlign: 'center', marginTop: 100 },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
     paddingTop: 50, paddingBottom: 12,
   },
   backButton: {
     width: 40, height: 40, borderRadius: 20,
-    borderWidth: 1, borderColor: '#27315B',
-    backgroundColor: '#111832',
+    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center', justifyContent: 'center', marginRight: 14,
   },
-  backButtonText: { color: '#7F8AB7', fontSize: 22 },
-  headerTitle: { color: '#F4F6FF', fontSize: 20, fontWeight: '700', flex: 1 },
+  backButtonText: { color: colors.textMuted, fontSize: 22 },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '700', flex: 1 },
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
   progressCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#111832',
-    borderRadius: 16, borderWidth: 1, borderColor: '#27315B',
+    backgroundColor: colors.card,
+    borderRadius: 16, borderWidth: 1, borderColor: colors.border,
     padding: 20, marginBottom: 16,
   },
   progressCircle: {
     width: 90, height: 90, borderRadius: 45,
-    borderWidth: 3, borderColor: '#8A68FF',
+    borderWidth: 3, borderColor: colors.accent,
     alignItems: 'center', justifyContent: 'center', marginRight: 20,
   },
-  progressCircleText: { color: '#F4F6FF', fontSize: 22, fontWeight: '700' },
-  progressCircleLabel: { color: '#7F8AB7', fontSize: 11, marginTop: 2 },
+  progressCircleText: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  progressCircleLabel: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   progressInfo: { flex: 1 },
-  progressInfoText: { color: '#F4F6FF', fontSize: 16, fontWeight: '600' },
-  progressInfoSub: { color: '#7F8AB7', fontSize: 13, marginTop: 4 },
+  progressInfoText: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  progressInfoSub: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
   sectionTitle: {
-    color: '#8F98C2', fontSize: 14, fontWeight: '600', textTransform: 'uppercase',
+    color: colors.textMuted, fontSize: 14, fontWeight: '600', textTransform: 'uppercase',
     letterSpacing: 1, marginBottom: 12,
   },
   topicoRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 12, padding: 14,
   },
-  topicoRowDone: { backgroundColor: 'rgba(111,82,255,0.08)' },
+  topicoRowDone: { backgroundColor: isDark ? 'rgba(111,82,255,0.08)' : 'rgba(111,82,255,0.10)' },
   checkbox: {
     width: 24, height: 24, borderRadius: 6,
-    borderWidth: 2, borderColor: '#27315B',
+    borderWidth: 2, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  checkboxChecked: { backgroundColor: '#6F52FF', borderColor: '#6F52FF' },
+  checkboxChecked: { backgroundColor: colors.accentStrong, borderColor: colors.accentStrong },
   checkboxIcon: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  topicoLabel: { color: '#F4F6FF', fontSize: 15, flex: 1 },
-  topicoLabelDone: { color: '#7F8AB7', textDecorationLine: 'line-through' },
+  topicoLabel: { color: colors.text, fontSize: 15, flex: 1 },
+  topicoLabelDone: { color: colors.textMuted, textDecorationLine: 'line-through' },
 
   startButton: {
-    backgroundColor: '#6F52FF', borderRadius: 14,
+    backgroundColor: colors.accentStrong, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center', marginBottom: 20,
   },
   startButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 
   timerCard: {
-    backgroundColor: 'rgba(111,82,255,0.1)',
-    borderRadius: 16, borderWidth: 1, borderColor: '#6F52FF',
+    backgroundColor: isDark ? 'rgba(111,82,255,0.1)' : 'rgba(111,82,255,0.08)',
+    borderRadius: 16, borderWidth: 1, borderColor: colors.accentStrong,
     padding: 20, alignItems: 'center', marginBottom: 16,
   },
-  timerLabel: { color: '#8A68FF', fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
-  timerDisplay: { color: '#F4F6FF', fontSize: 48, fontWeight: '200', fontVariant: ['tabular-nums'], marginVertical: 12 },
+  timerLabel: { color: colors.accent, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
+  timerDisplay: { color: colors.text, fontSize: 48, fontWeight: '200', fontVariant: ['tabular-nums'], marginVertical: 12 },
   timerRow: { flexDirection: 'row', gap: 12 },
   timerBtnPause: {
-    backgroundColor: '#111832', borderRadius: 10, borderWidth: 1, borderColor: '#27315B',
+    backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border,
     paddingVertical: 10, paddingHorizontal: 24,
   },
-  timerBtnPauseText: { color: '#F4F6FF', fontSize: 15, fontWeight: '600' },
+  timerBtnPauseText: { color: colors.text, fontSize: 15, fontWeight: '600' },
   timerBtnResume: {
-    backgroundColor: '#6F52FF', borderRadius: 10,
+    backgroundColor: colors.accentStrong, borderRadius: 10,
     paddingVertical: 10, paddingHorizontal: 24,
   },
   timerBtnResumeText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
@@ -727,9 +756,10 @@ const s = StyleSheet.create({
 
   sessionRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#111832', borderRadius: 12,
+    backgroundColor: colors.card, borderRadius: 12,
     padding: 14, marginBottom: 8,
   },
-  sessionDate: { color: '#7F8AB7', fontSize: 14 },
-  sessionDuration: { color: '#8A68FF', fontSize: 14, fontWeight: '600' },
-});
+  sessionDate: { color: colors.textMuted, fontSize: 14 },
+  sessionDuration: { color: colors.accent, fontSize: 14, fontWeight: '600' },
+  });
+}

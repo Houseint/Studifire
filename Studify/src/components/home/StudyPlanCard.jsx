@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../shared/theme/ThemeContext';
 import { buildWeeklyPlan } from '../../shared/utils/studyPlan';
 
 const KIND_EMOJI = { revisao: '⏰', novo: '🌱', reforco: '🔁' };
 
 // Card puro: recebe o que a Home já tem, sem query nova (padrão SmartNextSteps).
 const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) => {
+  const { colors } = useTheme();
+  const s = useMemo(() => getPlanStyles(colors), [colors]);
   const plan = buildWeeklyPlan(materias, { goalMinutes, currentMinutes });
   if (plan.totalItems === 0) return null;
   return (
@@ -26,11 +29,11 @@ const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) =
   );
 };
 
-const s = StyleSheet.create({
+const getPlanStyles = (colors) => StyleSheet.create({
   card: {
-    backgroundColor: '#1A1C4A',
+    backgroundColor: colors.mode === 'light' ? colors.card : '#1A1C4A',
     borderWidth: 1,
-    borderColor: '#4850AE',
+    borderColor: colors.mode === 'light' ? colors.accent : '#4850AE',
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -39,9 +42,9 @@ const s = StyleSheet.create({
   },
   emoji: { fontSize: 26, marginRight: 10 },
   body: { flex: 1 },
-  label: { color: '#8F98C2', fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
-  text: { color: '#F4F6FF', fontSize: 14, fontWeight: '800', marginTop: 2 },
-  row: { color: '#C6CBE8', fontSize: 12, marginTop: 4 },
+  label: { color: colors.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
+  text: { color: colors.text, fontSize: 14, fontWeight: '800', marginTop: 2 },
+  row: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
 });
 
 export default StudyPlanCard;

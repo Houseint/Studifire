@@ -1,19 +1,20 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../../../../shared/theme/colors';
 
-export const CreateMateriaModalStyles = StyleSheet.create({
+export const getCreateMateriaModalStyles = (colors) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.62)',
     justifyContent: 'flex-end',
   },
   modalBox: {
-    backgroundColor: '#151D3A',
+    backgroundColor: colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 22,
     paddingBottom: 30,
     borderTopWidth: 1,
-    borderColor: '#2A3564',
+    borderColor: colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -22,28 +23,28 @@ export const CreateMateriaModalStyles = StyleSheet.create({
     marginBottom: 18,
   },
   modalTitulo: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 20,
     fontWeight: '800',
   },
   modalClose: {
-    color: '#5a6a7a',
+    color: colors.textMuted,
     fontSize: 20,
   },
   modalLabel: {
-    color: '#AAB6D9',
+    color: colors.textSecondary,
     marginBottom: 8,
     fontSize: 13,
     fontWeight: '600',
   },
   modalInput: {
-    backgroundColor: '#1B2545',
+    backgroundColor: colors.card2,
     borderWidth: 1,
-    borderColor: '#303E70',
+    borderColor: colors.borderStrong,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 14,
     fontSize: 14,
   },
@@ -61,7 +62,7 @@ export const CreateMateriaModalStyles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: '#6F52FF',
+    backgroundColor: colors.accentStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -81,9 +82,9 @@ export const CreateMateriaModalStyles = StyleSheet.create({
   topicoChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1B2545',
+    backgroundColor: colors.card2,
     borderWidth: 1,
-    borderColor: '#303E70',
+    borderColor: colors.borderStrong,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -91,7 +92,7 @@ export const CreateMateriaModalStyles = StyleSheet.create({
     marginBottom: 6,
   },
   topicoChipText: {
-    color: '#C0CAE8',
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
     marginRight: 6,
@@ -100,17 +101,17 @@ export const CreateMateriaModalStyles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: colors.mode === 'light' ? 'rgba(20,27,51,0.08)' : 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   topicoChipRemoveText: {
-    color: '#8a9bb5',
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: '700',
   },
   modalConfirmar: {
-    backgroundColor: '#6F52FF',
+    backgroundColor: colors.accentStrong,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -122,3 +123,5 @@ export const CreateMateriaModalStyles = StyleSheet.create({
     fontSize: 15,
   },
 });
+
+export const CreateMateriaModalStyles = getCreateMateriaModalStyles(dark);

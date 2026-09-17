@@ -12,6 +12,8 @@ import DetailScreen from './src/screens/DetailScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import HelpScreen from './src/screens/HelpScreen';
 import { getSessionUser, getUserById, logoutUser } from './src/features/auth';
+import { getUserSettings } from './src/features/subjects';
+import { ThemeProvider } from './src/shared/theme/ThemeContext';
 import { restoreDailyReminder } from './src/features/reminders';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
@@ -51,6 +53,7 @@ export default function App() {
 
 function AppContent() {
   const [initialRoute, setInitialRoute] = useState(null);
+  const [initialTheme, setInitialTheme] = useState('dark');
 
   useEffect(() => {
     let mounted = true;
@@ -69,6 +72,13 @@ function AppContent() {
           } else {
             // Reagenda o lembrete diário a partir do persistido (fire-and-forget)
             restoreDailyReminder(user.id);
+            // Lê o tema persistido antes do 1º render (splash cobre — sem flash)
+            try {
+              const settings = await getUserSettings(user.id);
+              if (mounted && settings?.theme_mode === 'light') setInitialTheme('light');
+            } catch {
+              // sem tema salvo: segue dark
+            }
           }
         }
 
@@ -96,7 +106,8 @@ function AppContent() {
   }
 
   return (
-    <NavigationContainer>
+    <ThemeProvider initialMode={initialTheme}>
+      <NavigationContainer>
       <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Register" component={StudifyRegisterScreen} options={{ headerShown: false }} />
@@ -108,7 +119,8 @@ function AppContent() {
         <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }
 

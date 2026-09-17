@@ -274,9 +274,10 @@ Gere ${qtd} complementares:`;
  * @param {number} [opts.maxTotal=10]
  * @returns {Promise<{topicos:Array<{nome:string,estudado:boolean}>, raw:string}>}
  */
-export const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
-// Imagem não dá p/ estimar por tamanho do texto: valor fixo p/ o rate limiter free.
-export const VISION_TOKEN_ESTIMATE = 2000;
+export const VISION_MODEL = 'qwen/qwen3.8-27b';
+// Imagem não dá p/ estimar por tamanho do texto: docs Groq contam 2048 tokens
+// por imagem + saída (max 900) → fixo p/ o rate limiter free.
+export const VISION_TOKEN_ESTIMATE = 3000;
 
 export async function gerarTopicosDeMaterial(nomeMateria, imagemBase64, topicosExistentes = [], opts = {}) {
   const maxTotal = opts.maxTotal || 10;

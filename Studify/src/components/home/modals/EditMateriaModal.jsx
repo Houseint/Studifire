@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, Alert, StyleSheet } from 'react-native';
-import { EditMateriaModalStyles as styles } from '../../../styles/components/home/modals/EditMateriaModalStyles';
+import { getEditMateriaModalStyles } from '../../../styles/components/home/modals/EditMateriaModalStyles';
+import { useTheme } from '../../../shared/theme/ThemeContext';
 import { renderTopicoInput } from '../helpers';
 
 const EditMateriaModal = ({
@@ -16,7 +17,10 @@ const EditMateriaModal = ({
   editTopicoInput,
   setEditTopicoInput,
   MAX_TOPICOS = 10,
-}) => (
+}) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getEditMateriaModalStyles(colors), [colors]);
+  return (
   <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
       <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
@@ -28,10 +32,10 @@ const EditMateriaModal = ({
         <TextInput
           style={styles.modalInput}
           placeholder="Ex: Matemática, Física..."
-          placeholderTextColor="#5a6a7a"
+          placeholderTextColor={colors.textMuted}
           value={editNome}
           onChangeText={setEditNome}
-          selectionColor="#6c8ebf"
+          selectionColor={colors.accent}
         />
         {renderTopicoInput({
           value: editTopicoInput,
@@ -48,6 +52,8 @@ const EditMateriaModal = ({
           placeholder: 'Ex: Álgebra Linear',
           max: MAX_TOPICOS,
           styles,
+          placeholderTextColor: colors.textMuted,
+          selectionColor: colors.accent,
         })}
         <TouchableOpacity style={[styles.modalConfirmar, { backgroundColor: '#6c9fd4' }]} onPress={onSave}>
           <Text style={styles.modalConfirmarText}>Salvar Alterações</Text>
@@ -61,8 +67,9 @@ const EditMateriaModal = ({
           <Text style={styles.excluirBtnText}>Excluir Matéria</Text>
         </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  </Modal>
-);
+      </TouchableOpacity>
+    </Modal>
+  );
+};
 
 export default EditMateriaModal;

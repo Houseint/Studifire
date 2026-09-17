@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -10,7 +10,8 @@ import {
   Image,
 } from 'react-native';
 
-import styles from '../styles/screens/HomeScreenStyles';
+import { getHomeStyles } from '../styles/screens/HomeScreenStyles';
+import { useTheme } from '../shared/theme/ThemeContext';
 import Icon from '../components/common/Icon';
 import CardMateria from '../components/home/CardMateria';
 import Secao from '../components/home/Secao';
@@ -27,6 +28,7 @@ import {
 } from '../components/home';
 import { filterRevisados, getEstaFixada, calcGlobalStats } from '../components/home/helpers';
 import { useUserId } from '../hooks/useUserId';
+import { validarNomeMateria } from '../shared/utils/validacao';
 import { getSessionUser, getUserById } from '../services/authDb';
 import {
   carregarMaterias,
@@ -41,6 +43,8 @@ import {
 
 export default function HomeScreen({ navigation }) {
   const userId = useUserId();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getHomeStyles(colors), [colors]);
   const [user, setUser] = useState(null);
   const [userAvatar, setUserAvatar] = useState(null);
   const [revisados, setRevisados] = useState([]);
@@ -115,8 +119,9 @@ export default function HomeScreen({ navigation }) {
   };
 
   const adicionarMateria = async () => {
-    if (!novaMateria.trim()) {
-      Alert.alert('Atenção', 'Digite o nome da matéria!');
+    const v = validarNomeMateria(novaMateria);
+    if (!v.ok) {
+      Alert.alert('Nome inválido', v.message);
       return;
     }
     const topicosValidos = novosTopicos.filter((t) => t.nome.trim());
@@ -174,8 +179,9 @@ export default function HomeScreen({ navigation }) {
   };
 
   const salvarEdicao = async () => {
-    if (!editNome.trim()) {
-      Alert.alert('Atenção', 'Digite o nome da matéria!');
+    const v = validarNomeMateria(editNome);
+    if (!v.ok) {
+      Alert.alert('Nome inválido', v.message);
       return;
     }
     const topicosValidos = editTopicos.filter((t) => t.nome.trim());
@@ -246,7 +252,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.main}>
-      <StatusBar barStyle="light-content" backgroundColor="#090E1F" />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
 
       <ScrollView
         style={styles.scroll}
@@ -261,14 +267,14 @@ export default function HomeScreen({ navigation }) {
         />
 
         <View style={styles.buscaWrapper}>
-          <Icon name="search" size={14} color="#5E6994" />
+          <Icon name="search" size={14} color={colors.textMuted} />
           <TextInput
             style={styles.buscaInput}
             placeholder="Pesquisar conteúdos..."
-            placeholderTextColor="#5E6994"
+            placeholderTextColor={colors.textMuted}
             value={busca}
             onChangeText={setBusca}
-            selectionColor="#7A6BFF"
+            selectionColor={colors.accent}
           />
         </View>
 

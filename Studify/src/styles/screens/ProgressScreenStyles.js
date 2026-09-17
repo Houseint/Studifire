@@ -1,12 +1,13 @@
 import { StyleSheet, Dimensions } from 'react-native';
+import { dark } from '../../shared/theme/colors';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 56) / 2;
 
-export const ProgressScreenStyles = StyleSheet.create({
+export const getProgressScreenStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090E1F',
+    backgroundColor: colors.bg,
   },
   gradient: {
     position: 'absolute',
@@ -30,7 +31,7 @@ export const ProgressScreenStyles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerTitle: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
@@ -41,12 +42,12 @@ export const ProgressScreenStyles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#27315B',
-    backgroundColor: '#111832',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backButtonText: { color: '#7F8AB7', fontSize: 22 },
+  backButtonText: { color: colors.textMuted, fontSize: 22 },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -56,8 +57,8 @@ export const ProgressScreenStyles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#27315B',
-    backgroundColor: '#111832',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -75,10 +76,10 @@ export const ProgressScreenStyles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 18,
     alignItems: 'center',
   },
@@ -90,13 +91,13 @@ export const ProgressScreenStyles = StyleSheet.create({
     marginBottom: 6,
   },
   statValue: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
   statLabel: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -110,7 +111,7 @@ export const ProgressScreenStyles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 16,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 170, 0, 0.3)',
@@ -129,20 +130,20 @@ export const ProgressScreenStyles = StyleSheet.create({
   },
   streakInfo: {},
   streakLabel: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   streakValue: {
-    color: '#FFAA00',
+    color: colors.warn,
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
   streakSub: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 13,
     marginTop: 2,
   },
@@ -155,7 +156,7 @@ export const ProgressScreenStyles = StyleSheet.create({
     borderColor: 'rgba(255, 170, 0, 0.3)',
   },
   streakButtonText: {
-    color: '#FFAA00',
+    color: colors.warn,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -172,19 +173,19 @@ export const ProgressScreenStyles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
   sectionSubtitle: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 13,
   },
   chartCard: {
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 18,
   },
   chartWrapper: {
@@ -209,13 +210,13 @@ export const ProgressScreenStyles = StyleSheet.create({
     minHeight: 4,
   },
   chartBarLabel: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 10,
     marginTop: 6,
     fontWeight: '500',
   },
   chartBarValue: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 10,
     fontWeight: '600',
     marginTop: 2,
@@ -233,10 +234,10 @@ export const ProgressScreenStyles = StyleSheet.create({
     marginBottom: 12,
   },
   subjectCard: {
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 16,
     marginBottom: 10,
   },
@@ -253,7 +254,7 @@ export const ProgressScreenStyles = StyleSheet.create({
     marginBottom: 10,
   },
   subjectName: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '700',
     flex: 1,
@@ -264,18 +265,18 @@ export const ProgressScreenStyles = StyleSheet.create({
     gap: 8,
   },
   subjectProgressText: {
-    color: '#8A68FF',
+    color: colors.accent,
     fontSize: 14,
     fontWeight: '700',
     minWidth: 44,
     textAlign: 'right',
   },
   subjectProgressTextCompleted: {
-    color: '#4CAF50',
+    color: colors.success,
   },
   progressBarContainer: {
     height: 6,
-    backgroundColor: '#1A2340',
+    backgroundColor: colors.mode === 'light' ? 'rgba(20,27,51,0.12)' : '#1A2340',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 8,
@@ -285,10 +286,10 @@ export const ProgressScreenStyles = StyleSheet.create({
     borderRadius: 3,
   },
   progressBarInProgress: {
-    backgroundColor: '#8A68FF',
+    backgroundColor: colors.accent,
   },
   progressBarCompleted: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.success,
   },
   subjectMeta: {
     flexDirection: 'row',
@@ -296,11 +297,11 @@ export const ProgressScreenStyles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   subjectTopics: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 12,
   },
   subjectCompletedDate: {
-    color: '#4CAF50',
+    color: colors.success,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -317,7 +318,7 @@ export const ProgressScreenStyles = StyleSheet.create({
     borderColor: 'rgba(138, 104, 255, 0.3)',
   },
   subjectActionButtonText: {
-    color: '#8A68FF',
+    color: colors.accent,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -326,7 +327,7 @@ export const ProgressScreenStyles = StyleSheet.create({
     borderColor: 'rgba(76, 175, 80, 0.3)',
   },
   subjectActionButtonTextCompleted: {
-    color: '#4CAF50',
+    color: colors.success,
   },
 
   // Empty States
@@ -341,13 +342,13 @@ export const ProgressScreenStyles = StyleSheet.create({
     opacity: 0.5,
   },
   emptyTitle: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   emptySubtitle: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
@@ -373,14 +374,16 @@ export const ProgressScreenStyles = StyleSheet.create({
     borderRadius: 5,
   },
   legendDotInProgress: {
-    backgroundColor: '#8A68FF',
+    backgroundColor: colors.accent,
   },
   legendDotCompleted: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.success,
   },
   legendText: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '500',
   },
 });
+
+export const ProgressScreenStyles = getProgressScreenStyles(dark);

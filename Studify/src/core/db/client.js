@@ -123,6 +123,7 @@ export async function getDb() {
           reminder_enabled INTEGER NOT NULL DEFAULT 0,
           reminder_hour INTEGER NOT NULL DEFAULT 20,
           reminder_minute INTEGER NOT NULL DEFAULT 0,
+          theme_mode TEXT NOT NULL DEFAULT 'dark',
           updated_at TEXT NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
@@ -233,6 +234,9 @@ export async function getDb() {
       }
       if (!setCols.some((c) => c.name === 'reminder_minute')) {
         await db.execAsync('ALTER TABLE user_settings ADD COLUMN reminder_minute INTEGER NOT NULL DEFAULT 0;');
+      }
+      if (!setCols.some((c) => c.name === 'theme_mode')) {
+        await db.execAsync("ALTER TABLE user_settings ADD COLUMN theme_mode TEXT NOT NULL DEFAULT 'dark';");
       }
 
       // --- Índices ---

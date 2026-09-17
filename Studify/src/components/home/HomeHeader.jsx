@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, Text, Image } from 'react-native';
-import { HomeHeaderStyles as styles } from '../../styles/components/home/HomeHeaderStyles';
+import { getHomeHeaderStyles } from '../../styles/components/home/HomeHeaderStyles';
+import { useTheme } from '../../shared/theme/ThemeContext';
 
-const HomeHeader = ({ user, userAvatar, onProfilePress, onHelpPress }) => (
+const HomeHeader = ({ user, userAvatar, onProfilePress, onHelpPress }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getHomeHeaderStyles(colors), [colors]);
+  return (
   <View style={styles.topo}>
     <TouchableOpacity style={styles.perfilBtn} activeOpacity={0.8} onPress={onProfilePress}>
       <View style={styles.avatarCircle}>
@@ -21,6 +25,7 @@ const HomeHeader = ({ user, userAvatar, onProfilePress, onHelpPress }) => (
       <Text style={styles.helpIcon}>❓</Text>
     </TouchableOpacity>
   </View>
-);
+  );
+};
 
 export default HomeHeader;

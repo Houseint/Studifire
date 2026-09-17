@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -18,10 +18,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { useUserId } from '../auth/useUserId';
 import { logoutUser, getSessionUser, atualizarAvatar, getUserById } from '../auth/authDb';
-import { 
+import {
   updateWeeklyGoal,
   getUserSettings,
   updateReminderSettings,
+  updateThemeMode,
   getUserBadges,
   checkAndAwardBadges,
   getProfileStats,
@@ -33,7 +34,8 @@ import {
   disableDailyReminder,
 } from '../reminders/reminderService';
 import * as ImagePicker from 'expo-image-picker';
-import { ProfileScreenStyles as s } from './ProfileScreenStyles.js';
+import { getProfileStyles } from './ProfileScreenStyles.js';
+import { useTheme } from '../../shared/theme/ThemeContext';
 
 const BADGE_COLORS = {
   '#8E97C4': 'rgba(142, 151, 196, 0.2)',
@@ -68,6 +70,8 @@ export default function ProfileScreen({ navigation }) {
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const [reminder, setReminder] = useState({ enabled: false, hour: 20, minute: 0 });
+  const { mode, colors, setMode } = useTheme();
+  const s = useMemo(() => getProfileStyles(colors), [colors]);
 
   useEffect(() => {
     getSessionUser().then(setUser);
@@ -342,6 +346,18 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  // Tema light/dark: troca imediata na UI + persiste no user_settings (como o lembrete).
+  const handleToggleTheme = async () => {
+    if (!userId) return;
+    const next = mode === 'dark' ? 'light' : 'dark';
+    setMode(next);
+    try {
+      await updateThemeMode(userId, next);
+    } catch (e) {
+      console.error('Erro ao salvar tema:', e);
+    }
+  };
+
   const openGoalModal = () => {
     setGoalInput(String(weeklyGoal.goalHours).replace('.', ','));
     setGoalModalVisible(true);
@@ -387,8 +403,8 @@ export default function ProfileScreen({ navigation }) {
   if (!userId) {
     return (
       <View style={s.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-        <LinearGradient colors={['#0a0f1e', '#0d1a2e', '#0a1520']} style={s.gradientFill} />
+        <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
+        <LinearGradient colors={colors.bgGradient} style={s.gradientFill} />
         <View style={s.loadingCenter}>
           <Text style={s.loadingText}>Carregando...</Text>
         </View>
@@ -398,8 +414,8 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-      <LinearGradient colors={['#0a0f1e', '#0d1a2e', '#0a1520']} style={s.gradientFill} />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
+      <LinearGradient colors={colors.bgGradient} style={s.gradientFill} />
 
       <ScrollView
         style={s.scrollView}
@@ -419,9 +435,10 @@ export default function ProfileScreen({ navigation }) {
           <TouchableOpacity
             style={s.profileButton}
             activeOpacity={0.7}
-            onPress={() => {}}
+            onPress={handleToggleTheme}
+            accessibilityLabel="Alternar tema claro/escuro"
           >
-            <Text style={s.profileButtonText}>◌</Text>
+            <Text style={s.profileButtonText}>{mode === 'dark' ? '☀️' : '🌙'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -488,7 +505,7 @@ export default function ProfileScreen({ navigation }) {
             <View style={s.goalProgressRow}>
               <Text style={s.goalCurrent}>{formatMinutes(weeklyGoal.currentMinutes)}</Text>
               <Text style={s.goalTarget}>/ {formatMinutes(weeklyGoal.goalMinutes)}</Text>
-              <Text style={[s.goalPercent, { color: weeklyGoal.percent >= 100 ? '#4CAF50' : '#8A68FF' }]}>
+              <Text style={[s.goalPercent, { color: weeklyGoal.percent >= 100 ? colors.success : colors.accent }]}>
                 {weeklyGoal.percent}%
               </Text>
             </View>
@@ -700,8 +717,8 @@ export default function ProfileScreen({ navigation }) {
                 onChangeText={setGoalInput}
                 keyboardType="decimal-pad"
                 placeholder="Ex: 5"
-                placeholderTextColor="#5E6994"
-                selectionColor="#8A68FF"
+                placeholderTextColor={colors.textMuted}
+                selectionColor={colors.accent}
                 autoFocus
               />
               <Text style={s.modalInputSuffix}>horas</Text>

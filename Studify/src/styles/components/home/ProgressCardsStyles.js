@@ -1,8 +1,9 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../../../shared/theme/colors';
 
-export const ProgressCardsStyles = StyleSheet.create({
+export const getProgressCardsStyles = (colors) => StyleSheet.create({
   sectionHeading: {
-    color: '#8F98C2',
+    color: colors.textMuted,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 0.4,
@@ -21,27 +22,27 @@ export const ProgressCardsStyles = StyleSheet.create({
     paddingVertical: 10,
   },
   progressoCardRoxo: {
-    backgroundColor: '#1A1C4A',
-    borderColor: '#4850AE',
+    backgroundColor: colors.mode === 'light' ? colors.card : '#1A1C4A',
+    borderColor: colors.mode === 'light' ? colors.accent : '#4850AE',
   },
   progressoCardLaranja: {
-    backgroundColor: '#2A1F19',
-    borderColor: '#A56A2A',
+    backgroundColor: colors.mode === 'light' ? colors.card : '#2A1F19',
+    borderColor: colors.mode === 'light' ? colors.warn : '#A56A2A',
   },
   progressoLabel: {
-    color: '#AEB5DA',
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: '700',
   },
   progressoValor: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 30,
     fontWeight: '900',
     lineHeight: 34,
     marginTop: 2,
   },
   progressoMeta: {
-    color: '#8E97C4',
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -49,7 +50,7 @@ export const ProgressCardsStyles = StyleSheet.create({
     marginTop: 8,
     height: 4,
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.mode === 'light' ? 'rgba(20,27,51,0.12)' : 'rgba(255,255,255,0.12)',
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -59,3 +60,5 @@ export const ProgressCardsStyles = StyleSheet.create({
     borderRadius: 999,
   },
 });
+
+export const ProgressCardsStyles = getProgressCardsStyles(dark);

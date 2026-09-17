@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -8,13 +8,16 @@ import {
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ProgressScreenStyles as s } from '../styles/screens/ProgressScreenStyles.js';
+import { getProgressScreenStyles } from '../styles/screens/ProgressScreenStyles.js';
+import { useTheme } from '../shared/theme/ThemeContext';
 import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
 
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export default function ProgressScreen({ navigation }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => getProgressScreenStyles(colors), [colors]);
   const userId = useUserId();
   const [materias, setMaterias] = useState([]);
   const [sessoes, setSessoes] = useState([]);
@@ -172,10 +175,10 @@ export default function ProgressScreen({ navigation }) {
   if (!userId) {
     return (
       <View style={s.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-        <LinearGradient colors={['#0a0f1e', '#0d1a2e', '#0a1520']} style={s.gradient} />
+        <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
+        <LinearGradient colors={colors.bgGradient} style={s.gradient} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: '#7F8AB7', fontSize: 16 }}>Carregando...</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 16 }}>Carregando...</Text>
         </View>
       </View>
     );
@@ -183,8 +186,8 @@ export default function ProgressScreen({ navigation }) {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-      <LinearGradient colors={['#0a0f1e', '#0d1a2e', '#0a1520']} style={s.gradient} />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
+      <LinearGradient colors={colors.bgGradient} style={s.gradient} />
 
       <ScrollView
         style={s.scrollView}
@@ -262,7 +265,7 @@ export default function ProgressScreen({ navigation }) {
                         s.chartBar,
                         {
                           height: Math.max((d.minutos / maxMinutos) * 90, d.minutos > 0 ? 4 : 0),
-                          backgroundColor: d.isHoje ? '#8A68FF' : 'rgba(138, 104, 255, 0.4)',
+                          backgroundColor: d.isHoje ? colors.accent : 'rgba(138, 104, 255, 0.4)',
                         },
                       ]}
                     />
@@ -433,7 +436,7 @@ export default function ProgressScreen({ navigation }) {
               </TouchableOpacity>
             ))}
             {materiasNaoIniciadas.length > 3 && (
-              <Text style={{ color: '#7F8AB7', fontSize: 13, textAlign: 'center', marginTop: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>
                 +{materiasNaoIniciadas.length - 3} mais na tela Início
               </Text>
             )}

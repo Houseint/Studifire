@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../../../shared/theme/colors';
 
-export const CardMateriaStyles = StyleSheet.create({
+export const getCardMateriaStyles = (colors) => StyleSheet.create({
   card: {
     width: 164,
     minHeight: 108,
@@ -20,7 +21,7 @@ export const CardMateriaStyles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   cardNome: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
     flex: 1,
@@ -39,7 +40,7 @@ export const CardMateriaStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardDesc: {
-    color: '#C0CAE8',
+    color: colors.textSecondary,
     fontSize: 12,
     marginTop: 6,
     fontWeight: '600',
@@ -55,7 +56,7 @@ export const CardMateriaStyles = StyleSheet.create({
     marginTop: 8,
     height: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: colors.mode === 'light' ? 'rgba(20,27,51,0.12)' : 'rgba(255,255,255,0.18)',
     overflow: 'hidden',
   },
   progressFill: {
@@ -64,3 +65,5 @@ export const CardMateriaStyles = StyleSheet.create({
     borderRadius: 999,
   },
 });
+
+export const CardMateriaStyles = getCardMateriaStyles(dark);

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../shared/theme/ThemeContext';
 import { getDueTopics } from '../../shared/utils/fsrs';
 
 // Lógica pura e testável: decide o próximo passo a partir de dados que o Home já tem.
@@ -35,6 +36,8 @@ export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, week
 }
 
 const SmartNextSteps = ({ streak = 0, materias = [], weeklyPercent = 0, weeklyRemaining = 0, onPress }) => {
+  const { colors } = useTheme();
+  const s = useMemo(() => getNextStepsStyles(colors), [colors]);
   const step = getNextStep({ streak, materias, weeklyPercent, weeklyRemaining });
   return (
     <TouchableOpacity style={s.card} activeOpacity={0.85} onPress={onPress}>
@@ -47,11 +50,11 @@ const SmartNextSteps = ({ streak = 0, materias = [], weeklyPercent = 0, weeklyRe
   );
 };
 
-const s = StyleSheet.create({
+const getNextStepsStyles = (colors) => StyleSheet.create({
   card: {
-    backgroundColor: '#1A1C4A',
+    backgroundColor: colors.mode === 'light' ? colors.card : '#1A1C4A',
     borderWidth: 1,
-    borderColor: '#4850AE',
+    borderColor: colors.mode === 'light' ? colors.accent : '#4850AE',
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -60,8 +63,8 @@ const s = StyleSheet.create({
   },
   emoji: { fontSize: 26, marginRight: 10 },
   body: { flex: 1 },
-  label: { color: '#8F98C2', fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
-  text: { color: '#F4F6FF', fontSize: 14, fontWeight: '800', marginTop: 2 },
+  label: { color: colors.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
+  text: { color: colors.text, fontSize: 14, fontWeight: '800', marginTop: 2 },
 });
 
 export default SmartNextSteps;

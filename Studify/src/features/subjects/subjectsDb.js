@@ -297,7 +297,7 @@ export async function getUserSettings(userId) {
       'INSERT INTO user_settings (user_id, weekly_goal_minutes, reminder_enabled, reminder_hour, reminder_minute, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
       [userId, 300, 0, 20, 0, now]
     );
-    settings = { user_id: userId, weekly_goal_minutes: 300, reminder_enabled: 0, reminder_hour: 20, reminder_minute: 0, updated_at: now };
+    settings = { user_id: userId, weekly_goal_minutes: 300, reminder_enabled: 0, reminder_hour: 20, reminder_minute: 0, theme_mode: 'dark', updated_at: now };
   }
   return settings;
 }
@@ -339,6 +339,29 @@ export async function updateReminderSettings(userId, { enabled, hour, minute }) 
     );
   }
   return { reminder_enabled: flag, reminder_hour: hour, reminder_minute: minute };
+}
+
+// Tema light/dark — persistido no user_settings existente (mesmo padrão do lembrete).
+// Aceita só 'light'/'dark'; qualquer outra coisa cai em 'dark'.
+export async function updateThemeMode(userId, mode) {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const value = mode === 'light' ? 'light' : 'dark';
+  const res = await db.runAsync(
+    'UPDATE user_settings SET theme_mode = ?, updated_at = ? WHERE user_id = ?',
+    [value, now, userId]
+  );
+  if (res.changes === 0) {
+    const cur = await db.getFirstAsync(
+      'SELECT weekly_goal_minutes FROM user_settings WHERE user_id = ?',
+      [userId]
+    );
+    await db.runAsync(
+      'INSERT INTO user_settings (user_id, weekly_goal_minutes, reminder_enabled, reminder_hour, reminder_minute, theme_mode, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [userId, cur?.weekly_goal_minutes ?? 300, 0, 20, 0, value, now]
+    );
+  }
+  return { theme_mode: value };
 }
 
 // Badges

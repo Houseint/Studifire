@@ -97,7 +97,23 @@ describe('HomeScreen — fluxos de criar/editar/excluir (C1 + modais extraídos)
     fireEvent.press(screen.getByText('Adicionar'));
     fireEvent.press(screen.getAllByText('Adicionar')[1]);
 
-    expect(alertSpy).toHaveBeenCalledWith('Atenção', 'Digite o nome da matéria!');
+    expect(alertSpy).toHaveBeenCalledWith('Nome inválido', 'Nome precisa de 3+ letras.');
+    expect(criarMateria).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  test('criar matéria com baboseira (asdf): alerta e não persiste', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const { screen } = renderHome();
+    await waitFor(() => {
+      expect(carregarMaterias).toHaveBeenCalled();
+    });
+
+    fireEvent.press(screen.getByText('Adicionar'));
+    fireEvent.changeText(inputPorPlaceholder(screen, 'Ex: Matemática, Física...'), 'asdf');
+    fireEvent.press(screen.getAllByText('Adicionar')[1]);
+
+    expect(alertSpy).toHaveBeenCalledWith('Nome inválido', expect.stringContaining('teclado'));
     expect(criarMateria).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });

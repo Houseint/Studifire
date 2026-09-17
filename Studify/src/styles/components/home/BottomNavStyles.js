@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../../../shared/theme/colors';
 
-export const BottomNavStyles = StyleSheet.create({
+export const getBottomNavStyles = (colors) => StyleSheet.create({
   bottomBar: {
     position: 'absolute',
     left: 10,
@@ -9,8 +10,8 @@ export const BottomNavStyles = StyleSheet.create({
     height: 64,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#28315B',
-    backgroundColor: '#0D1330',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -18,24 +19,25 @@ export const BottomNavStyles = StyleSheet.create({
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 56,
+    flex: 1,
   },
   navIcon: {
-    color: '#7682B4',
+    color: colors.textMuted,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 3,
   },
   navLabel: {
-    color: '#707AA8',
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: '700',
   },
   navLabelActive: {
-    color: '#7F6CFF',
+    color: colors.accent,
   },
   navItemPlus: {
-    marginTop: -8,
+    marginTop: 4,
+    marginLeft: 8,
   },
   navPlusText: {
     color: '#FFFFFF',
@@ -46,8 +48,10 @@ export const BottomNavStyles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 33,
     overflow: 'hidden',
-    backgroundColor: '#6F52FF',
+    backgroundColor: colors.accentStrong,
     marginBottom: 3,
     fontWeight: '700',
   },
 });
+
+export const BottomNavStyles = getBottomNavStyles(dark);

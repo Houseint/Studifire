@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../../../shared/theme/colors';
 
-export const SecaoStyles = StyleSheet.create({
+export const getSecaoStyles = (colors) => StyleSheet.create({
   secao: {
     marginTop: 18,
   },
@@ -12,7 +13,7 @@ export const SecaoStyles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   secaoTitulo: {
-    color: '#9AA4CC',
+    color: colors.textMuted,
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 0.8,
@@ -20,3 +21,5 @@ export const SecaoStyles = StyleSheet.create({
     flex: 1,
   },
 });
+
+export const SecaoStyles = getSecaoStyles(dark);

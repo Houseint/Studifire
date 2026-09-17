@@ -1,11 +1,17 @@
 import { StyleSheet, Dimensions } from 'react-native';
+import { dark } from '../../shared/theme/colors';
 
 const { width } = Dimensions.get('window');
 
-export const ProfileScreenStyles = StyleSheet.create({
+/**
+ * Estilos do Perfil por tema. Mesmas keys do objeto estático antigo —
+ * telas não migradas seguem usando `ProfileScreenStyles` (dark) sem quebrar.
+ */
+export function getProfileStyles(colors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090E1F',
+    backgroundColor: colors.bg,
   },
   gradientFill: {
     position: 'absolute',
@@ -26,7 +32,7 @@ export const ProfileScreenStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 16,
   },
   bottomSpacer: {
@@ -47,17 +53,17 @@ export const ProfileScreenStyles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#27315B',
-    backgroundColor: '#111832',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backButtonText: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 22,
   },
   headerTitle: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 20,
     fontWeight: '700',
     flex: 1,
@@ -68,8 +74,8 @@ export const ProfileScreenStyles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#27315B',
-    backgroundColor: '#111832',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -88,15 +94,15 @@ export const ProfileScreenStyles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#6F52FF',
-    backgroundColor: '#151D3A',
+    borderColor: colors.accentStrong,
+    backgroundColor: colors.card2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
     position: 'relative',
   },
   avatarInitials: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 42,
     fontWeight: '700',
   },
@@ -112,24 +118,24 @@ export const ProfileScreenStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#6F52FF',
+    backgroundColor: colors.accentStrong,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#090E1F',
+    borderColor: colors.bg,
   },
   editAvatarText: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 20,
   },
   userName: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 26,
     fontWeight: '700',
     marginTop: 15,
   },
   userEmail: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 16,
     marginTop: 5,
   },
@@ -141,7 +147,7 @@ export const ProfileScreenStyles = StyleSheet.create({
     marginTop: 15,
   },
   badgeText: {
-    color: '#8A68FF',
+    color: colors.accent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -158,10 +164,10 @@ export const ProfileScreenStyles = StyleSheet.create({
   },
   statCard: {
     width: (width - 44) / 2,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 18,
     alignItems: 'center',
   },
@@ -174,14 +180,14 @@ export const ProfileScreenStyles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 24,
     fontWeight: '800',
     letterSpacing: -0.3,
     textAlign: 'center',
   },
   statLabel: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -202,12 +208,12 @@ export const ProfileScreenStyles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
   sectionSubtitle: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 13,
   },
 
@@ -221,15 +227,15 @@ export const ProfileScreenStyles = StyleSheet.create({
     borderColor: 'rgba(138, 104, 255, 0.3)',
   },
   goalEditText: {
-    color: '#8A68FF',
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '600',
   },
   goalCard: {
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 18,
   },
   goalProgressRow: {
@@ -239,12 +245,12 @@ export const ProfileScreenStyles = StyleSheet.create({
     marginBottom: 10,
   },
   goalCurrent: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 28,
     fontWeight: '800',
   },
   goalTarget: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 20,
     fontWeight: '500',
   },
@@ -255,7 +261,7 @@ export const ProfileScreenStyles = StyleSheet.create({
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: '#1A2340',
+    backgroundColor: colors.card2,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 10,
@@ -263,17 +269,17 @@ export const ProfileScreenStyles = StyleSheet.create({
   progressBar: {
     height: '100%',
     borderRadius: 4,
-    backgroundColor: '#8A68FF',
+    backgroundColor: colors.accent,
   },
   goalSubtext: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 13,
     textAlign: 'center',
   },
 
   // Lembrete diário
   reminderStatus: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '600',
     textAlign: 'center',
@@ -288,21 +294,21 @@ export const ProfileScreenStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#1A2340',
+    backgroundColor: colors.card2,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
   },
   reminderChipActive: {
     backgroundColor: 'rgba(138, 104, 255, 0.2)',
-    borderColor: '#8A68FF',
+    borderColor: colors.accent,
   },
   reminderChipText: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: '600',
   },
   reminderChipTextActive: {
-    color: '#F4F6FF',
+    color: colors.text,
   },
 
   // Badges
@@ -310,10 +316,10 @@ export const ProfileScreenStyles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
     paddingHorizontal: 24,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
   },
   emptyIcon: {
     fontSize: 48,
@@ -321,13 +327,13 @@ export const ProfileScreenStyles = StyleSheet.create({
     opacity: 0.5,
   },
   emptyTitle: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   emptySubtitle: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
@@ -339,10 +345,10 @@ export const ProfileScreenStyles = StyleSheet.create({
   },
   badgeCard: {
     width: 160,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -351,7 +357,7 @@ export const ProfileScreenStyles = StyleSheet.create({
   badgeCardLocked: {
     opacity: 0.5,
     borderStyle: 'dashed',
-    borderColor: '#27315B',
+    borderColor: colors.border,
   },
   badgeIcon: {
     fontSize: 28,
@@ -369,18 +375,18 @@ export const ProfileScreenStyles = StyleSheet.create({
     marginBottom: 2,
   },
   badgeNameLocked: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 2,
   },
   badgeDesc: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 11,
     lineHeight: 16,
   },
   badgeDescLocked: {
-    color: '#5E6994',
+    color: colors.textMuted,
     fontSize: 11,
     lineHeight: 16,
   },
@@ -394,10 +400,10 @@ export const ProfileScreenStyles = StyleSheet.create({
   },
   insightCard: {
     width: (width - 44) / 2,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -410,20 +416,20 @@ export const ProfileScreenStyles = StyleSheet.create({
     flex: 1,
   },
   insightLabel: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   insightValue: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '700',
     marginTop: 2,
   },
   insightSub: {
-    color: '#7F8AB7',
+    color: colors.textMuted,
     fontSize: 11,
     marginTop: 2,
   },
@@ -442,20 +448,25 @@ export const ProfileScreenStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     paddingVertical: 16,
   },
   actionButtonSecondary: {
     borderColor: 'rgba(138, 104, 255, 0.4)',
     backgroundColor: 'rgba(138, 104, 255, 0.1)',
   },
-  actionButtonDanger: {
-    backgroundColor: '#2A1B1B',
-    borderColor: '#5A3030',
-  },
+  actionButtonDanger: colors.mode === 'light'
+    ? {
+      backgroundColor: '#F6E3EC',
+      borderColor: '#DFA9C4',
+    }
+    : {
+      backgroundColor: '#2A1B1B',
+      borderColor: '#5A3030',
+    },
   actionIcon: {
     fontSize: 20,
   },
@@ -463,7 +474,7 @@ export const ProfileScreenStyles = StyleSheet.create({
     fontSize: 20,
   },
   actionText: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -480,7 +491,7 @@ export const ProfileScreenStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 2,
     padding: 14,
@@ -498,14 +509,14 @@ export const ProfileScreenStyles = StyleSheet.create({
     flex: 1,
   },
   toastTitle: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   toastName: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '700',
     marginTop: 2,
@@ -529,21 +540,21 @@ export const ProfileScreenStyles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     padding: 24,
   },
   modalTitle: {
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 20,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 6,
   },
   modalSubtitle: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 20,
@@ -551,22 +562,22 @@ export const ProfileScreenStyles = StyleSheet.create({
   modalInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0D1326',
+    backgroundColor: colors.card2,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     paddingHorizontal: 16,
     marginBottom: 20,
   },
   modalInput: {
     flex: 1,
-    color: '#F4F6FF',
+    color: colors.text,
     fontSize: 20,
     fontWeight: '600',
     paddingVertical: 14,
   },
   modalInputSuffix: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -582,21 +593,25 @@ export const ProfileScreenStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalButtonCancel: {
-    backgroundColor: '#1A2340',
+    backgroundColor: colors.card2,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
   },
   modalButtonCancelText: {
-    color: '#8E97C4',
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '600',
   },
   modalButtonConfirm: {
-    backgroundColor: '#6F52FF',
+    backgroundColor: colors.accentStrong,
   },
   modalButtonConfirmText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
-});
+  });
+}
+
+// Compat: objeto estático dark (shim, fase0-16 e telas não migradas).
+export const ProfileScreenStyles = getProfileStyles(dark);

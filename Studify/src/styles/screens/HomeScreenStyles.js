@@ -1,9 +1,10 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../../shared/theme/colors';
 
-export default StyleSheet.create({
+export const getHomeStyles = (colors) => StyleSheet.create({
   main: {
     flex: 1,
-    backgroundColor: '#090E1F',
+    backgroundColor: colors.bg,
   },
   scroll: {
     flex: 1,
@@ -12,9 +13,9 @@ export default StyleSheet.create({
   buscaWrapper: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#111832',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#27315B',
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -22,7 +23,7 @@ export default StyleSheet.create({
   },
   buscaInput: {
     flex: 1,
-    color: '#E6EAFF',
+    color: colors.text,
     marginLeft: 8,
     fontSize: 13,
     fontWeight: '600',
@@ -31,3 +32,5 @@ export default StyleSheet.create({
     height: 86,
   },
 });
+
+export default getHomeStyles(dark);

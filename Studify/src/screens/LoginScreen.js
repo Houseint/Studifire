@@ -15,9 +15,12 @@ import { LinearGradient } from "expo-linear-gradient";
 
 
 import { loginUser } from '../features/auth/authDb';
+import { getUserSettings } from '../services/subjectsDb';
+import { useTheme } from '../shared/theme/ThemeContext';
 import { AuthScreenStyles as styles } from '../styles/AuthScreenStyles.js';
 
 export default function LoginScreen({ navigation }) {
+  const { setMode } = useTheme();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,6 +48,14 @@ export default function LoginScreen({ navigation }) {
       if (!user) {
         Alert.alert('Login inválido', 'E-mail ou senha incorretos.');
         return;
+      }
+
+      // Carrega o tema persistido (o bootstrap rodou sem sessão — sem isso, light voltaria dark)
+      try {
+        const settings = await getUserSettings(user.id);
+        setMode(settings?.theme_mode === 'light' ? 'light' : 'dark');
+      } catch {
+        // sem tema salvo: segue dark
       }
 
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });

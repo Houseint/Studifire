@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { CreateMateriaModalStyles as styles } from '../../../styles/components/home/modals/CreateMateriaModalStyles';
+import { getCreateMateriaModalStyles } from '../../../styles/components/home/modals/CreateMateriaModalStyles';
+import { useTheme } from '../../../shared/theme/ThemeContext';
 import { renderTopicoInput } from '../helpers';
 import { gerarTopicosComplementares } from '../../../services/aiService';
 
@@ -20,6 +21,8 @@ const CreateMateriaModal = ({
   const [iaError, setIaError] = useState('');
   const [iaSugestoes, setIaSugestoes] = useState([]); // [{nome, estudado:false}]
   const [iaSelected, setIaSelected] = useState({}); // index -> bool
+  const { colors } = useTheme();
+  const styles = useMemo(() => getCreateMateriaModalStyles(colors), [colors]);
 
   useEffect(() => {
     if (!visible) {
@@ -117,10 +120,10 @@ const CreateMateriaModal = ({
           <TextInput
             style={styles.modalInput}
             placeholder="Ex: Matemática, Física..."
-            placeholderTextColor="#5a6a7a"
+            placeholderTextColor={colors.textMuted}
             value={novaMateria}
             onChangeText={setNovaMateria}
-            selectionColor="#6c8ebf"
+            selectionColor={colors.accent}
           />
           {renderTopicoInput({
             value: topicoInput,
@@ -137,6 +140,8 @@ const CreateMateriaModal = ({
             placeholder: 'Ex: Álgebra Linear',
             max: MAX_TOPICOS,
             styles,
+            placeholderTextColor: colors.textMuted,
+            selectionColor: colors.accent,
           })}
 
           {/* Botão IA híbrido C 1,2,3 */}
@@ -146,9 +151,9 @@ const CreateMateriaModal = ({
               disabled={!canGenerate || iaLoading}
               activeOpacity={0.8}
               style={{
-                backgroundColor: canGenerate ? '#8A68FF' : '#1B2545',
+                backgroundColor: canGenerate ? colors.accent : colors.card2,
                 borderWidth: 1,
-                borderColor: canGenerate ? '#8A68FF' : '#303E70',
+                borderColor: canGenerate ? colors.accent : colors.borderStrong,
                 borderRadius: 12,
                 paddingVertical: 12,
                 alignItems: 'center',
@@ -161,42 +166,42 @@ const CreateMateriaModal = ({
               {iaLoading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={{ color: canGenerate ? '#fff' : '#5a6a7a', fontSize: 16 }}>✨</Text>
+                <Text style={{ color: canGenerate ? '#fff' : colors.textMuted, fontSize: 16 }}>✨</Text>
               )}
-              <Text style={{ color: canGenerate ? '#fff' : '#5a6a7a', fontWeight: '800', fontSize: 14 }}>
+              <Text style={{ color: canGenerate ? '#fff' : colors.textMuted, fontWeight: '800', fontSize: 14 }}>
                 {iaLoading ? 'Gerando...' : 'Completar com IA'}
               </Text>
             </TouchableOpacity>
-            {!!hintIa && <Text style={{ color: '#7F8AB7', fontSize: 11, marginTop: 6 }}>{hintIa}</Text>}
-            {!!iaError && <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 6 }}>{iaError}</Text>}
+            {!!hintIa && <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>{hintIa}</Text>}
+            {!!iaError && <Text style={{ color: colors.danger, fontSize: 12, marginTop: 6 }}>{iaError}</Text>}
           </View>
 
           {/* Preview IA */}
           {iaSugestoes.length > 0 && (
-            <View style={{ backgroundColor: '#111832', borderWidth: 1, borderColor: '#27315B', borderRadius: 12, padding: 12, marginBottom: 10 }}>
-              <Text style={{ color: '#F4F6FF', fontWeight: '700', marginBottom: 8 }}>Sugestões da IA ({iaSugestoes.length}) — marque para adicionar</Text>
+            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginBottom: 10 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', marginBottom: 8 }}>Sugestões da IA ({iaSugestoes.length}) — marque para adicionar</Text>
               <ScrollView style={{ maxHeight: 160 }}>
                 {iaSugestoes.map((t, idx) => (
                   <TouchableOpacity key={idx} onPress={() => toggleSelect(idx)} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
-                    <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: iaSelected[idx] ? '#6F52FF' : '#303E70', backgroundColor: iaSelected[idx] ? '#6F52FF' : 'transparent', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                    <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: iaSelected[idx] ? colors.accentStrong : colors.borderStrong, backgroundColor: iaSelected[idx] ? colors.accentStrong : 'transparent', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
                       {iaSelected[idx] && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>}
                     </View>
-                    <Text style={{ color: '#C0CAE8', flex: 1 }}>{t.nome}</Text>
+                    <Text style={{ color: colors.textSecondary, flex: 1 }}>{t.nome}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                <TouchableOpacity onPress={handleClearIa} style={{ flex: 1, backgroundColor: '#1B2545', borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: '#303E70' }}>
-                  <Text style={{ color: '#AAB6D9', fontWeight: '700' }}>Limpar</Text>
+                <TouchableOpacity onPress={handleClearIa} style={{ flex: 1, backgroundColor: colors.card2, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.borderStrong }}>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Limpar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleGenerate} disabled={iaLoading} style={{ flex: 1, backgroundColor: '#1B2545', borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: '#303E70', opacity: iaLoading ? 0.5 : 1 }}>
-                  <Text style={{ color: '#AAB6D9', fontWeight: '700' }}>Regenerar</Text>
+                <TouchableOpacity onPress={handleGenerate} disabled={iaLoading} style={{ flex: 1, backgroundColor: colors.card2, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.borderStrong, opacity: iaLoading ? 0.5 : 1 }}>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Regenerar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleAddSelected} style={{ flex: 2, backgroundColor: '#6F52FF', borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}>
+                <TouchableOpacity onPress={handleAddSelected} style={{ flex: 2, backgroundColor: colors.accentStrong, borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}>
                   <Text style={{ color: '#fff', fontWeight: '800' }}>Adicionar ({Object.values(iaSelected).filter(Boolean).length})</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={{ color: '#5E6994', fontSize: 11, marginTop: 8 }}>Vagas: {MAX_TOPICOS - novosTopicos.length} • Desmarque o que não quiser</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 8 }}>Vagas: {MAX_TOPICOS - novosTopicos.length} • Desmarque o que não quiser</Text>
             </View>
           )}
 

@@ -55,6 +55,8 @@ export const renderTopicoInput = ({
   max = 10,
   disabled = false,
   styles,
+  placeholderTextColor = '#5a6a7a',
+  selectionColor = '#6c8ebf',
 }) => (
   <View>
     <Text style={styles.modalLabel}>{label} ({list.length}/{max})</Text>
@@ -62,10 +64,10 @@ export const renderTopicoInput = ({
       <TextInput
         style={[styles.modalInput, styles.topicoInputField]}
         placeholder={placeholder}
-        placeholderTextColor="#5a6a7a"
+        placeholderTextColor={placeholderTextColor}
         value={value}
         onChangeText={onChangeText}
-        selectionColor="#6c8ebf"
+        selectionColor={selectionColor}
         onSubmitEditing={onAdd}
         returnKeyType="next"
         disabled={disabled}
