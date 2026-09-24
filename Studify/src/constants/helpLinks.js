@@ -1,4 +1,4 @@
-export const HELP_LINKS = [
+  export const HELP_LINKS = [
   { icon: '🌐', nome: 'International School', desc: 'Métodos Pomodoro, SQ3R, repetição espaçada e autonomia.', url: 'https://internationalschool.global/metodos-de-estudo' },
   { icon: '🌐', nome: 'Terra', desc: 'Artigo prático sobre 4 métodos de estudo ativos incluindo SQ3R.', url: 'https://www.terra.com.br' },
   { icon: '🌐', nome: 'Solaris', desc: 'Estratégias práticas para desenvolver autonomia nos estudos.', url: 'https://centroeducacionalsolaris.com.br/desenvolver-autonomia-nos-estudos/' },

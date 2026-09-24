@@ -1,3 +1,6 @@
+// Camada de dados canônica de matérias/sessões/chat/settings/badges (features/subjects).
+// Tudo aqui é escopado por `user_id` (regra de posse: usuário nunca lê/escreve dado alheio).
+// `topicos` vive como JSON na coluna subjects.topicos; getDb() é singleton (core/db/client).
 import { getDb } from '../../core/db/client';
 import { getDueTopics } from '../../shared/utils/fsrs';
 
@@ -13,6 +16,7 @@ export async function getDueTopicsForUser(userId, now = new Date()) {
   }
 }
 
+// Lista do usuário em ordem de acesso recente (a Home mostra quem estudou por último no topo).
 export async function carregarMaterias(userId) {
   const db = await getDb();
   const rows = await db.getAllAsync(
@@ -22,6 +26,7 @@ export async function carregarMaterias(userId) {
   return rows.map(parseRow);
 }
 
+// Busca uma matéria do usuário (`AND user_id` = posse; id de outro usuário retorna null).
 export async function getMateriaById(userId, id) {
   const db = await getDb();
   const row = await db.getFirstAsync(
@@ -31,6 +36,8 @@ export async function getMateriaById(userId, id) {
   return row ? parseRow(row) : null;
 }
 
+// Cria a matéria (nome com trim; tópicos serializados em JSON) e devolve o objeto em memória
+// com o id inserido — a Home usa esse retorno p/ atualizar a lista sem refetch.
 export async function criarMateria(userId, nome, topicos) {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -48,6 +55,8 @@ export async function criarMateria(userId, nome, topicos) {
   };
 }
 
+// Whitelist de colunas atualizáveis: nome de coluna NUNCA vem do chamador (anti SQL injection —
+// só valores via `?`). `fixada` converte bool→0/1; `topicos` serializa o array em JSON.
 const UPDATE_WHITELIST = {
   nome: { sql: 'nome = ?', value: (v) => v },
   topicos: { sql: 'topicos = ?', value: (v) => JSON.stringify(v) },
@@ -55,6 +64,8 @@ const UPDATE_WHITELIST = {
   accessed_at: { sql: 'accessed_at = ?', value: (v) => v },
 };
 
+// Monta o SET do UPDATE só com chaves da whitelist; chaves desconhecidas são ignoradas.
+// Retorna sql vazio quando nada é válido — `atualizarMateria` vira no-op nesse caso.
 export function buildUpdateSql(updates) {
   const sets = [];
   const vals = [];
@@ -83,6 +94,7 @@ export async function deletarMateria(userId, id) {
   await db.runAsync('DELETE FROM subjects WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
+// Salva a sessão e "encosta" a matéria (accessed_at = agora) p/ ela subir na lista da Home.
 export async function registrarSessao(userId, subjectId, durationMinutes) {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -97,6 +109,7 @@ export async function toggleFixada(userId, id, atualmenteFixada) {
   return atualizarMateria(userId, id, { fixada: !atualmenteFixada });
 }
 
+// Histórico global do usuário (JOIN traz `subject_nome` p/ a Historic não precisar de 2ª query).
 export async function carregarHistorico(userId) {
   const db = await getDb();
   const rows = await db.getAllAsync(
@@ -138,6 +151,8 @@ export async function registrarQuizAttempt(userId, { subject_id, topic_index = n
   };
 }
 
+// Últimas mensagens primeiro: `null` = todas as matérias; com subjectId filtra uma só.
+// A Detail usa com subjectId (seção "ÚLTIMOS QUIZZES", 3 mais recentes).
 export async function carregarQuizAttempts(userId, subjectId = null) {
   const db = await getDb();
   if (subjectId == null) {
@@ -163,6 +178,7 @@ export async function getSubjectGoal(userId, subjectId) {
   return row ? row.weekly_minutes : null;
 }
 
+// Upsert da meta (PK user+matéria): valor ≤0 APAGA a meta (desliga) em vez de salvar 0.
 export async function setSubjectGoal(userId, subjectId, weeklyMinutes) {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -179,6 +195,7 @@ export async function setSubjectGoal(userId, subjectId, weeklyMinutes) {
 }
 
 // Minutos estudados nesta matéria desde domingo 00:00 (mesma regra da meta global).
+// Semana conta de domingo 00:00 (mesma regra da meta global e do heatmap).
 export async function getSubjectWeekMinutes(userId, subjectId) {
   const sessoes = await carregarSessoesPorMateria(userId, subjectId);
   const inicioSemana = new Date();
@@ -189,6 +206,7 @@ export async function getSubjectWeekMinutes(userId, subjectId) {
     .reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
 }
 
+// ===== Chat IA: conversas e mensagens (só persistência; o prompt mora em features/chat) =====
 export async function criarConversa(userId) {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -227,6 +245,7 @@ export async function atualizarTituloConversa(userId, id, titulo) {
   );
 }
 
+// Apaga mensagens antes da conversa (ordem importa: sem as mensagens a conversa some limpa).
 export async function deletarConversa(userId, id) {
   const db = await getDb();
   await db.runAsync(
@@ -239,6 +258,7 @@ export async function deletarConversa(userId, id) {
   );
 }
 
+// Grava uma mensagem com 2 guards: conversa tem que ser do usuário e role só 'user'/'assistant'.
 export async function salvarMensagem(userId, conversationId, role, content) {
   const db = await getDb();
   const conv = await db.getFirstAsync(
@@ -268,6 +288,7 @@ export async function carregarMensagens(userId, conversationId) {
   );
 }
 
+// Teto de conversas guardadas (default 20): mantém as mais recentes, apaga o resto em loop.
 export async function limparConversasAntigas(userId, limite = 20) {
   const db = await getDb();
   const todas = await db.getAllAsync(
@@ -283,7 +304,7 @@ export async function limparConversasAntigas(userId, limite = 20) {
 
 // ===== NOVAS FUNCTIONS PARA PROFILE =====
 
-// User Settings
+// Lê os settings criando a linha default se não existir (meta 300min, lembrete off às 20:00, dark).
 export async function getUserSettings(userId) {
   const db = await getDb();
   let settings = await db.getFirstAsync(
@@ -302,6 +323,8 @@ export async function getUserSettings(userId) {
   return settings;
 }
 
+// Padrão UPDATE-then-INSERT dos 3 setters abaixo: o UPDATE preserva as colunas irmãs
+// (meta, lembrete, tema); o INSERT só roda quando a linha ainda não existe.
 export async function updateWeeklyGoal(userId, minutes) {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -382,6 +405,8 @@ export async function getUserBadges(userId) {
   );
 }
 
+// Concede badges comparando stats locais com os gatilhos; pula os já desbloqueados.
+// Devolve só os recém-desbloqueados (a Home usa p/ celebrar na hora).
 export async function checkAndAwardBadges(userId) {
   const db = await getDb();
   
@@ -455,7 +480,8 @@ export async function checkAndAwardBadges(userId) {
   return newlyUnlocked;
 }
 
-// Métricas para Profile
+// Métricas do Perfil/IA contextual: horas, tópicos, matéria top (por minutos), melhor dia,
+// média por sessão, streak (dias consecutivos terminando hoje) e minutos da semana (domingo 00:00).
 export async function getProfileStats(userId) {
   const db = await getDb();
   const materias = await carregarMaterias(userId);
@@ -535,7 +561,7 @@ export async function getProfileStats(userId) {
   };
 }
 
-// Meta semanal progress
+// Progresso p/ o anel da Home: `percent` travado em 100 (passou da meta, anel cheio).
 export async function getWeeklyGoalProgress(userId) {
   const settings = await getUserSettings(userId);
   const stats = await getProfileStats(userId);
@@ -552,6 +578,7 @@ export async function getWeeklyGoalProgress(userId) {
 }
 
 // ===== Topic Coach Cache (Detail Study Coach) =====
+// Chave do cache insensível a acento/maiúscula (máx 80 chars); JSON corrompido lê como null.
 function topicKeyFromName(nome) {
   return (nome || '')
     .normalize('NFD')
@@ -592,6 +619,7 @@ export async function clearTopicCoachCache(userId, subjectId) {
   await db.runAsync('DELETE FROM topic_coach_cache WHERE user_id = ? AND subject_id = ?', [userId, subjectId]);
 }
 
+// Linha do SQLite → objeto da app: `topicos` sai de JSON p/ array, `fixada` de 0/1 p/ bool.
 function parseRow(row) {
   return {
     id: row.id,

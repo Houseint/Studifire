@@ -1,6 +1,20 @@
-import { groqChatCompletion } from '../../core/api/groqClient';
-import { carregarMaterias, getProfileStats } from '../subjects/subjectsDb';
-import { getDueTopics } from '../../shared/utils/fsrs';
+/**
+ * features/chat/aiService — toda a conversa com a IA (Groq) num lugar só.
+ *
+ * O que mora aqui:
+ * - chat livre (`enviarMensagem`) e chat com contexto do app (`enviarMensagemContextual`);
+ * - gerador de tópicos digitado (`gerarTopicosComplementares`) e via foto (`gerarTopicosDeMaterial`);
+ * - quiz da IA (`gerarQuiz`) com fallback offline (`gerarQuizLocal` — o botão nunca morre).
+ *
+ * Quem chama: ChatScreen (conversa), modais de matéria (gerador), DetailScreen (quiz/material).
+ * A chamada HTTP real está isolada em `core/api/groqClient` (chave, rate limit, erros).
+ */
+import { groqChatCompletion } from '../../core/api/groqClient'; // HTTP Groq: chave, rate limit, normalização de erros
+import { carregarMaterias, getProfileStats } from '../subjects/subjectsDb'; // dados reais p/ o contexto RAG
+import { getDueTopics } from '../../shared/utils/fsrs'; // revisões vencidas entram no contexto da IA
+
+// Prompt base de TODA conversa: trava a IA em "assistente de estudos em PT-BR".
+// O contexto do usuário (RAG) é concatenado depois dele em enviarMensagemContextual.
 
 export const SYSTEM_PROMPT = `Você é um assistente de estudos do app Studify.
 Responda APENAS sobre: matérias escolares, métodos de estudo,
@@ -10,6 +24,13 @@ Se o usuário perguntar algo fora disso, responda:
 Sempre responda em português brasileiro, de forma clara e amigável.
 Seja conciso — no máximo 4 parágrafos.`;
 
+/**
+ * Chat simples, SEM contexto do usuário (só SYSTEM_PROMPT + histórico).
+ * Converta `{role, text}` do app p/ `{role, content}` da API Groq.
+ *
+ * @param {Array<{role:string, text:string}>} mensagens - histórico da conversa
+ * @returns {Promise<string>} resposta da IA (ou string de erro amigável do groqClient)
+ */
 export async function enviarMensagem(mensagens) {
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -38,6 +59,7 @@ export async function enviarMensagem(mensagens) {
 export async function enviarMensagemContextual(userId, mensagens) {
   let systemContent = SYSTEM_PROMPT;
 
+  // Fail-safe: DB falhou ou userId null → cai p/ prompt base, conversa continua.
   if (userId) {
     try {
       const contextStr = await buildUserContext(userId);
@@ -71,11 +93,13 @@ export async function enviarMensagemContextual(userId, mensagens) {
  * @returns {Promise<string>}
  */
 export async function buildUserContext(userId) {
+  // Busca em paralelo; cada uma degrada sozinha (materias→[], stats→null).
   const [materias, stats] = await Promise.all([
     carregarMaterias(userId).catch(() => []),
     getProfileStats(userId).catch(() => null),
   ]);
 
+  // Sem stats não há contexto útil → string vazia (chamador usa prompt base).
   if (!stats) return '';
 
   const linhas = [];
@@ -92,6 +116,7 @@ export async function buildUserContext(userId) {
     linhas.push(`- Melhor dia da semana: ${stats.melhorDia}.`);
   }
   // FASE 2.1: IA sabe o que está vencido e pode cobrar revisão.
+  // Mostra no máx 5 nomes p/ economizar tokens; o resto vira "+N".
   try {
     const due = getDueTopics(materias);
     if (due.length > 0) {
@@ -103,6 +128,7 @@ export async function buildUserContext(userId) {
     // contexto de revisão é opcional
   }
 
+  // Cap de tokens: máx 8 matérias × 3 pendentes cada; o resto vira "... e mais N".
   if (materias.length > 0) {
     linhas.push('- Matérias (nome | progresso | pendentes):');
     const topMaterias = materias.slice(0, 8);
@@ -125,6 +151,7 @@ export async function buildUserContext(userId) {
     linhas.push('- Nenhuma matéria cadastrada ainda.');
   }
 
+  // Ordem final importa: a última linha proíbe a IA de inventar dados.
   linhas.push(
     'Use esses dados para personalizar a resposta. Se o usuário perguntar "como estou?", "o que estudar?", "onde estou fraco?", use-os diretamente. Nunca invente dados.',
   );
@@ -133,6 +160,11 @@ export async function buildUserContext(userId) {
 }
 
 // --- Utils ---
+
+/**
+ * Normaliza nome p/ dedup: sem acento, minúsculo, sem espaços extras.
+ * Ex.: "Fotossíntese " e "fotossintese" viram a mesma chave.
+ */
 function normalizeTopico(s) {
   return (s || '')
     .normalize('NFD')
@@ -154,7 +186,7 @@ export function extrairTopicosDoJson(raw, existentesSet, qtd) {
   try {
     parsed = JSON.parse(raw);
   } catch (_) {
-    // tenta extrair JSON de dentro do texto
+    // IA às vezes embrulha o JSON em texto: extrai o 1º {...} e tenta de novo.
     const m = (raw || '').match(/\{[\s\S]*\}/);
     if (m) {
       try {
@@ -163,6 +195,7 @@ export function extrairTopicosDoJson(raw, existentesSet, qtd) {
     }
   }
 
+  // Aceita variações de chave da IA (PT/EN, objeto ou array puro).
   let lista = [];
   if (parsed) {
     if (Array.isArray(parsed.topicos)) lista = parsed.topicos;
@@ -170,6 +203,7 @@ export function extrairTopicosDoJson(raw, existentesSet, qtd) {
     else if (Array.isArray(parsed)) lista = parsed;
   }
 
+  // Validação anti-lixo: nome 2-60 chars + dedup contra existentes e entre si.
   const filtrados = [];
   const seen = new Set(existentesSet);
   for (const item of lista) {
@@ -203,16 +237,20 @@ export async function gerarTopicosComplementares(nomeMateria, topicosExistentes 
     .filter(Boolean);
 
   const existentesSet = new Set(existentesNomes.map(normalizeTopico));
+  // Slots = teto (10) menos o que já existe; sem slot, volta vazio (não é erro).
   const slots = maxTotal - existentesNomes.length;
   if (slots <= 0) {
     return { topicos: [], reason: 'limite_atingido', raw: '' };
   }
+  // Guards de UX: nome curto não gera nada útil; sem 1 tópico a IA divaga.
   if (!nomeMateria || nomeMateria.trim().length < 3) {
     throw new Error('NOME_INVALIDO');
   }
   if (existentesNomes.length < 1) {
     throw new Error('PRECISA_1_TOPICO');
   }
+
+  // Gera no máx 7 por chamada (cabe no limite de tokens e no preview).
 
   const qtd = Math.min(slots, 7);
   const system = `Você é um curador especialista que quebra matérias em tópicos atômicos e acionáveis para estudo.
@@ -233,6 +271,7 @@ Gere ${qtd} complementares:`;
     ],
     { temperature: 0.6, max_tokens: 600, response_format: { type: 'json_object' }, reasoning_effort: 'low' },
   );
+  // Retry único: se a 1ª resposta veio com JSON inválido, tenta 1x mais frio e verboso.
   if (typeof raw === 'string' && raw.startsWith('Erro na API') && raw.includes('Failed to generate JSON')) {
     console.warn('[aiService] retry topicos por json_validate_failed');
     raw = await groqChatCompletion(
@@ -244,6 +283,7 @@ Gere ${qtd} complementares:`;
     );
   }
 
+  // Guarda de erros do groqClient: cada prefixo vira throw p/ a tela mostrar o aviso certo.
   // rate limiter guard retorna mensagem com ⏳
   if (typeof raw === 'string' && raw.startsWith('⏳')) {
     throw new Error(raw);
@@ -281,6 +321,7 @@ export const VISION_TOKEN_ESTIMATE = 3000;
 
 export async function gerarTopicosDeMaterial(nomeMateria, imagemBase64, topicosExistentes = [], opts = {}) {
   const maxTotal = opts.maxTotal || 10;
+  // Guards: nome curto não ancora a IA; base64 <100 chars = foto vazia/corrompida.
   if (!nomeMateria || nomeMateria.trim().length < 3) {
     throw new Error('NOME_INVALIDO');
   }
@@ -320,6 +361,7 @@ Regras:
     { temperature: 0.5, max_tokens: 900, response_format: { type: 'json_object' }, model: VISION_MODEL, tokenEstimate: VISION_TOKEN_ESTIMATE },
   );
 
+  // Guarda de erros do vision: mesmos prefixos do gerador, mensagens p/ fluxo de foto.
   // rate limiter guard retorna mensagem com ⏳
   if (typeof raw === 'string' && raw.startsWith('⏳')) {
     throw new Error(raw);
@@ -351,9 +393,11 @@ Regras:
  * @returns {Array<{pergunta:string, alternativas:Array<string>, correta:number, local:boolean}>}
  */
 export function gerarQuizLocal(foco = [], qtd = 3) {
+  // Trava 1-5 questões; sem tópicos usa placeholder genérico (quiz nunca sai vazio).
   const n = Math.min(Math.max(Number(qtd) || 3, 1), 5);
   const topicos = (foco || []).map((s) => String(s || '').trim()).filter(Boolean);
   const base = topicos.length > 0 ? topicos : ['este tópico'];
+  // 3 modelos de autoavaliação; correta sempre 0 (o valor está no tentar, não no acertar).
   const modelos = [
     (t) => ({
       pergunta: `Sobre "${t}", você consegue explicar o essencial sem olhar o material?`,
@@ -372,6 +416,7 @@ export function gerarQuizLocal(foco = [], qtd = 3) {
     }),
   ];
   const questoes = [];
+  // Round-robin: distribui tópicos × modelos até completar n (varia sem repetir lógica).
   for (let i = 0; i < n; i++) {
     const t = base[i % base.length];
     const q = modelos[i % modelos.length](t);
@@ -393,10 +438,12 @@ export function gerarQuizLocal(foco = [], qtd = 3) {
  * @returns {Promise<{questoes:Array<{pergunta:string, alternativas:Array<string>, correta:number}>, raw:string}>}
  */
 export async function gerarQuiz(nomeMateria, topicosFoco = [], opts = {}) {
+  // Trava 1-5 questões; nome <2 chars e lista vazia são erro de chamada, não da IA.
   const qtd = Math.min(Math.max(Number(opts.qtd) || 3, 1), 5);
   if (!nomeMateria || nomeMateria.trim().length < 2) {
     throw new Error('NOME_INVALIDO');
   }
+  // Foco = no máx 5 tópicos limpos; vazio aqui significa "nada p/ perguntar".
   const foco = (topicosFoco || [])
     .map((t) => (typeof t === 'string' ? t : t?.nome || t?.titulo || ''))
     .map((s) => s.trim())
@@ -465,6 +512,8 @@ Gere ${qtd} questões:`;
     else if (Array.isArray(parsed)) lista = parsed;
   }
 
+  // Validação questão a questão: pergunta ≥5 chars, exatas 4 alternativas, correta 0-3.
+  // Aceita chaves PT/EN; o que não passa é descartado (não quebra o quiz).
   const questoes = [];
   for (const item of lista) {
     const pergunta = (item?.pergunta || item?.question || '').trim();
