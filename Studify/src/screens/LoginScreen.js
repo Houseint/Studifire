@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -17,10 +17,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { loginUser } from '../features/auth/authDb';
 import { getUserSettings } from '../services/subjectsDb';
 import { useTheme } from '../shared/theme/ThemeContext';
-import { AuthScreenStyles as styles } from '../styles/AuthScreenStyles.js';
+import { getAuthScreenStyles } from '../styles/AuthScreenStyles.js';
 
 export default function LoginScreen({ navigation }) {
-  const { setMode } = useTheme();
+  const { colors, setMode } = useTheme();
+  const styles = useMemo(() => getAuthScreenStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,10 +72,10 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
 
       <LinearGradient
-        colors={["#0a0f1e", "#0d1a2e", "#0a1520"]}
+        colors={colors.bgGradient}
         style={StyleSheet.absoluteFillObject}
         pointerEvents="none"
       />
@@ -99,7 +100,7 @@ export default function LoginScreen({ navigation }) {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              selectionColor="#00d4ff"
+              selectionColor={colors.accent}
             />
           </View>
         </View>
@@ -112,7 +113,7 @@ export default function LoginScreen({ navigation }) {
               value={senha}
               onChangeText={setSenha}
               secureTextEntry
-              selectionColor="#00d4ff"
+              selectionColor={colors.accent}
             />
           </View>
         </View>

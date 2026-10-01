@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,9 +15,12 @@ import { LinearGradient } from "expo-linear-gradient";
 
 
 import { registerUser } from '../services/authDb';
-import { AuthScreenStyles as styles } from '../styles/AuthScreenStyles.js';
+import { useTheme } from '../shared/theme/ThemeContext';
+import { getAuthScreenStyles } from '../styles/AuthScreenStyles.js';
 
 export default function StudifyRegisterScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getAuthScreenStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -74,10 +77,10 @@ export default function StudifyRegisterScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
 
       <LinearGradient
-        colors={["#0a0f1e", "#0d1a2e", "#0a1520"]}
+        colors={colors.bgGradient}
         style={StyleSheet.absoluteFillObject}
         pointerEvents="none"
       />
@@ -103,7 +106,7 @@ export default function StudifyRegisterScreen({ navigation }) {
               keyboardType="email-address"
               autoCapitalize="none"
               placeholderTextColor="transparent"
-              selectionColor="#00d4ff"
+              selectionColor={colors.accent}
             />
           </View>
         </View>
@@ -117,7 +120,7 @@ export default function StudifyRegisterScreen({ navigation }) {
               onChangeText={setSenha}
               secureTextEntry
               placeholderTextColor="transparent"
-              selectionColor="#00d4ff"
+              selectionColor={colors.accent}
             />
           </View>
         </View>
@@ -131,7 +134,7 @@ export default function StudifyRegisterScreen({ navigation }) {
               onChangeText={setConfirmarSenha}
               secureTextEntry
               placeholderTextColor="transparent"
-              selectionColor="#00d4ff"
+              selectionColor={colors.accent}
             />
           </View>
         </View>

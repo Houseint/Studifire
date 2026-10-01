@@ -1,9 +1,15 @@
 import { StyleSheet } from 'react-native';
+import { dark } from '../shared/theme/colors';
 
-export const AuthScreenStyles = StyleSheet.create({
+/**
+ * T7 Auth light — mesma paleta do app (colors.js).
+ * Padrão igual ao Chat: getAuthScreenStyles(colors) via useMemo.
+ * AuthScreenStyles mantido como fallback dark p/ compat.
+ */
+export const getAuthScreenStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0f1e',
+    backgroundColor: colors.bg,
   },
   glowOrb1: {
     position: 'absolute',
@@ -34,18 +40,20 @@ export const AuthScreenStyles = StyleSheet.create({
     height: 260,
   },
   inputLabel: {
-    color: 'rgba(200, 220, 230, 0.8)',
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
   },
   inputWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 30,
     paddingHorizontal: 18,
   },
   input: {
-    color: '#ffffff',
+    color: colors.text,
     fontSize: 15,
     paddingVertical: 14,
   },
@@ -60,7 +68,7 @@ export const AuthScreenStyles = StyleSheet.create({
   authButton: {
     marginTop: 10,
     borderRadius: 30,
-    backgroundColor: '#5ab8d4',
+    backgroundColor: colors.accentStrong,
     paddingVertical: 15,
     alignItems: 'center',
   },
@@ -74,11 +82,11 @@ export const AuthScreenStyles = StyleSheet.create({
     marginTop: 40,
   },
   footerText: {
-    color: 'rgba(200, 220, 230, 0.7)',
+    color: colors.textMuted,
     fontSize: 13,
   },
   footerLink: {
-    color: '#00c8f0',
+    color: colors.accent,
     fontWeight: '700',
   },
   registerLogo: {
@@ -86,3 +94,5 @@ export const AuthScreenStyles = StyleSheet.create({
     height: 350,
   },
 });
+
+export const AuthScreenStyles = getAuthScreenStyles(dark);

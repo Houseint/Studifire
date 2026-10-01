@@ -539,3 +539,110 @@ Gere ${qtd} questões:`;
 
   return { questoes, raw, local: false };
 }
+
+/**
+ * FASE 3 item 2 — Tutor hints-first (socrático, progressive disclosure).
+ * Nível 1 = dica que guia sem entregar resposta, 2 = passo parcial,
+ * 3 = solução completa + explicação curta. Aditivo: não muda
+ * enviarMensagem/enviarMensagemContextual/gerarQuiz — Chat e Detail
+ * continuam chamando os mesmos fluxos, sem conflito.
+ *
+ * @param {string} nomeMateria
+ * @param {string} topico
+ * @param {string} pergunta dúvida do aluno (ex: "como resolve x²=13?")
+ * @param {number} [nivel=1] 1|2|3
+ * @returns {Promise<{dica:string, nivel:number, raw:string, local:boolean}>}
+ */
+export async function gerarDicaSocratica(nomeMateria, topico, pergunta, nivel = 1) {
+  const nv = Number(nivel) || 1;
+  if (!nomeMateria || nomeMateria.trim().length < 2) {
+    throw new Error('NOME_INVALIDO');
+  }
+  if (!topico || String(topico).trim().length < 2) {
+    throw new Error('TOPICO_INVALIDO');
+  }
+  if (![1, 2, 3].includes(nv)) {
+    throw new Error('NIVEL_INVALIDO');
+  }
+  const duvida = (pergunta || '').trim().slice(0, 500) || `Dúvida sobre ${String(topico).trim()}`;
+
+  const system = `Você é um tutor socrático de estudos em PT-BR (hints-first).
+Regras por nível:
+- Nível 1: só 1 pergunta-guia + 1 lembrete conceitual curto. NÃO dê a resposta nem o passo final.
+- Nível 2: mostre o próximo passo do raciocínio (1 passo), sem concluir. Termine com 1 pergunta de checagem.
+- Nível 3: solução completa em até 4 passos curtos + explicação de 1 linha do porquê.
+- Tom curto, direto, sem enrolar. Retorne APENAS JSON {"dica": "..."}.`;
+
+  const user = `Matéria: "${nomeMateria.trim()}"\nTópico: "${String(topico).trim()}"\nDúvida: "${duvida}"\nNível: ${nv}`;
+
+  let raw;
+  try {
+    raw = await groqChatCompletion(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { temperature: 0.5, max_tokens: 400, response_format: { type: 'json_object' }, reasoning_effort: 'low' },
+    );
+  } catch (e) {
+    console.warn('[gerarDicaSocratica] IA falhou, usando fallback local:', e?.message);
+    return { ...gerarDicaLocal(nv, topico, nomeMateria), raw: 'LOCAL_FALLBACK', local: true };
+  }
+
+  if (
+    typeof raw !== 'string' ||
+    raw.startsWith('⏳') ||
+    raw.startsWith('Configure') ||
+    raw.startsWith('Erro de conexão') ||
+    raw.startsWith('Sem resposta') ||
+    raw.startsWith('Erro na API')
+  ) {
+    return { ...gerarDicaLocal(nv, topico, nomeMateria), raw: typeof raw === 'string' ? raw : 'LOCAL_FALLBACK', local: true };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_) {
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        parsed = JSON.parse(m[0]);
+      } catch (_) {}
+    }
+  }
+  const dica = (parsed?.dica || parsed?.hint || parsed?.texto || '').trim();
+  if (!dica || dica.length < 10) {
+    return { ...gerarDicaLocal(nv, topico, nomeMateria), raw, local: true };
+  }
+  return { dica: dica.slice(0, 800), nivel: nv, raw, local: false };
+}
+
+/**
+ * Fallback offline do tutor (puro, sem rede).
+ * Mantém o botão "Pedir dica" sempre vivo, mesmo sem chave Groq.
+ */
+export function gerarDicaLocal(nivel, topico, nomeMateria = '') {
+  const nv = [1, 2, 3].includes(Number(nivel)) ? Number(nivel) : 1;
+  const t = String(topico || 'este tópico').trim().slice(0, 60);
+  const m = String(nomeMateria || 'a matéria').trim().slice(0, 60);
+  if (nv === 1) {
+    return {
+      dica: `Dica 1 — O que você já sabe sobre "${t}" em ${m}? Tente explicar com suas palavras o conceito central antes de olhar a resposta. Qual parte trava?`,
+      nivel: 1,
+      local: true,
+    };
+  }
+  if (nv === 2) {
+    return {
+      dica: `Dica 2 — Próximo passo em "${t}": quebre em 1 micro-passo (ex: identifique a fórmula/definição, aplique a 1 exemplo simples). Fez? O que deu?`,
+      nivel: 2,
+      local: true,
+    };
+  }
+  return {
+    dica: `Solução guiada em "${t}": 1) Releia o conceito base, 2) Refaça 1 exemplo resolvido, 3) Tente de novo sem olhar, 4) Confira. O porquê: repetição espaçada fixa em ${m}.`,
+    nivel: 3,
+    local: true,
+  };
+}
