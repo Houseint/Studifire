@@ -384,6 +384,99 @@ export const getProgressScreenStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+
+  // ===== Rework visual (append-only — keys antigas acima intactas) =====
+  // Header novo: data + botões 44px (antigos backButton/profileButton 40px seguem exportados)
+  headerDate: {
+    color: colors.textFaint,
+    fontSize: 13,
+    marginTop: 2,
+    marginLeft: 14,
+  },
+  backButtonLarge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileButtonLarge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Glows de fundo (Views absolutas, sem reanimated)
+  glowTop: {
+    position: 'absolute',
+    width: 360,
+    height: 360,
+    borderRadius: 180,
+    top: -120,
+    left: -120,
+    opacity: colors.mode === 'light' ? 0.12 : 0.28,
+  },
+  glowAmber: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    top: 320,
+    right: -100,
+    opacity: 0.10,
+  },
+  // Hero novo
+  heroCard: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
+    overflow: 'hidden',
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  heroRight: {
+    flex: 1,
+  },
+  heroEyebrow: {
+    color: colors.primaryLight,
+    fontSize: 10.5,
+    fontWeight: '600',
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  heroPhrase: {
+    color: colors.text,
+    fontSize: 19,
+    fontWeight: '600',
+    lineHeight: 24,
+    marginBottom: 6,
+  },
+  heroCount: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+  // Link "+N mais na tela Início" (antes inline)
+  moreLink: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 8,
+  },
 });
 
 export const ProgressScreenStyles = getProgressScreenStyles(dark);

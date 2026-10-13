@@ -23,6 +23,20 @@ export const dark = {
   success: '#4CAF50',
   warn: '#FFAA00',
   statusBar: 'light-content',
+  bgEnd: '#0A1220',
+  cardAlt: '#171A47',
+  borderDashed: '#34398A',
+  textFaint: '#7F88B8',
+  primary: '#7C5CFA',
+  primaryLight: '#A78BFA',
+  primaryDark: '#5B3FE0',
+  amber: '#F5A00B',
+  amberLight: '#FBBF24',
+  amberBorder: '#6B4E1C',
+  amberBg: '#2E2113',
+  info: '#60A5FA',
+  barIdle: '#3A3F94',
+  track: '#232857',
 };
 
 export const light = {
@@ -42,6 +56,20 @@ export const light = {
   success: '#4CAF50',
   warn: '#FFAA00',
   statusBar: 'dark-content',
+  bgEnd: '#DDE4F2',
+  cardAlt: '#EFE9FF',
+  borderDashed: '#B9C3DA',
+  textFaint: '#6B7694',
+  primary: '#6F52FF',
+  primaryLight: '#6F52FF',
+  primaryDark: '#5B3FE0',
+  amber: '#B45309',
+  amberLight: '#B45309',
+  amberBorder: '#E5C07B',
+  amberBg: '#FEF3E2',
+  info: '#2563EB',
+  barIdle: '#C9D2E8',
+  track: '#E2E6F3',
 };
 
 /** Retorna a paleta do modo; qualquer valor inválido cai em dark. */
