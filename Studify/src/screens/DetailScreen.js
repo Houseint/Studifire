@@ -171,25 +171,25 @@ export default function DetailScreen({ route, navigation }) {
   const [quizQuestoes, setQuizQuestoes] = useState([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizTopicIndex, setQuizTopicIndex] = useState(0);
-  const [quizLocal, setQuizLocal] = useState(false);
   // Histórico de quizzes da matéria (últimos resultados).
   const [quizHistory, setQuizHistory] = useState([]);
   // Meta semanal da matéria (passo 3): goal em min/semana (null = sem meta).
   const [meta, setMeta] = useState({ goal: null, week: 0 });
+  // Modal de escolha da meta (Alert nativo no Android mostra no máx 3 botões e prendia o usuário).
+  const [metaModalVisible, setMetaModalVisible] = useState(false);
 
-  const editarMeta = () => {
-    const opcoes = [30, 60, 120, 180, 300].map((m) => ({
-      text: `${m} min/sem`,
-      onPress: async () => {
-        const g = await setSubjectGoal(userId, id, m).catch(() => null);
-        if (g != null) setMeta((prev) => ({ ...prev, goal: g }));
-      },
-    }));
-    Alert.alert('Meta semanal', 'Quanto estudar esta matéria por semana?', [
-      ...opcoes,
-      { text: 'Desligar', style: 'destructive', onPress: async () => { await setSubjectGoal(userId, id, 0).catch(() => {}); setMeta((prev) => ({ ...prev, goal: null })); } },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+  const editarMeta = () => setMetaModalVisible(true);
+
+  const escolherMeta = async (min) => {
+    const g = await setSubjectGoal(userId, id, min).catch(() => null);
+    if (g != null) setMeta((prev) => ({ ...prev, goal: g }));
+    setMetaModalVisible(false);
+  };
+
+  const desligarMeta = async () => {
+    await setSubjectGoal(userId, id, 0).catch(() => {});
+    setMeta((prev) => ({ ...prev, goal: null }));
+    setMetaModalVisible(false);
   };
   // Quiz automático: garante 1 oferta por sessão (ref é síncrono — sem duplo Alert).
   const quizOfertadoRef = useRef(false);
@@ -205,14 +205,13 @@ export default function DetailScreen({ route, navigation }) {
     const foco = materia.topicos[idx];
     setQuizLoading(true);
     try {
-      const { questoes, local } = await gerarQuiz(materia.nome, [foco.nome || foco.titulo || 'tópico']);
+      const { questoes } = await gerarQuiz(materia.nome, [foco.nome || foco.titulo || 'tópico']);
       if (!questoes || questoes.length === 0) {
         Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente de novo.');
         return;
       }
       setQuizTopicIndex(idx);
       setQuizQuestoes(questoes);
-      setQuizLocal(!!local);
       setQuizVisible(true);
     } catch (e) {
       Alert.alert('Quiz indisponível', e?.message || 'Erro ao gerar quiz.');
@@ -658,10 +657,44 @@ export default function DetailScreen({ route, navigation }) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* Modal escolha da meta semanal (com X e Cancelar — fecha sem escolher) */}
+      <Modal
+        visible={metaModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMetaModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', paddingHorizontal: 24 }}>
+          <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setMetaModalVisible(false)} />
+          <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 18 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ color: colors.text, fontSize: 17, fontWeight: '800' }}>Meta semanal</Text>
+              <TouchableOpacity onPress={() => setMetaModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.card2, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: colors.textMuted, fontSize: 15, fontWeight: '800' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 12 }}>Quanto estudar esta matéria por semana?</Text>
+            {[30, 60, 120, 180, 300].map((m) => (
+              <TouchableOpacity key={m} onPress={() => escolherMeta(m)} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: meta.goal === m ? 'rgba(111,82,255,0.15)' : colors.card2, borderWidth: 1, borderColor: meta.goal === m ? colors.accentStrong : colors.border, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 8 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: meta.goal === m ? '800' : '600' }}>{m} min/sem</Text>
+                {meta.goal === m && <Text style={{ color: colors.accent, fontWeight: '800' }}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <TouchableOpacity onPress={desligarMeta} activeOpacity={0.7} style={{ flex: 1, backgroundColor: colors.card2, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}>
+                <Text style={{ color: colors.danger, fontWeight: '700' }}>Desligar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setMetaModalVisible(false)} activeOpacity={0.7} style={{ flex: 1, backgroundColor: colors.card2, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}>
+                <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <QuizModal
         visible={quizVisible}
         questoes={quizQuestoes}
-        local={quizLocal}
         onFinish={finalizarQuiz}
         onClose={() => setQuizVisible(false)}
       />

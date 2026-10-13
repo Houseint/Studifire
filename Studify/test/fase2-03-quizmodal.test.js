@@ -69,12 +69,11 @@ describe('2.2 - QuizModal: responde e salva', () => {
     expect(onFinish).toHaveBeenCalledWith({ total: 1, correct: 0 });
   });
 
-  test('acerto mostra ✓ na revisão e badge offline quando local', async () => {
+  test('acerto mostra ✓ na revisão', async () => {
     const screen = render(
-      <QuizModal visible questoes={QUESTOES} local onFinish={() => {}} onClose={() => {}} />
+      <QuizModal visible questoes={QUESTOES} onFinish={() => {}} onClose={() => {}} />
     );
 
-    expect(screen.getByText(/⚡ offline/)).toBeTruthy();
     fireEvent.press(screen.getByText('4'));
     fireEvent.press(screen.getByText('Ver resultado'));
 

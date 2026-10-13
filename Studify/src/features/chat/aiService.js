@@ -4,7 +4,8 @@
  * O que mora aqui:
  * - chat livre (`enviarMensagem`) e chat com contexto do app (`enviarMensagemContextual`);
  * - gerador de tópicos digitado (`gerarTopicosComplementares`) e via foto (`gerarTopicosDeMaterial`);
- * - quiz da IA (`gerarQuiz`) com fallback offline (`gerarQuizLocal` — o botão nunca morre).
+ * - quiz da IA (`gerarQuiz`) 100% online: sem chave/sem internet vira throw
+ *   e a Detail mostra "Quiz indisponível" (sem quiz genérico offline).
  *
  * Quem chama: ChatScreen (conversa), modais de matéria (gerador), DetailScreen (quiz/material).
  * A chamada HTTP real está isolada em `core/api/groqClient` (chave, rate limit, erros).
@@ -17,10 +18,16 @@ import { getDueTopics } from '../../shared/utils/fsrs'; // revisões vencidas en
 // O contexto do usuário (RAG) é concatenado depois dele em enviarMensagemContextual.
 
 export const SYSTEM_PROMPT = `Você é um assistente de estudos do app Studify.
-Responda APENAS sobre: matérias escolares, métodos de estudo,
-planejamento de estudos, dicas de aprendizado e motivação educacional.
-Se o usuário perguntar algo fora disso, responda:
+Sua missão é ajudar o usuário a ESTUDAR. Responda a qualquer pergunta com
+potencial educacional: conteúdos de matérias escolares (Matemática, Português,
+História, Geografia, Física, Química, Biologia, Inglês, Filosofia, Sociologia...),
+métodos de estudo, planejamento de estudos, dicas de aprendizado e motivação educacional.
+Temas históricos como Guerras Mundiais, Guerra Fria, Revolução Francesa, Ditadura
+Militar etc. SÃO conteúdo escolar legítimo — explique normalmente.
+Recuse APENAS pedidos sem nenhum valor educacional (fofoca, apostas, conteúdo
+adulto, como colar escondido). Nesse caso responda:
 "Meu propósito é ajudar com seus estudos 📚. Pergunte-me sobre matérias, métodos de estudo ou dicas educacionais!"
+Na dúvida, responda ligando o tema ao estudo.
 Sempre responda em português brasileiro, de forma clara e amigável.
 Seja conciso — no máximo 4 parágrafos.`;
 
@@ -382,54 +389,9 @@ Regras:
 }
 
 /**
- * Fallback local (offline/sem chave IA): autoavaliação honesta por tópico.
- * Puro e testável. Garante que o botão "Quiz rápido" SEMPRE abre um quiz:
- * sem .env, sem internet ou com limite gratuito atingido, o usuário estuda
- * do mesmo jeito e o FSRS recebe o sinal (correta = domínio real).
- * Cada questão carrega `local: true` para a UI sinalizar "modo offline".
- *
- * @param {Array<string>} foco nomes dos tópicos em foco
- * @param {number} qtd quantidade de questões (1-5)
- * @returns {Array<{pergunta:string, alternativas:Array<string>, correta:number, local:boolean}>}
- */
-export function gerarQuizLocal(foco = [], qtd = 3) {
-  // Trava 1-5 questões; sem tópicos usa placeholder genérico (quiz nunca sai vazio).
-  const n = Math.min(Math.max(Number(qtd) || 3, 1), 5);
-  const topicos = (foco || []).map((s) => String(s || '').trim()).filter(Boolean);
-  const base = topicos.length > 0 ? topicos : ['este tópico'];
-  // 3 modelos de autoavaliação; correta sempre 0 (o valor está no tentar, não no acertar).
-  const modelos = [
-    (t) => ({
-      pergunta: `Sobre "${t}", você consegue explicar o essencial sem olhar o material?`,
-      alternativas: ['Domino — explico sem olhar', 'Sei o básico, falta detalhe', 'Só reconheço o nome', 'Ainda não estudei'],
-      correta: 0,
-    }),
-    (t) => ({
-      pergunta: `Qual frase descreve melhor seu estudo de "${t}"?`,
-      alternativas: ['Já estudei e revisei', 'Estudei uma vez', 'Só li por cima', 'Ainda não estudei'],
-      correta: 0,
-    }),
-    (t) => ({
-      pergunta: `Se caísse uma questão sobre "${t}" agora, você...`,
-      alternativas: ['Acertaria com confiança', 'Acertaria com dúvida', 'Chutaria', 'Deixaria em branco'],
-      correta: 0,
-    }),
-  ];
-  const questoes = [];
-  // Round-robin: distribui tópicos × modelos até completar n (varia sem repetir lógica).
-  for (let i = 0; i < n; i++) {
-    const t = base[i % base.length];
-    const q = modelos[i % modelos.length](t);
-    questoes.push({ ...q, local: true });
-  }
-  return questoes;
-}
-
-/**
  * 2.2 Quiz pós-sessão — gera perguntas de múltipla escolha sobre a matéria.
- * Mesmo padrão do gerador de tópicos: guards de erro + parse JSON com fallback.
- * Nunca quebra o fluxo de estudo: qualquer falha da IA vira throw com mensagem
- * amigável e a DetailScreen oferece o quiz só quando há questões válidas.
+ * 100% online via Groq: sem chave/sem internet/limite atingido vira throw
+ * com mensagem amigável e a DetailScreen mostra "Quiz indisponível".
  *
  * @param {string} nomeMateria
  * @param {Array<string|{nome:string}>} topicosFoco nomes dos tópicos estudados
@@ -474,22 +436,18 @@ Gere ${qtd} questões:`;
       { temperature: 0.6, max_tokens: 900, response_format: { type: 'json_object' }, reasoning_effort: 'low' },
     );
   } catch (e) {
-    console.warn('[gerarQuiz] IA falhou, usando fallback local:', e?.message);
-    return { questoes: gerarQuizLocal(foco, qtd), raw: 'LOCAL_FALLBACK', local: true };
+    throw new Error('Não foi possível gerar o quiz, tente novamente em alguns segundos.');
   }
 
-  // IA indisponível (sem chave, sem internet, limite free, erro API):
-  // cai para o quiz local em vez de quebrar o fluxo de estudo.
-  if (
-    typeof raw !== 'string' ||
-    raw.startsWith('⏳') ||
-    raw.startsWith('Configure') ||
-    raw.startsWith('Erro de conexão') ||
-    raw.startsWith('Sem resposta') ||
-    raw.startsWith('Erro na API')
-  ) {
-    console.warn('[gerarQuiz] IA indisponível, usando fallback local.');
-    return { questoes: gerarQuizLocal(foco, qtd), raw: typeof raw === 'string' ? raw : 'LOCAL_FALLBACK', local: true };
+  // rate limiter guard retorna mensagem com ⏳
+  if (typeof raw === 'string' && raw.startsWith('⏳')) {
+    throw new Error(raw);
+  }
+  if (typeof raw === 'string' && raw.startsWith('Configure')) {
+    throw new Error(raw);
+  }
+  if (typeof raw === 'string' && (raw.startsWith('Erro de conexão') || raw.startsWith('Sem resposta') || raw.startsWith('Erro na API'))) {
+    throw new Error('Não foi possível gerar o quiz, tente novamente em alguns segundos.');
   }
 
   let parsed;
@@ -531,13 +489,12 @@ Gere ${qtd} questões:`;
     if (questoes.length >= qtd) break;
   }
 
-  // IA retornou zero questões válidas: fallback local em vez de tela vazia.
+  // IA retornou zero questões válidas: deixa a Detail avisar ("A IA não retornou perguntas").
   if (questoes.length === 0) {
-    console.warn('[gerarQuiz] IA sem questões válidas, usando fallback local.');
-    return { questoes: gerarQuizLocal(foco, qtd), raw, local: true };
+    return { questoes: [], raw };
   }
 
-  return { questoes, raw, local: false };
+  return { questoes, raw };
 }
 
 /**

@@ -9,7 +9,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../../shared/theme/ThemeContext';
 
-export default function QuizModal({ visible, questoes = [], local = false, onFinish, onClose }) {
+export default function QuizModal({ visible, questoes = [], onFinish, onClose }) {
   const { colors } = useTheme();
   const s = useMemo(() => getQuizModalStyles(colors), [colors]);
   const [idx, setIdx] = useState(0);
@@ -53,7 +53,7 @@ export default function QuizModal({ visible, questoes = [], local = false, onFin
         <View style={s.card}>
           {!done ? (
             <>
-              <Text style={s.kicker}>QUIZ DE REVISÃO · {idx + 1}/{total}{local ? ' · ⚡ offline' : ''}</Text>
+              <Text style={s.kicker}>QUIZ DE REVISÃO · {idx + 1}/{total}</Text>
               <Text style={s.question}>{q.pergunta}</Text>
               {q.alternativas.map((alt, i) => (
                 <TouchableOpacity
