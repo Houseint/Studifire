@@ -11,9 +11,12 @@ describe('0.1 - GROQ_API_KEY fora do bundle client', () => {
   });
 
   test('app.config.js não expõe GROQ_API_KEY em extra', () => {
-    const config = require('../app.config.js');
-    expect(config.expo.extra).not.toHaveProperty('GROQ_API_KEY');
-    expect(config.expo.extra.GROQ_API_KEY).toBeUndefined();
+    const exported = require('../app.config.js');
+    // app.config.js agora é função ({ config }) => expo config (formato EAS)
+    const config = typeof exported === 'function' ? exported({ config: {} }) : exported;
+    const expo = config.expo || config;
+    expect(expo.extra || {}).not.toHaveProperty('GROQ_API_KEY');
+    expect((expo.extra || {}).GROQ_API_KEY).toBeUndefined();
   });
 
   test('aiService não lê a chave via Constants.expoConfig.extra', () => {

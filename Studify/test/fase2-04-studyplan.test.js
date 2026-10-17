@@ -48,11 +48,17 @@ describe('2.3 - Planner semanal (card na Home)', () => {
   });
 
   test('card: mostra resumo e próximos dias com itens', () => {
-    const screen = render(
-      <StudyPlanCard materias={materias} goalMinutes={300} currentMinutes={90} />
-    );
-    expect(screen.getByText('PLANO DA SEMANA')).toBeTruthy();
-    expect(screen.getByText('30 min/dia · 3 itens')).toBeTruthy();
-    expect(screen.getByText('Qui · ⏰ Vencido  🌱 Novo  🔁 Feito')).toBeTruthy();
+    // congela o relógio na quinta do NOW → rótulo do dia estável ('Qui', sem depender do dia real)
+    jest.useFakeTimers({ now: NOW });
+    try {
+      const screen = render(
+        <StudyPlanCard materias={materias} goalMinutes={300} currentMinutes={90} />
+      );
+      expect(screen.getByText('PLANO DA SEMANA')).toBeTruthy();
+      expect(screen.getByText('30 min/dia · 3 itens')).toBeTruthy();
+      expect(screen.getByText('Qui · ⏰ Vencido  🌱 Novo  🔁 Feito')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

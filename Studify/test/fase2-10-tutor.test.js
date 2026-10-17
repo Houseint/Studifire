@@ -6,11 +6,14 @@ import { gerarDicaSocratica, gerarDicaLocal } from '../src/features/chat/aiServi
 
 describe('Tutor hints-first — gerarDicaSocratica', () => {
   beforeEach(() => {
+    // env falsa: IA "configurada" (fetch segue mockado — nenhuma chamada real sai)
+    process.env.EXPO_PUBLIC_GROQ_API_KEY = 'chave-teste';
     global.fetch = jest.fn();
     jest.clearAllMocks();
   });
 
   afterEach(() => {
+    delete process.env.EXPO_PUBLIC_GROQ_API_KEY;
     delete global.fetch;
   });
 
