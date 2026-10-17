@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, SectionList, StatusBar, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
 import { buildActivityHeatmap } from '../shared/utils/activity';
+import { useTheme } from '../shared/theme/ThemeContext';
 
-const HEATMAP_COLORS = ['#1B2342', '#2E3A6E', '#4A569E', '#6F52FF', '#9D86FF'];
+const HEATMAP_COLORS_DARK = ['#1B2342', '#2E3A6E', '#4A569E', '#6F52FF', '#9D86FF'];
+const HEATMAP_COLORS_LIGHT = ['#E1E6F5', '#C3CBEE', '#9AA4DF', '#6F52FF', '#4B32CC'];
+
+function getHeatmapColors(colors) {
+  return colors.mode === 'light' ? HEATMAP_COLORS_LIGHT : HEATMAP_COLORS_DARK;
+}
 
 const FILTROS = [
   { key: 'todos', label: 'Todos' },
@@ -35,6 +41,8 @@ function getFiltroData(filtro) {
 
 export default function HistoricScreen({ navigation }) {
   const userId = useUserId();
+  const { colors } = useTheme();
+  const s = useMemo(() => getHistoricStyles(colors), [colors]);
   const [filtro, setFiltro] = useState('todos');
   const [materias, setMaterias] = useState([]);
   const [sessoes, setSessoes] = useState([]);
@@ -69,11 +77,12 @@ export default function HistoricScreen({ navigation }) {
 
   const sections = agruparPorData(sessoesFiltradas);
   const heatmap = buildActivityHeatmap(sessoes);
+  const heatmapColors = getHeatmapColors(colors);
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-      <LinearGradient colors={['#0a0f1e', '#0d1a2e', '#0a1520']} style={s.gradient} />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
+      <LinearGradient colors={colors.bgGradient} style={s.gradient} />
 
       <View style={s.header}>
         <TouchableOpacity style={s.backButton} activeOpacity={0.7} onPress={() => navigation.goBack()}>
@@ -120,7 +129,7 @@ export default function HistoricScreen({ navigation }) {
               <View
                 style={[
                   s.heatmapDot,
-                  { backgroundColor: HEATMAP_COLORS[d.level] || HEATMAP_COLORS[0] },
+                  { backgroundColor: heatmapColors[d.level] || heatmapColors[0] },
                   d.isToday && s.heatmapDotToday,
                 ]}
               />
@@ -182,70 +191,72 @@ function agruparPorData(sessoes) {
   return Object.entries(map).map(([title, data]) => ({ title, data }));
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#090E1F' },
-  gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
-    paddingTop: 50, paddingBottom: 12,
-  },
-  backButton: {
-    width: 40, height: 40, borderRadius: 20,
-    borderWidth: 1, borderColor: '#27315B',
-    backgroundColor: '#111832',
-    alignItems: 'center', justifyContent: 'center', marginRight: 14,
-  },
-  backButtonText: { color: '#7F8AB7', fontSize: 22 },
-  headerTitle: { color: '#F4F6FF', fontSize: 22, fontWeight: '700' },
-  statsRow: {
-    flexDirection: 'row', paddingHorizontal: 20, marginTop: 8, marginBottom: 16,
-  },
-  statCard: {
-    flex: 1, alignItems: 'center',
-    backgroundColor: '#111832',
-    borderRadius: 14, borderWidth: 1, borderColor: '#27315B',
-    paddingVertical: 14, marginHorizontal: 4,
-  },
-  statValue: { color: '#F4F6FF', fontSize: 20, fontWeight: '700' },
-  statLabel: { color: '#8E97C4', fontSize: 11, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 4 },
-  filtrosRow: {
-    flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12,
-  },
-  filtroBtn: {
-    flex: 1, paddingVertical: 8, borderRadius: 10,
-    alignItems: 'center', marginHorizontal: 4,
-    backgroundColor: '#111832',
-  },
-  filtroBtnAtivo: { backgroundColor: 'rgba(111,82,255,0.2)' },
-  filtroBtnText: { color: '#7F8AB7', fontSize: 13, fontWeight: '600' },
-  filtroBtnTextAtivo: { color: '#8A68FF' },
-  heatmapCard: {
-    backgroundColor: '#111832', borderRadius: 14,
-    borderWidth: 1, borderColor: '#27315B',
-    paddingVertical: 12, paddingHorizontal: 16,
-    marginHorizontal: 20, marginBottom: 12,
-  },
-  heatmapTitle: { color: '#8E97C4', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
-  heatmapRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  heatmapCell: { alignItems: 'center' },
-  heatmapDot: { width: 26, height: 26, borderRadius: 8, marginBottom: 6 },
-  heatmapDotToday: { borderWidth: 2, borderColor: '#F4F6FF' },
-  heatmapWeekday: { color: '#7F8AB7', fontSize: 11, fontWeight: '600' },
-  heatmapWeekdayToday: { color: '#F4F6FF' },
-  listContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  sectionHeader: {
-    color: '#8F98C2', fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
-    letterSpacing: 0.8, marginTop: 16, marginBottom: 8,
-  },
-  sessionItem: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#111832', borderRadius: 12,
-    padding: 14, marginBottom: 8,
-  },
-  sessionLeft: { flex: 1 },
-  sessionSubject: { color: '#F4F6FF', fontSize: 15, fontWeight: '600' },
-  sessionTime: { color: '#7F8AB7', fontSize: 13, marginTop: 2 },
-  sessionDuration: { color: '#8A68FF', fontSize: 14, fontWeight: '600' },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { color: '#7F8AB7', fontSize: 15 },
-});
+export function getHistoricStyles(colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.bg },
+    gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+    header: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
+      paddingTop: 50, paddingBottom: 12,
+    },
+    backButton: {
+      width: 40, height: 40, borderRadius: 20,
+      borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.card,
+      alignItems: 'center', justifyContent: 'center', marginRight: 14,
+    },
+    backButtonText: { color: colors.textMuted, fontSize: 22 },
+    headerTitle: { color: colors.text, fontSize: 22, fontWeight: '700' },
+    statsRow: {
+      flexDirection: 'row', paddingHorizontal: 20, marginTop: 8, marginBottom: 16,
+    },
+    statCard: {
+      flex: 1, alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+      paddingVertical: 14, marginHorizontal: 4,
+    },
+    statValue: { color: colors.text, fontSize: 20, fontWeight: '700' },
+    statLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 4 },
+    filtrosRow: {
+      flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12,
+    },
+    filtroBtn: {
+      flex: 1, paddingVertical: 8, borderRadius: 10,
+      alignItems: 'center', marginHorizontal: 4,
+      backgroundColor: colors.card,
+    },
+    filtroBtnAtivo: { backgroundColor: 'rgba(111,82,255,0.2)' },
+    filtroBtnText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+    filtroBtnTextAtivo: { color: colors.accent },
+    heatmapCard: {
+      backgroundColor: colors.card, borderRadius: 14,
+      borderWidth: 1, borderColor: colors.border,
+      paddingVertical: 12, paddingHorizontal: 16,
+      marginHorizontal: 20, marginBottom: 12,
+    },
+    heatmapTitle: { color: colors.textMuted, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
+    heatmapRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    heatmapCell: { alignItems: 'center' },
+    heatmapDot: { width: 26, height: 26, borderRadius: 8, marginBottom: 6 },
+    heatmapDotToday: { borderWidth: 2, borderColor: colors.text },
+    heatmapWeekday: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+    heatmapWeekdayToday: { color: colors.text },
+    listContent: { paddingHorizontal: 20, paddingBottom: 40 },
+    sectionHeader: {
+      color: colors.textMuted, fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
+      letterSpacing: 0.8, marginTop: 16, marginBottom: 8,
+    },
+    sessionItem: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: colors.card, borderRadius: 12,
+      padding: 14, marginBottom: 8,
+    },
+    sessionLeft: { flex: 1 },
+    sessionSubject: { color: colors.text, fontSize: 15, fontWeight: '600' },
+    sessionTime: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+    sessionDuration: { color: colors.accent, fontSize: 14, fontWeight: '600' },
+    empty: { alignItems: 'center', marginTop: 60 },
+    emptyText: { color: colors.textMuted, fontSize: 15 },
+  });
+}

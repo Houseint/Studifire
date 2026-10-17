@@ -521,6 +521,11 @@ export function getProfileStyles(colors) {
     fontWeight: '700',
     marginTop: 2,
   },
+  toastHint: {
+    color: colors.textMuted,
+    fontSize: 10,
+    marginTop: 4,
+  },
 
   // Modal Meta Semanal
   modalOverlay: {

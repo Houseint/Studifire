@@ -17,18 +17,18 @@ export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, week
   if (due.length > 0) {
     const first = due[0];
     const extra = due.length > 1 ? ` (+${due.length - 1})` : '';
-    return { emoji: '⏰', text: `Revisar: ${first.topicoNome} (${first.materiaNome})${extra}` };
+    return { emoji: '⏰', text: `Revisar: ${first.topicoNome} (${first.materiaNome})${extra}`, materiaId: first.materiaId };
   }
   const withPct = all.map((m) => {
     const tops = Array.isArray(m.topicos) ? m.topicos : [];
     const done = tops.filter((t) => t.estudado).length;
     const pct = tops.length > 0 ? Math.round((done / tops.length) * 100) : 0;
-    return { nome: m.nome, pct };
+    return { id: m.id, nome: m.nome, pct };
   });
   const zero = withPct.find((m) => m.pct === 0);
-  if (zero) return { emoji: '🌱', text: `Comece: ${zero.nome}` };
+  if (zero) return { emoji: '🌱', text: `Comece: ${zero.nome}`, materiaId: zero.id };
   const low = withPct.sort((a, b) => a.pct - b.pct)[0];
-  if (low && low.pct < 50) return { emoji: '📚', text: `Continue: ${low.nome} (${low.pct}%)` };
+  if (low && low.pct < 50) return { emoji: '📚', text: `Continue: ${low.nome} (${low.pct}%)`, materiaId: low.id };
   if ((weeklyPercent || 0) < 100 && (weeklyRemaining || 0) > 0) {
     return { emoji: '⏱', text: `Faltam ${weeklyRemaining} min para a meta semanal` };
   }
@@ -39,8 +39,10 @@ const SmartNextSteps = ({ streak = 0, materias = [], weeklyPercent = 0, weeklyRe
   const { colors } = useTheme();
   const s = useMemo(() => getNextStepsStyles(colors), [colors]);
   const step = getNextStep({ streak, materias, weeklyPercent, weeklyRemaining });
+  // Toque abre a matéria indicada (quando o passo tem alvo); sem alvo, o card fica inerte.
+  const canOpen = step.materiaId != null && typeof onPress === 'function';
   return (
-    <TouchableOpacity style={s.card} activeOpacity={0.85} onPress={onPress}>
+    <TouchableOpacity style={s.card} activeOpacity={canOpen ? 0.85 : 1} disabled={!canOpen} onPress={() => onPress(step.materiaId)}>
       <Text style={s.emoji}>{step.emoji}</Text>
       <View style={s.body}>
         <Text style={s.label}>PRÓXIMO PASSO INTELIGENTE</Text>

@@ -289,6 +289,7 @@ export default function HomeScreen({ navigation }) {
           materias={[...revisados, ...fixados]}
           weeklyPercent={weeklyGoal.percent}
           weeklyRemaining={Math.max(0, weeklyGoal.goalMinutes - weeklyGoal.currentMinutes)}
+          onPress={(materiaId) => navigation?.navigate('Detail', { id: materiaId })}
         />
 
         <StudyPlanCard

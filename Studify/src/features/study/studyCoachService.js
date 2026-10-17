@@ -83,6 +83,7 @@ export async function getTopicAssist(userId, subjectId, materiaNome, topicoNome,
 
   if (typeof raw === 'string' && raw.startsWith('⏳')) throw new Error(raw);
   if (typeof raw === 'string' && raw.startsWith('Configure')) throw new Error(raw);
+  if (typeof raw === 'string' && (raw.startsWith('Erro de conexão') || raw.startsWith('Sem resposta'))) throw new Error('Sem conexão com a IA. Verifique sua internet e tente de novo.');
   // Groq retorna "Erro na API: Failed to generate JSON. max completion tokens..." quando estoura
   if (typeof raw === 'string' && raw.startsWith('Erro na API')) {
     // se for json_validate_failed por tokens, tenta 1 retry com 1600
@@ -95,6 +96,8 @@ export async function getTopicAssist(userId, subjectId, materiaNome, topicoNome,
         ],
         { temperature: 0.3, max_tokens: 1600, response_format: { type: 'json_object' }, reasoning_effort: 'medium' },
       );
+      if (typeof raw === 'string' && (raw.startsWith('⏳') || raw.startsWith('Configure'))) throw new Error(raw);
+      if (typeof raw === 'string' && (raw.startsWith('Erro de conexão') || raw.startsWith('Sem resposta'))) throw new Error('Sem conexão com a IA. Verifique sua internet e tente de novo.');
       if (typeof raw === 'string' && raw.startsWith('Erro na API')) throw new Error('IA sobrecarregada, tente novamente em alguns segundos.');
     } else {
       throw new Error(raw);

@@ -170,7 +170,7 @@ export default function DetailScreen({ route, navigation }) {
   const [quizVisible, setQuizVisible] = useState(false);
   const [quizQuestoes, setQuizQuestoes] = useState([]);
   const [quizLoading, setQuizLoading] = useState(false);
-  const [quizTopicIndex, setQuizTopicIndex] = useState(0);
+  const [quizTopicIndexes, setQuizTopicIndexes] = useState([]);
   // Histórico de quizzes da matéria (últimos resultados).
   const [quizHistory, setQuizHistory] = useState([]);
   // Meta semanal da matéria (passo 3): goal em min/semana (null = sem meta).
@@ -199,18 +199,27 @@ export default function DetailScreen({ route, navigation }) {
       Alert.alert('Sem tópicos', 'Adicione tópicos à matéria para gerar o quiz.');
       return;
     }
-    // Foco: primeiro tópico ainda não estudado, senão o primeiro.
-    const pendente = materia.topicos.findIndex((t) => !t.estudado);
-    const idx = pendente >= 0 ? pendente : 0;
-    const foco = materia.topicos[idx];
+    // Foco: tópicos já estudados (os que a sessão cobriu), até 5; senão o primeiro pendente.
+    const estudadosIdx = materia.topicos
+      .map((t, i) => (t.estudado ? i : -1))
+      .filter((i) => i >= 0)
+      .slice(-5);
+    let idxs = estudadosIdx;
+    if (idxs.length === 0) {
+      const pendente = materia.topicos.findIndex((t) => !t.estudado);
+      idxs = [pendente >= 0 ? pendente : 0];
+    }
+    const topicosFoco = idxs.map(
+      (i) => materia.topicos[i].nome || materia.topicos[i].titulo || 'tópico'
+    );
     setQuizLoading(true);
     try {
-      const { questoes } = await gerarQuiz(materia.nome, [foco.nome || foco.titulo || 'tópico']);
+      const { questoes } = await gerarQuiz(materia.nome, topicosFoco);
       if (!questoes || questoes.length === 0) {
         Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente de novo.');
         return;
       }
-      setQuizTopicIndex(idx);
+      setQuizTopicIndexes(idxs);
       setQuizQuestoes(questoes);
       setQuizVisible(true);
     } catch (e) {
@@ -221,21 +230,26 @@ export default function DetailScreen({ route, navigation }) {
   };
 
   const finalizarQuiz = async ({ total, correct }) => {
-    const idx = quizTopicIndex;
-    const foco = materia?.topicos?.[idx];
+    const idxs = quizTopicIndexes.length ? quizTopicIndexes : [0];
+    const nomes = idxs
+      .map((i) => materia?.topicos?.[i]?.nome || materia?.topicos?.[i]?.titulo)
+      .filter(Boolean);
     try {
-      if (userId && id && foco) {
+      if (userId && id) {
         await registrarQuizAttempt(userId, {
           subject_id: id,
-          topic_index: idx,
-          topic_nome: foco.nome || foco.titulo || 'tópico',
+          topic_index: idxs[0],
+          topic_nome: nomes.join(', ') || 'tópico',
           questions_total: total,
           questions_correct: correct,
         });
         // Resultado alimenta o FSRS: erro endurece (revisa antes), acerto facilita.
-        const { topicos: novosTopicos } = aplicarResultadoQuiz(materia.topicos, idx, { total, correct });
-        await atualizarMateria(userId, id, { topicos: novosTopicos });
-        setMateria({ ...materia, topicos: novosTopicos });
+        let topicos = materia.topicos;
+        for (const i of idxs) {
+          topicos = aplicarResultadoQuiz(topicos, i, { total, correct }).topicos;
+        }
+        await atualizarMateria(userId, id, { topicos });
+        setMateria({ ...materia, topicos });
         const q = await carregarQuizAttempts(userId, id).catch(() => []);
         setQuizHistory(q);
       }

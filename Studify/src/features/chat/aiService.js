@@ -298,6 +298,9 @@ Gere ${qtd} complementares:`;
   if (typeof raw === 'string' && raw.startsWith('Configure')) {
     throw new Error(raw);
   }
+  if (typeof raw === 'string' && (raw.startsWith('Erro de conexão') || raw.startsWith('Sem resposta'))) {
+    throw new Error('Sem conexão com a IA. Verifique sua internet e tente de novo.');
+  }
   if (typeof raw === 'string' && raw.startsWith('Erro na API')) {
     throw new Error('Não foi possível gerar tópicos, tente novamente em alguns segundos.');
   }
@@ -417,7 +420,9 @@ export async function gerarQuiz(nomeMateria, topicosFoco = [], opts = {}) {
 
   const system = `Você é um professor que cria quizzes rápidos de revisão em PT-BR.
 Regras:
-- Gere exatamente ${qtd} questões de múltipla escolha sobre os tópicos dados.
+- Gere exatamente ${qtd} questões de múltipla escolha ESTRITAMENTE sobre os tópicos listados — não fuja deles nem invente subtemas.
+- Revise o essencial: perguntas objetivas e diretas, dificuldade moderada (nível escolar), sem aprofundamento avançado.
+- Se houver mais de um tópico, distribua as questões entre eles.
 - Cada questão: 1 pergunta objetiva + 4 alternativas curtas + índice da correta (0-3).
 - Varie a posição da resposta correta; sem pegadinhas, sem "todas as anteriores".
 - Retorne APENAS JSON válido no formato {"questoes": [{"pergunta": "...", "alternativas": ["a", "b", "c", "d"], "correta": 0}]}.`;

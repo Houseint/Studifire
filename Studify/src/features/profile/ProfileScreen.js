@@ -127,6 +127,13 @@ export default function ProfileScreen({ navigation }) {
     }, [userId])
   );
 
+  // Toast de conquista: some sozinho em 6s (e o toque também dispensa).
+  useEffect(() => {
+    if (newBadges.length === 0) return;
+    const t = setTimeout(() => setNewBadges([]), 6000);
+    return () => clearTimeout(t);
+  }, [newBadges.length]);
+
   const handleLogout = () => {
     Alert.alert('Sair', 'Tem certeza que deseja sair da sua conta?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -675,19 +682,20 @@ export default function ProfileScreen({ navigation }) {
         <View style={s.bottomSpacer} />
       </ScrollView>
 
-      {/* New Badge Toast */}
+      {/* New Badge Toast — toque para dispensar (ou some sozinho em 6s) */}
       {newBadges.length > 0 && (
-        <View style={s.toastContainer}>
+        <TouchableOpacity style={s.toastContainer} activeOpacity={0.9} onPress={() => setNewBadges([])}>
           {newBadges.map((badge, i) => (
             <View key={i} style={[s.toast, { borderColor: badge.color }]}>
               <Text style={s.toastIcon}>{badge.icon}</Text>
               <View style={s.toastContent}>
                 <Text style={s.toastTitle}>Nova Conquista!</Text>
                 <Text style={[s.toastName, { color: badge.color }]}>{badge.name}</Text>
+                <Text style={s.toastHint}>Toque para dispensar</Text>
               </View>
             </View>
           ))}
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* Modal Meta Semanal */}

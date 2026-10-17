@@ -27,7 +27,7 @@ function splash() {
 
 function keepSplash() {
   try {
-    splash().preventAutohideAsync?.()?.catch?.(() => {});
+    splash().preventAutoHideAsync?.()?.catch?.(() => {});
   } catch {
     // fora do Expo Go / no jest: ignora
   }
