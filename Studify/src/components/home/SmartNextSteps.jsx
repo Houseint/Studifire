@@ -2,22 +2,23 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../shared/theme/ThemeContext';
 import { getDueTopics } from '../../shared/utils/fsrs';
+import { SproutIcon, FlameIcon, ClockIcon, BookOpenIcon, TrophyIcon } from '../common/FeatherIcons';
 
 // Lógica pura e testável: decide o próximo passo a partir de dados que o Home já tem.
 // FASE 2.1: revisão vencida (FSRS) tem prioridade — aparece aqui sem prop nova.
 export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, weeklyRemaining = 0 } = {}) {
   const all = Array.isArray(materias) ? materias : [];
   if (all.length === 0) {
-    return { emoji: '🌱', text: 'Crie sua primeira matéria para começar' };
+    return { icon: 'sprout', text: 'Crie sua primeira matéria para começar' };
   }
   if (!streak || streak === 0) {
-    return { emoji: '🔥', text: 'Volte hoje e recupere seu streak!' };
+    return { icon: 'flame', text: 'Volte hoje e recupere seu streak!' };
   }
   const due = getDueTopics(all);
   if (due.length > 0) {
     const first = due[0];
     const extra = due.length > 1 ? ` (+${due.length - 1})` : '';
-    return { emoji: '⏰', text: `Revisar: ${first.topicoNome} (${first.materiaNome})${extra}`, materiaId: first.materiaId };
+    return { icon: 'clock', text: `Revisar: ${first.topicoNome} (${first.materiaNome})${extra}`, materiaId: first.materiaId };
   }
   const withPct = all.map((m) => {
     const tops = Array.isArray(m.topicos) ? m.topicos : [];
@@ -26,14 +27,22 @@ export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, week
     return { id: m.id, nome: m.nome, pct };
   });
   const zero = withPct.find((m) => m.pct === 0);
-  if (zero) return { emoji: '🌱', text: `Comece: ${zero.nome}`, materiaId: zero.id };
+  if (zero) return { icon: 'sprout', text: `Comece: ${zero.nome}`, materiaId: zero.id };
   const low = withPct.sort((a, b) => a.pct - b.pct)[0];
-  if (low && low.pct < 50) return { emoji: '📚', text: `Continue: ${low.nome} (${low.pct}%)`, materiaId: low.id };
+  if (low && low.pct < 50) return { icon: 'book', text: `Continue: ${low.nome} (${low.pct}%)`, materiaId: low.id };
   if ((weeklyPercent || 0) < 100 && (weeklyRemaining || 0) > 0) {
-    return { emoji: '⏱', text: `Faltam ${weeklyRemaining} min para a meta semanal` };
+    return { icon: 'clock', text: `Faltam ${weeklyRemaining} min para a meta semanal` };
   }
-  return { emoji: '🏆', text: 'Meta no rumo! Revise um tópico de hoje' };
+  return { icon: 'trophy', text: 'Meta no rumo! Revise um tópico de hoje' };
 }
+
+const STEP_ICONS = {
+  sprout: SproutIcon,
+  flame: FlameIcon,
+  clock: ClockIcon,
+  book: BookOpenIcon,
+  trophy: TrophyIcon,
+};
 
 const SmartNextSteps = ({ streak = 0, materias = [], weeklyPercent = 0, weeklyRemaining = 0, onPress }) => {
   const { colors } = useTheme();
@@ -41,9 +50,12 @@ const SmartNextSteps = ({ streak = 0, materias = [], weeklyPercent = 0, weeklyRe
   const step = getNextStep({ streak, materias, weeklyPercent, weeklyRemaining });
   // Toque abre a matéria indicada (quando o passo tem alvo); sem alvo, o card fica inerte.
   const canOpen = step.materiaId != null && typeof onPress === 'function';
+  const Icon = STEP_ICONS[step.icon] || SproutIcon;
   return (
     <TouchableOpacity style={s.card} activeOpacity={canOpen ? 0.85 : 1} disabled={!canOpen} onPress={() => onPress(step.materiaId)}>
-      <Text style={s.emoji}>{step.emoji}</Text>
+      <View style={s.iconWrap}>
+        <Icon size={24} color={colors.accent} />
+      </View>
       <View style={s.body}>
         <Text style={s.label}>PRÓXIMO PASSO INTELIGENTE</Text>
         <Text style={s.text}>{step.text}</Text>
@@ -63,7 +75,7 @@ const getNextStepsStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  emoji: { fontSize: 26, marginRight: 10 },
+  iconWrap: { marginRight: 10 },
   body: { flex: 1 },
   label: { color: colors.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
   text: { color: colors.text, fontSize: 14, fontWeight: '800', marginTop: 2 },

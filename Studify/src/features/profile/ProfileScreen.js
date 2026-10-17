@@ -36,6 +36,22 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { getProfileStyles } from './ProfileScreenStyles.js';
 import { useTheme } from '../../shared/theme/ThemeContext';
+import {
+  SunIcon,
+  MoonIcon,
+  CameraIcon,
+  ClockIcon,
+  CheckIcon,
+  FlameIcon,
+  BookOpenIcon,
+  TargetIcon,
+  BellIcon,
+  TrophyIcon,
+  TrendingUpIcon,
+  CalendarIcon,
+  ZapIcon,
+  XIcon,
+} from '../../components/common/FeatherIcons';
 
 const BADGE_COLORS = {
   '#8E97C4': 'rgba(142, 151, 196, 0.2)',
@@ -269,8 +285,8 @@ export default function ProfileScreen({ navigation }) {
   const handleAvatarChange = () => {
     Alert.alert('Trocar avatar', 'Escolha de onde virá a foto:', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: '📷 Tirar foto', onPress: takePhoto },
-      { text: '🖼️ Galeria', onPress: pickFromGallery },
+      { text: 'Tirar foto', onPress: takePhoto },
+      { text: 'Galeria', onPress: pickFromGallery },
     ]);
   };
 
@@ -444,8 +460,13 @@ export default function ProfileScreen({ navigation }) {
             activeOpacity={0.7}
             onPress={handleToggleTheme}
             accessibilityLabel="Alternar tema claro/escuro"
+            testID="themeToggleButton"
           >
-            <Text style={s.profileButtonText}>{mode === 'dark' ? '☀️' : '🌙'}</Text>
+            {mode === 'dark' ? (
+              <SunIcon size={17} color={colors.textMuted} testID="icon-sun" />
+            ) : (
+              <MoonIcon size={17} color={colors.textMuted} testID="icon-moon" />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -466,7 +487,7 @@ export default function ProfileScreen({ navigation }) {
               activeOpacity={0.8}
               onPress={handleAvatarChange}
             >
-              <Text style={s.editAvatarText}>📷</Text>
+              <CameraIcon size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
           <Text style={s.userName}>{displayName}</Text>
@@ -479,22 +500,30 @@ export default function ProfileScreen({ navigation }) {
         {/* Stats Grid - 4 cards */}
         <View style={s.statsGrid}>
           <View style={[s.statCard, { borderColor: 'rgba(138, 104, 255, 0.4)' }]}>
-            <Text style={s.statIcon}>⏱</Text>
+            <View style={s.statIcon}>
+              <ClockIcon size={24} color={colors.accent} />
+            </View>
             <Text style={s.statValue}>{formatHours(stats.totalMinutos)}</Text>
             <Text style={s.statLabel}>Horas de Estudo</Text>
           </View>
           <View style={s.statCard}>
-            <Text style={s.statIcon}>✓</Text>
+            <View style={s.statIcon}>
+              <CheckIcon size={24} color={colors.success} />
+            </View>
             <Text style={s.statValue}>{stats.topicosConcluidos}/{stats.totalTopicos}</Text>
             <Text style={s.statLabel}>Tópicos Concluídos</Text>
           </View>
           <View style={[s.statCard, { borderColor: 'rgba(255, 170, 0, 0.4)' }]}>
-            <Text style={s.flameEmoji}>🔥</Text>
+            <View style={s.flameEmoji}>
+              <FlameIcon size={24} color="#FF9F1C" />
+            </View>
             <Text style={s.statValue}>{stats.streak}</Text>
             <Text style={s.statLabel}>Dias Seguidos</Text>
           </View>
           <View style={s.statCard}>
-            <Text style={s.statIcon}>📚</Text>
+            <View style={s.statIcon}>
+              <BookOpenIcon size={24} color={colors.accent} />
+            </View>
             <Text style={s.statValue}>{stats.totalMaterias}</Text>
             <Text style={s.statLabel}>Matérias</Text>
           </View>
@@ -503,7 +532,10 @@ export default function ProfileScreen({ navigation }) {
         {/* Weekly Goal */}
         <View style={s.sectionContainer}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>🎯 Meta Semanal</Text>
+            <View style={s.sectionTitleRow}>
+              <TargetIcon size={16} color={colors.accent} />
+              <Text style={s.sectionTitle}>Meta Semanal</Text>
+            </View>
             <TouchableOpacity style={s.goalEditBtn} activeOpacity={0.7} onPress={openGoalModal}>
               <Text style={s.goalEditText}>Editar</Text>
             </TouchableOpacity>
@@ -533,7 +565,10 @@ export default function ProfileScreen({ navigation }) {
         {/* Lembrete diário */}
         <View style={s.sectionContainer}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>🔔 Lembrete diário</Text>
+            <View style={s.sectionTitleRow}>
+              <BellIcon size={16} color={colors.accent} />
+              <Text style={s.sectionTitle}>Lembrete diário</Text>
+            </View>
             <TouchableOpacity style={s.goalEditBtn} activeOpacity={0.7} onPress={handleToggleReminder}>
               <Text style={s.goalEditText}>{reminder.enabled ? 'Desligar' : 'Ativar'}</Text>
             </TouchableOpacity>
@@ -572,7 +607,10 @@ export default function ProfileScreen({ navigation }) {
         {/* Badges */}
         <View style={s.sectionContainer}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>🏆 Conquistas</Text>
+            <View style={s.sectionTitleRow}>
+              <TrophyIcon size={16} color={colors.accent} />
+              <Text style={s.sectionTitle}>Conquistas</Text>
+            </View>
             <Text style={s.sectionSubtitle}>{badges.length} de 8 desbloqueadas</Text>
           </View>
           {badges.length === 0 ? (
@@ -616,11 +654,16 @@ export default function ProfileScreen({ navigation }) {
 
         {/* Quick Insights */}
         <View style={s.sectionContainer}>
-          <Text style={s.sectionTitle}>📈 Resumo Rápido</Text>
+          <View style={s.sectionTitleRow}>
+            <TrendingUpIcon size={16} color={colors.accent} />
+            <Text style={s.sectionTitle}>Resumo Rápido</Text>
+          </View>
           <View style={s.insightsGrid}>
             {stats.materiaTop && (
               <View style={s.insightCard}>
-                <Text style={s.insightIcon}>📚</Text>
+                <View style={s.insightIcon}>
+                  <BookOpenIcon size={22} color={colors.accent} />
+                </View>
                 <View style={s.insightContent}>
                   <Text style={s.insightLabel}>Matéria mais estudada</Text>
                   <Text style={s.insightValue}>{stats.materiaTop.nome}</Text>
@@ -630,7 +673,9 @@ export default function ProfileScreen({ navigation }) {
             )}
             {stats.melhorDia && (
               <View style={s.insightCard}>
-                <Text style={s.insightIcon}>📅</Text>
+                <View style={s.insightIcon}>
+                  <CalendarIcon size={22} color={colors.accent} />
+                </View>
                 <View style={s.insightContent}>
                   <Text style={s.insightLabel}>Melhor dia</Text>
                   <Text style={s.insightValue}>{stats.melhorDia}</Text>
@@ -640,7 +685,9 @@ export default function ProfileScreen({ navigation }) {
             )}
             {stats.totalSessoes > 0 && (
               <View style={s.insightCard}>
-                <Text style={s.insightIcon}>⚡</Text>
+                <View style={s.insightIcon}>
+                  <ZapIcon size={22} color={colors.accent} />
+                </View>
                 <View style={s.insightContent}>
                   <Text style={s.insightLabel}>Média por sessão</Text>
                   <Text style={s.insightValue}>{formatMinutes(stats.mediaSessao)}</Text>
@@ -658,7 +705,9 @@ export default function ProfileScreen({ navigation }) {
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Historic')}
           >
-            <Text style={s.buttonEmoji}>📋</Text>
+            <View style={s.buttonEmoji}>
+              <ClockIcon size={18} color={colors.text} />
+            </View>
             <Text style={s.actionText}>Histórico</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -666,7 +715,9 @@ export default function ProfileScreen({ navigation }) {
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Progress')}
           >
-            <Text style={s.buttonEmoji}>📈</Text>
+            <View style={s.buttonEmoji}>
+              <TrendingUpIcon size={18} color={colors.text} />
+            </View>
             <Text style={s.actionText}>Progresso</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -674,7 +725,9 @@ export default function ProfileScreen({ navigation }) {
             activeOpacity={0.7}
             onPress={handleLogout}
           >
-            <Text style={s.buttonEmoji}>🚪</Text>
+            <View style={s.buttonEmoji}>
+              <XIcon size={18} color={colors.text} />
+            </View>
             <Text style={s.actionText}>Sair</Text>
           </TouchableOpacity>
         </View>
@@ -715,7 +768,10 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => setGoalModalVisible(false)}
           />
           <View style={s.modalCard}>
-            <Text style={s.modalTitle}>🎯 Meta Semanal</Text>
+            <View style={s.modalTitleRow}>
+              <TargetIcon size={18} color={colors.accent} />
+              <Text style={s.modalTitle}>Meta Semanal</Text>
+            </View>
             <Text style={s.modalSubtitle}>Defina sua meta de horas de estudo por semana</Text>
 
             <View style={s.modalInputWrapper}>

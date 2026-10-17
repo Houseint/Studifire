@@ -12,6 +12,7 @@ import { gerarTopicosComplementares, gerarTopicosDeMaterial, gerarQuiz } from '.
 import TopicCoachCard from '../components/TopicCoachCard';
 import { QuizModal } from '../features/study';
 import { useTheme } from '../shared/theme/ThemeContext';
+import { SparklesIcon, CameraIcon, ImageIcon, FileTextIcon } from '../components/common/FeatherIcons';
 
 export default function DetailScreen({ route, navigation }) {
   const { colors } = useTheme();
@@ -493,7 +494,12 @@ export default function DetailScreen({ route, navigation }) {
               >
                 {quizLoading
                   ? <ActivityIndicator color={colors.accent} size="small" />
-                  : <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 15 }}>🧠 Quiz rápido</Text>}
+                  : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <SparklesIcon size={16} color={colors.accent} />
+                      <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 15 }}>Quiz rápido</Text>
+                    </View>
+                  )}
               </TouchableOpacity>
             )}
           </>
@@ -564,7 +570,7 @@ export default function DetailScreen({ route, navigation }) {
               activeOpacity={0.8}
               style={{ backgroundColor:colors.card2, borderWidth:1, borderColor:colors.borderStrong, borderRadius:12, paddingVertical:12, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:8, marginTop:8, opacity: iaGenLoading?0.5:1 }}
             >
-              <Text style={{ color:colors.textSecondary }}>📷</Text>
+              <CameraIcon size={16} color={colors.textSecondary} />
               <Text style={{ color:colors.textSecondary, fontWeight:'800', fontSize:14 }}>{iaGenLoading ? 'Lendo material...' : 'Importar material (foto/PDF)'}</Text>
             </TouchableOpacity>
             {materia.topicos.length < 1 && <Text style={{ color:colors.textMuted, fontSize:11, marginTop:6 }}>Adicione 1 tópico para IA completar</Text>}
@@ -578,12 +584,16 @@ export default function DetailScreen({ route, navigation }) {
               <Text style={{ color:colors.text, fontWeight:'800', fontSize:16 }}>Importar material</Text>
               <Text style={{ color:colors.textMuted, fontSize:12, marginTop:2, marginBottom:12 }}>De onde vem o conteúdo?</Text>
               {[
-                ['📷', 'Câmera', importarViaCamera],
-                ['🖼️', 'Galeria', importarViaGaleria],
-                ['📄', 'Arquivo (imagem/PDF)', importarViaArquivo],
-              ].map(([emoji, label, fn]) => (
+                ['camera', 'Câmera', importarViaCamera],
+                ['galeria', 'Galeria', importarViaGaleria],
+                ['arquivo', 'Arquivo (imagem/PDF)', importarViaArquivo],
+              ].map(([ico, label, fn]) => (
                 <TouchableOpacity key={label} onPress={() => escolherOrigem(fn)} activeOpacity={0.7} style={{ flexDirection:'row', alignItems:'center', backgroundColor:colors.card2, borderWidth:1, borderColor:colors.borderStrong, borderRadius:12, paddingVertical:12, paddingHorizontal:14, marginBottom:8 }}>
-                  <Text style={{ fontSize:18, marginRight:10 }}>{emoji}</Text>
+                  <View style={{ marginRight: 10 }}>
+                    {ico === 'camera' ? <CameraIcon size={18} color={colors.text} />
+                      : ico === 'galeria' ? <ImageIcon size={18} color={colors.text} />
+                      : <FileTextIcon size={18} color={colors.text} />}
+                  </View>
                   <Text style={{ color:colors.text, fontWeight:'700', fontSize:14 }}>{label}</Text>
                 </TouchableOpacity>
               ))}

@@ -44,7 +44,7 @@ describe('T4 — Home light: factories seguem a paleta', () => {
         <HomeHeader user={{ email: 'a@b.com' }} userAvatar={null} onProfilePress={jest.fn()} onHelpPress={jest.fn()} />
       </ThemeProvider>
     );
-    expect(header.getByText('Bom dia ☀')).toBeTruthy();
+    expect(header.getByText('Bom dia')).toBeTruthy();
   });
 
   test('cards de matéria usam lilás claro no light (dark preservado)', () => {

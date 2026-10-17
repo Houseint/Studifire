@@ -160,9 +160,9 @@ describe('HomeHeader (extraído)', () => {
     expect(screen.getByText('J')).toBeTruthy();
     expect(screen.getByText('joao')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Bom dia ☀'));
+    fireEvent.press(screen.getByText('Bom dia'));
     expect(onProfilePress).toHaveBeenCalled();
-    fireEvent.press(screen.getByText('❓'));
+    fireEvent.press(screen.getByTestId('helpButton'));
     expect(onHelpPress).toHaveBeenCalled();
   });
 

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, TouchableOpacity, Text, Image } from 'react-native';
 import { getHomeHeaderStyles } from '../../styles/components/home/HomeHeaderStyles';
 import { useTheme } from '../../shared/theme/ThemeContext';
+import { SunIcon, HelpCircleIcon } from '../common/FeatherIcons';
 
 const HomeHeader = ({ user, userAvatar, onProfilePress, onHelpPress }) => {
   const { colors } = useTheme();
@@ -17,12 +18,15 @@ const HomeHeader = ({ user, userAvatar, onProfilePress, onHelpPress }) => {
         )}
       </View>
       <View>
-        <Text style={styles.saudacao}>Bom dia ☀</Text>
+        <View style={styles.saudacaoRow}>
+          <Text style={styles.saudacao}>Bom dia</Text>
+          <SunIcon size={11} color={colors.textMuted} />
+        </View>
         <Text style={styles.perfilNome}>{user?.email?.split('@')[0] || 'Carregando...'}</Text>
       </View>
     </TouchableOpacity>
-    <TouchableOpacity style={styles.helpBtn} activeOpacity={0.8} onPress={onHelpPress}>
-      <Text style={styles.helpIcon}>❓</Text>
+    <TouchableOpacity style={styles.helpBtn} activeOpacity={0.8} onPress={onHelpPress} testID="helpButton">
+      <HelpCircleIcon size={18} color={colors.textMuted} />
     </TouchableOpacity>
   </View>
   );

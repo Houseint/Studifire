@@ -56,7 +56,11 @@ describe('2.3 - Planner semanal (card na Home)', () => {
       );
       expect(screen.getByText('PLANO DA SEMANA')).toBeTruthy();
       expect(screen.getByText('30 min/dia · 3 itens')).toBeTruthy();
-      expect(screen.getByText('Qui · ⏰ Vencido  🌱 Novo  🔁 Feito')).toBeTruthy();
+      // legenda do dia: weekday + ícones SVG + nome de cada tópico (emojis → ícones)
+      expect(screen.getByText('Qui ·')).toBeTruthy();
+      expect(screen.getByText('Vencido')).toBeTruthy();
+      expect(screen.getByText('Novo')).toBeTruthy();
+      expect(screen.getByText('Feito')).toBeTruthy();
     } finally {
       jest.useRealTimers();
     }

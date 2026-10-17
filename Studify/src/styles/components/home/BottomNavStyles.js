@@ -22,9 +22,6 @@ export const getBottomNavStyles = (colors) => StyleSheet.create({
     flex: 1,
   },
   navIcon: {
-    color: colors.textMuted,
-    fontSize: 15,
-    fontWeight: '700',
     marginBottom: 3,
   },
   navLabel: {

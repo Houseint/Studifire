@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../shared/theme/ThemeContext';
 import { buildWeeklyPlan } from '../../shared/utils/studyPlan';
+import { ClockIcon, SproutIcon, RefreshCwIcon, CalendarIcon } from '../common/FeatherIcons';
 
-const KIND_EMOJI = { revisao: '⏰', novo: '🌱', reforco: '🔁' };
+const KIND_ICONS = { revisao: ClockIcon, novo: SproutIcon, reforco: RefreshCwIcon };
 
 // Card puro: recebe o que a Home já tem, sem query nova (padrão SmartNextSteps).
 const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) => {
@@ -13,16 +14,31 @@ const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) =
   if (plan.totalItems === 0) return null;
   return (
     <View style={s.card}>
-      <Text style={s.emoji}>📅</Text>
+      <View style={s.iconWrap}>
+        <CalendarIcon size={24} color={colors.accent} />
+      </View>
       <View style={s.body}>
         <Text style={s.label}>PLANO DA SEMANA</Text>
         <Text style={s.text}>
           {plan.perDayMinutes} min/dia · {plan.totalItems} {plan.totalItems > 1 ? 'itens' : 'item'}
         </Text>
         {plan.days.slice(0, 3).map((d) => (
-          <Text key={d.date} style={s.row} numberOfLines={1}>
-            {d.weekday} · {d.items.map((it) => `${KIND_EMOJI[it.kind] || ''} ${it.topicoNome}`).join('  ') || '—'}
-          </Text>
+          <View key={d.date} style={s.dayRow}>
+            <Text style={s.row}>{`${d.weekday} ·`}</Text>
+            {d.items.length === 0 ? (
+              <Text style={s.row}>—</Text>
+            ) : (
+              d.items.map((it, i) => {
+                const KindIcon = KIND_ICONS[it.kind] || SproutIcon;
+                return (
+                  <View key={i} style={s.itemRow}>
+                    <KindIcon size={12} color={colors.textSecondary} />
+                    <Text style={s.row}>{it.topicoNome}</Text>
+                  </View>
+                );
+              })
+            )}
+          </View>
         ))}
       </View>
     </View>
@@ -40,11 +56,13 @@ const getPlanStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  emoji: { fontSize: 26, marginRight: 10 },
+  iconWrap: { marginRight: 10, marginTop: 2 },
   body: { flex: 1 },
   label: { color: colors.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
   text: { color: colors.text, fontSize: 14, fontWeight: '800', marginTop: 2 },
-  row: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
+  dayRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 6 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  row: { color: colors.textSecondary, fontSize: 12 },
 });
 
 export default StudyPlanCard;

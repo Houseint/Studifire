@@ -14,6 +14,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
 import { getTopicAssist, buildSearchUrl } from '../features/study/studyCoachService';
 import { useTheme } from '../shared/theme/ThemeContext';
+import { ZapIcon, ClockIcon } from './common/FeatherIcons';
 
 export default function TopicCoachCard({
   userId, subjectId, materiaNome, topicoNome, outrosTopicos,
@@ -99,7 +100,10 @@ export default function TopicCoachCard({
       {!!data && !loading && !error && (
         <>
           {data.fromCache && (
-            <Text style={{ color: colors.textMuted, fontSize: 10, marginBottom: 6 }}>⚡ do cache • atualizado {new Date(data.geradoEm).toLocaleDateString('pt-BR')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+              <ZapIcon size={10} color={colors.textMuted} />
+              <Text style={{ color: colors.textMuted, fontSize: 10 }}>do cache • atualizado {new Date(data.geradoEm).toLocaleDateString('pt-BR')}</Text>
+            </View>
           )}
 
           {/* Explicação */}
@@ -109,7 +113,10 @@ export default function TopicCoachCard({
           {/* Método */}
           {data.metodo && (
             <View style={{ backgroundColor: 'rgba(138,104,255,0.10)', borderWidth: 1, borderColor: 'rgba(138,104,255,0.25)', borderRadius: 10, padding: 10, marginBottom: 12 }}>
-              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', marginBottom: 4 }}>⏱ {data.metodo.nome} • {data.metodo.duracao}/{data.metodo.pausa} min</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                <ClockIcon size={12} color={colors.accent} />
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>{data.metodo.nome} • {data.metodo.duracao}/{data.metodo.pausa} min</Text>
+              </View>
               <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{data.metodo.motivo}</Text>
               {onUseMetodo && (
                 <TouchableOpacity onPress={() => onUseMetodo(data.metodo.duracao)} activeOpacity={0.7} style={{ marginTop: 8, backgroundColor: colors.accentStrong, borderRadius: 8, paddingVertical: 7, alignItems: 'center' }}>

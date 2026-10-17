@@ -3,39 +3,63 @@ import { View, Text, TouchableOpacity, ScrollView, Linking, StatusBar, StyleShee
 import { LinearGradient } from 'expo-linear-gradient';
 import { HELP_LINKS } from '../constants/helpLinks';
 import { useTheme } from '../shared/theme/ThemeContext';
+import { BookOpenIcon, BookIcon, TargetIcon, MapIcon, LinkIcon, ClockIcon, SparklesIcon, RefreshCwIcon, ZapIcon, PencilIcon, SearchIcon, TrendingUpIcon, CalendarIcon } from '../components/common/FeatherIcons';
 
 
 const CORES_SECAO = ['#4CAF50', '#FF9800', '#2196F3', '#E91E63', '#9C27B0', '#FF5722'];
 
+const ICONE_PADRAO = BookOpenIcon;
+
+const ICON_MAP = {
+  bookOpen: BookOpenIcon,
+  book: BookIcon,
+  target: TargetIcon,
+  map: MapIcon,
+  link: LinkIcon,
+  clock: ClockIcon,
+  sparkles: SparklesIcon,
+  refresh: RefreshCwIcon,
+  zap: ZapIcon,
+  pencil: PencilIcon,
+  search: SearchIcon,
+  trending: TrendingUpIcon,
+  calendar: CalendarIcon,
+};
+
+function HelpIcon({ name, size = 18, color }) {
+  const Cmp = ICON_MAP[name] || ICONE_PADRAO;
+  return <Cmp size={size} color={color} />;
+}
+
 const SECOES = [
   {
-    icon: '📚',
+    icon: 'bookOpen',
     titulo: 'MÉTODOS DE ESTUDO',
     subtitulo: 'Técnicas para aprender melhor',
     metodos: [
-      { icon: '🍅', nome: 'Pomodoro', desc: 'Ciclos de 25 min de foco com pausas de 5 min. Após 4 ciclos, pausa de 15-30 min.' },
-      { icon: '🧠', nome: 'Feynman', desc: 'Explique o conteúdo com suas próprias palavras, como se estivesse ensinando alguém.' },
-      { icon: '📖', nome: 'SQ3R', desc: 'Survey, Question, Read, Recite, Review — leitura ativa em 5 etapas.' },
-      { icon: '🗺️', nome: 'Mapas Mentais', desc: 'Diagramas visuais com o tema central e ramificações de ideias conectadas.' },
-      { icon: '🃏', nome: 'Flashcards + Espaçada', desc: 'Cartas de pergunta/resposta revisadas em intervalos crescentes de tempo.' },
-      { icon: '⚡', nome: 'Pareto 80/20', desc: 'Foque nos 20% do conteúdo que geram 80% dos resultados.' },
-      { icon: '✏️', nome: 'Estudo Ativo', desc: 'Interaja com o material: resolva exercícios, questione e aplique o que aprendeu.' },
+      { icon: 'clock', nome: 'Pomodoro', desc: 'Ciclos de 25 min de foco com pausas de 5 min. Após 4 ciclos, pausa de 15-30 min.' },
+      { icon: 'sparkles', nome: 'Feynman', desc: 'Explique o conteúdo com suas próprias palavras, como se estivesse ensinando alguém.' },
+      { icon: 'book', nome: 'SQ3R', desc: 'Survey, Question, Read, Recite, Review — leitura ativa em 5 etapas.' },
+      { icon: 'map', nome: 'Mapas Mentais', desc: 'Diagramas visuais com o tema central e ramificações de ideias conectadas.' },
+      { icon: 'refresh', nome: 'Flashcards + Espaçada', desc: 'Cartas de pergunta/resposta revisadas em intervalos crescentes de tempo.' },
+      { icon: 'zap', nome: 'Pareto 80/20', desc: 'Foque nos 20% do conteúdo que geram 80% dos resultados.' },
+      { icon: 'pencil', nome: 'Estudo Ativo', desc: 'Interaja com o material: resolva exercícios, questione e aplique o que aprendeu.' },
     ],
   },
   {
-    icon: '🎯',
+    icon: 'target',
     titulo: 'AUTONOMIA & AUTODIDATISMO',
     subtitulo: 'Estratégias para aprender sozinho',
     metodos: [
-      { icon: '🔨', nome: 'Aprendizado por Projetos', desc: 'Defina um projeto concreto e aprenda o necessário para realizá-lo (PBL).' },
-      { icon: '💻', nome: 'Cursos Online', desc: 'Consumo estratégico: defina objetivos, evite acumular cursos inacabados.' },
-      { icon: '🔍', nome: 'Resolução de Problemas', desc: 'Aprenda enfrentando desafios reais — exercícios, casos e simulações.' },
-      { icon: '📊', nome: 'Autoavaliação', desc: 'Reflita sobre seu progresso, ajuste métodos e ritmo continuamente.' },
-      { icon: '📋', nome: 'Roteiro de Estudos', desc: 'Planejamento que define o que, quando e como estudar — reduz ansiedade.' },
+      { icon: 'zap', nome: 'Aprendizado por Projetos', desc: 'Defina um projeto concreto e aprenda o necessário para realizá-lo (PBL).' },
+      { icon: 'bookOpen', nome: 'Cursos Online', desc: 'Consumo estratégico: defina objetivos, evite acumular cursos inacabados.' },
+      { icon: 'search', nome: 'Resolução de Problemas', desc: 'Aprenda enfrentando desafios reais — exercícios, casos e simulações.' },
+      { icon: 'trending', nome: 'Autoavaliação', desc: 'Reflita sobre seu progresso, ajuste métodos e ritmo continuamente.' },
+      { icon: 'calendar', nome: 'Roteiro de Estudos', desc: 'Planejamento que define o que, quando e como estudar — reduz ansiedade.' },
     ],
   },
   {
-    icon: '🔗',
+    icon: 'link',
     titulo: 'LINKS ÚTEIS',
     subtitulo: 'Aprofunde-se nos temas',
     metodos: HELP_LINKS,
@@ -55,7 +79,7 @@ function SecaoAccordion({ secao, indice }) {
         <View style={[s.secaoBar, { backgroundColor: cor }]} />
         <View style={s.secaoHeader}>
           <View style={[s.secaoIconContainer, { backgroundColor: cor + '25' }]}>
-            <Text style={{ fontSize: 16 }}>{secao.icon}</Text>
+            <HelpIcon name={secao.icon} size={18} color={cor} />
           </View>
           <View style={s.secaoTitleArea}>
             <Text style={[s.secaoTitulo, { color: cor }]}>{secao.titulo}</Text>
@@ -75,7 +99,9 @@ function SecaoAccordion({ secao, indice }) {
                 activeOpacity={0.6}
                 onPress={() => Linking.openURL(metodo.url).catch(() => {})}
               >
-                <Text style={s.linkIcon}>{metodo.icon}</Text>
+                <View style={s.linkIcon}>
+              <HelpIcon name={metodo.icon} size={18} color={cor} />
+            </View>
                 <View style={s.linkInfo}>
                   <Text style={s.linkNome}>{metodo.nome}</Text>
                   <Text style={[s.linkUrl, { color: colors.textMuted }]} numberOfLines={2}>{metodo.desc}</Text>
@@ -85,7 +111,9 @@ function SecaoAccordion({ secao, indice }) {
               </TouchableOpacity>
             ) : (
               <View key={i} style={s.metodoItem}>
-                <Text style={s.metodoIcon}>{metodo.icon}</Text>
+                <View style={s.metodoIcon}>
+              <HelpIcon name={metodo.icon} size={18} color={cor} />
+            </View>
                 <View style={s.metodoInfo}>
                   <Text style={[s.metodoNome, { color: cor }]}>{metodo.nome}</Text>
                   <Text style={s.metodoDesc}>{metodo.desc}</Text>

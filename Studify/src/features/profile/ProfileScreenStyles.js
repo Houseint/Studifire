@@ -212,6 +212,17 @@ export function getProfileStyles(colors) {
     fontSize: 18,
     fontWeight: '700',
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
   sectionSubtitle: {
     color: colors.textSecondary,
     fontSize: 13,

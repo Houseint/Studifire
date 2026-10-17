@@ -3,12 +3,21 @@
     "name": "Studify",
     "slug": "Studify",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3a37da81-ff31-441e-b03b-dfbd4baa0d24",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./img/LogoStudifirWithDesc.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a0f1e"
     },
@@ -18,7 +27,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0a0f1e"
       },
       "edgeToEdgeEnabled": true
     },
@@ -31,7 +40,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0a0f1e",
-          "image": "./img/LogoStudifirWithDesc.png",
+          "image": "./assets/splash-icon.png",
           "imageWidth": 260
         }
       ]

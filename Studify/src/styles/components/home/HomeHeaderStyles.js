@@ -53,8 +53,10 @@ export const getHomeHeaderStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  helpIcon: {
-    fontSize: 18,
+  saudacaoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 });
 

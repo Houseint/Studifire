@@ -72,14 +72,14 @@ test('Perfil tem ícone sol no header (dark) e alterna p/ lua persistindo claro'
 
   // Sem seção Aparência: toggle é o ícone no canto superior direito
   expect(screen.queryByText('🎨 Aparência')).toBeNull();
-  expect(await screen.findByText('☀️')).toBeTruthy();
+  expect(await screen.findByTestId('icon-sun')).toBeTruthy();
 
   await act(async () => {
-    fireEvent.press(screen.getByText('☀️'));
+    fireEvent.press(screen.getByTestId('themeToggleButton'));
   });
 
   await waitFor(() => {
     expect(updateThemeMode).toHaveBeenCalledWith(1, 'light');
   });
-  expect(await screen.findByText('🌙')).toBeTruthy();
+  expect(await screen.findByTestId('icon-moon')).toBeTruthy();
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Image, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from './src/screens/HomeScreen';
@@ -43,6 +43,10 @@ function hideSplash() {
 
 const Stack = createStackNavigator();
 
+// Tempo mínimo na tela de loading — o bootstrap costuma resolver em <100ms;
+// segurar ~500ms evita o "flash" da splash e dá identidade ao app.
+const MIN_SPLASH_MS = 500;
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -58,6 +62,17 @@ function AppContent() {
   useEffect(() => {
     let mounted = true;
     keepSplash();
+    const startedAt = Date.now();
+
+    // Revela a navegação — mas nunca antes de MIN_SPLASH_MS de tela de loading.
+    async function reveal(route) {
+      const wait = MIN_SPLASH_MS - (Date.now() - startedAt);
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      if (mounted) {
+        setInitialRoute(route);
+        hideSplash();
+      }
+    }
 
     async function bootstrapSession() {
       try {
@@ -82,15 +97,9 @@ function AppContent() {
           }
         }
 
-        if (mounted) {
-          setInitialRoute(hasSession ? 'Home' : 'Login');
-          hideSplash();
-        }
+        await reveal(hasSession ? 'Home' : 'Login');
       } catch {
-        if (mounted) {
-          setInitialRoute('Login');
-          hideSplash();
-        }
+        await reveal('Login');
       }
     }
 
@@ -124,7 +133,7 @@ function AppContent() {
   );
 }
 
-// Loading com a identidade do app: logo Studifire pulsando + spinner.
+// Loading com a identidade do app: mark transparente pulsando + wordmark + spinner.
 // O pulsar é um loop de escala+brilho (só estética, não trava o bootstrap).
 function SplashLoading() {
   const pulse = useRef(new Animated.Value(0)).current;
@@ -140,23 +149,27 @@ function SplashLoading() {
     return () => anim.stop();
   }, [pulse]);
 
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
-  const glow = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] });
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] });
+  const glow = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] });
 
   return (
     <View style={splashStyles.container}>
       <Animated.Image
-        source={require('./img/LogoStudifirWithDesc.png')}
+        source={require('./assets/splash-icon.png')}
         resizeMode="contain"
-        style={[splashStyles.logo, { transform: [{ scale }], opacity: glow }]}
+        style={[splashStyles.mark, { transform: [{ scale }], opacity: glow }]}
       />
-      <ActivityIndicator size="large" color="#8A68FF" style={splashStyles.spinner} />
+      <Text style={splashStyles.wordmark}>Studify</Text>
+      <Text style={splashStyles.tagline}>Seu estudo, organizado.</Text>
+      <ActivityIndicator size="small" color="#8A68FF" style={splashStyles.spinner} />
     </View>
   );
 }
 
 const splashStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0f1e', alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 240, height: 240 },
-  spinner: { marginTop: 8 },
+  mark: { width: 150, height: 150 },
+  wordmark: { color: '#FFFFFF', fontSize: 34, fontWeight: '800', letterSpacing: 0.5, marginTop: 10 },
+  tagline: { color: '#9AA0D8', fontSize: 13, marginTop: 4, letterSpacing: 0.3 },
+  spinner: { marginTop: 24 },
 });

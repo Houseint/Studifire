@@ -71,7 +71,7 @@ describe('2.1 - FSRS-lite (memória inteligente)', () => {
       weeklyPercent: 10,
       weeklyRemaining: 50,
     });
-    expect(step.emoji).toBe('⏰');
+    expect(step.icon).toBe('clock');
     expect(step.text).toMatch('Bhaskara');
   });
 
