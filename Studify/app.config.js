@@ -6,7 +6,7 @@ require('dotenv').config();
 module.exports = ({ config }) => ({
   ...config,
   name: 'Studify',
-  slug: 'studify',
+  slug: 'studifire',
   version: '1.0.0',
   orientation: 'portrait',
   platforms: ['android', 'ios', 'web'],
