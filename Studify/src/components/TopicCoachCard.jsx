@@ -60,12 +60,13 @@ export default function TopicCoachCard({
 
   const handleOpenLink = async (query, tipo) => {
     const url = buildSearchUrl(query, tipo);
+    // Não usar canOpenURL como gate: no Android 11+ ele retorna false para
+    // links https (restrição de package visibility), mesmo com navegador
+    // instalado. openURL direto não sofre dessa restrição.
     try {
-      const can = await Linking.canOpenURL(url);
-      if (can) await Linking.openURL(url);
-      else Alert.alert('Não foi possível abrir', url);
+      await Linking.openURL(url);
     } catch (_) {
-      Alert.alert('Link', url);
+      Alert.alert('Não foi possível abrir o link', url);
     }
   };
 
