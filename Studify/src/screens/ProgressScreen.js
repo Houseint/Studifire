@@ -12,6 +12,22 @@ import { getProgressScreenStyles } from '../styles/screens/ProgressScreenStyles.
 import { useTheme } from '../shared/theme/ThemeContext';
 import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
+import SectionHeader from '../components/progress/SectionHeader';
+import EmptyState from '../components/progress/EmptyState';
+import StatCard from '../components/progress/StatCard';
+import ProgressRing from '../components/progress/ProgressRing';
+import StreakCard from '../components/progress/StreakCard';
+import WeeklyChart from '../components/progress/WeeklyChart';
+import SubjectCard from '../components/progress/SubjectCard';
+import {
+  BookOpenIcon,
+  CheckIcon,
+  ClockIcon,
+  TrophyIcon,
+  SproutIcon,
+  PencilIcon,
+  ArrowLeftIcon,
+} from '../components/progress/ProgressIcons';
 
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -184,161 +200,136 @@ export default function ProgressScreen({ navigation }) {
     );
   }
 
+  const isDark = colors.mode !== 'light';
+  const rawHeaderDate = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const headerDate = rawHeaderDate.charAt(0).toUpperCase() + rawHeaderDate.slice(1);
+  const heroGradient = isDark
+    ? ['#1A1B4B', colors.card, '#10142F']
+    : ['#FFFFFF', colors.cardAlt, '#E9EDF7'];
+
   return (
     <View style={s.container}>
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
       <LinearGradient colors={colors.bgGradient} style={s.gradient} />
+      <View pointerEvents="none" style={[s.glowTop, { backgroundColor: colors.primary }]} />
+      <View pointerEvents="none" style={[s.glowAmber, { backgroundColor: colors.amber }]} />
 
       <ScrollView
         style={s.scrollView}
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header: voltar + Perfil (sem refresh do mockup) */}
         <View style={s.header}>
           <View style={s.headerLeft}>
             <TouchableOpacity
-              style={s.backButton}
+              style={s.backButtonLarge}
               activeOpacity={0.7}
               onPress={() => navigation.goBack()}
+              accessibilityLabel="Voltar"
+              accessibilityRole="button"
             >
-              <Text style={s.backButtonText}>←</Text>
+              <ArrowLeftIcon size={20} color={colors.textMuted} />
             </TouchableOpacity>
-            <Text style={s.headerTitle}>Progresso</Text>
+            <View>
+              <Text style={s.headerTitle}>Progresso</Text>
+              <Text style={s.headerDate}>{headerDate}</Text>
+            </View>
           </View>
           <TouchableOpacity
-            style={s.profileButton}
+            style={s.profileButtonLarge}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Profile')}
+            accessibilityLabel="Perfil"
+            accessibilityRole="button"
           >
             <Text style={s.profileButtonText}>◌</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Stat Cards */}
-        <View style={s.statsRow}>
-          <View style={[s.statCard, { borderColor: 'rgba(138, 104, 255, 0.4)' }]}>
-            <Text style={s.statIcon}>📚</Text>
-            <Text style={s.statValue}>{stats.totalMaterias}</Text>
-            <Text style={s.statLabel}>Matérias</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statIcon}>✓</Text>
-            <Text style={s.statValue}>{stats.topicosConcluidos}/{stats.totalTopicos}</Text>
-            <Text style={s.statLabel}>Tópicos</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statIcon}>⏱</Text>
-            <Text style={s.statValue}>{stats.totalHoras > 0 ? stats.totalHoras + 'h' : '0h'}</Text>
-            <Text style={s.statLabel}>Horas</Text>
-          </View>
-        </View>
-
-        {/* Streak Card */}
-        <View style={s.streakCard}>
-          <View style={s.streakLeft}>
-            <Text style={s.streakFire}>🔥</Text>
-            <View style={s.streakInfo}>
-              <Text style={s.streakLabel}>Sequência atual</Text>
-              <Text style={s.streakValue}>{stats.sequencia}</Text>
-              <Text style={s.streakSub}>{stats.sequencia === 1 ? 'dia seguido' : 'dias seguidos'}</Text>
+        {/* Hero: anel + jornada */}
+        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.heroCard}>
+          <View style={s.heroRow}>
+            <ProgressRing concluidos={stats.topicosConcluidos} total={stats.totalTopicos} />
+            <View style={s.heroRight}>
+              <Text style={s.heroEyebrow}>SUA JORNADA</Text>
+              <Text style={s.heroPhrase}>Cada tópico conta — continue no ritmo!</Text>
+              <Text style={s.heroCount}>{stats.topicosConcluidos} de {stats.totalTopicos} tópicos concluídos</Text>
             </View>
           </View>
-          <TouchableOpacity style={s.streakButton} activeOpacity={0.7}>
-            <Text style={s.streakButtonText}>Manter vivo</Text>
-          </TouchableOpacity>
+        </LinearGradient>
+
+        {/* Stat Cards */}
+        <View style={s.statsRow}>
+          <StatCard
+            icon={<BookOpenIcon size={20} color={colors.primary} />}
+            value={stats.totalMaterias}
+            label="Matérias"
+            tint={colors.primary}
+          />
+          <StatCard
+            icon={<CheckIcon size={20} color={colors.success} />}
+            value={stats.topicosConcluidos}
+            suffix={`/${stats.totalTopicos}`}
+            label="Tópicos"
+            tint={colors.success}
+          />
+          <StatCard
+            icon={<ClockIcon size={20} color={colors.info} />}
+            value={stats.totalHoras > 0 ? stats.totalHoras + 'h' : '0h'}
+            label="Horas"
+            tint={colors.info}
+          />
+        </View>
+
+        {/* Streak */}
+        <View style={{ marginHorizontal: 16 }}>
+          <StreakCard sequencia={stats.sequencia} sessoes={sessoes} />
         </View>
 
         {/* Weekly Chart */}
         <View style={s.chartSection}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Evolução Semanal</Text>
-            <Text style={s.sectionSubtitle}>Últimos 7 dias</Text>
-          </View>
-          <View style={s.chartCard}>
-            <View style={s.chartWrapper}>
-              <View style={s.chartBars}>
-                {dadosGrafico.map((d, i) => (
-                  <View key={i} style={s.chartBarContainer}>
-                    <View
-                      style={[
-                        s.chartBar,
-                        {
-                          height: Math.max((d.minutos / maxMinutos) * 90, d.minutos > 0 ? 4 : 0),
-                          backgroundColor: d.isHoje ? colors.accent : 'rgba(138, 104, 255, 0.4)',
-                        },
-                      ]}
-                    />
-                    <Text style={s.chartBarLabel}>{d.dia}</Text>
-                    <Text style={s.chartBarValue}>{d.horas > 0 ? d.horas + 'h' : d.minutos + 'min'}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            {/* Legend */}
-            <View style={s.legendRow}>
-              <View style={s.legendItem}>
-                <View style={[s.legendDot, s.legendDotInProgress]} />
-                <Text style={s.legendText}>Hoje</Text>
-              </View>
-              <View style={s.legendItem}>
-                <View style={[s.legendDot, { backgroundColor: 'rgba(138, 104, 255, 0.4)' }]} />
-                <Text style={s.legendText}>Outros dias</Text>
-              </View>
-            </View>
-          </View>
+          <SectionHeader
+            icon={<ClockIcon size={18} color={colors.primary} />}
+            title="Evolução Semanal"
+            countText="Últimos 7 dias"
+            tint={colors.primary}
+          />
+          <WeeklyChart dados={dadosGrafico} maxMinutos={maxMinutos} formatarTempo={formatarTempo} />
         </View>
 
         {/* Em Andamento */}
         <View style={s.subjectSection}>
-          <View style={s.subjectSectionHeader}>
-            <Text style={s.sectionTitle}>📚 Em Andamento</Text>
-            <Text style={s.sectionSubtitle}>
-              {materiasEmAndamento.length} {materiasEmAndamento.length === 1 ? 'matéria' : 'matérias'}
-            </Text>
-          </View>
+          <SectionHeader
+            icon={<BookOpenIcon size={18} color={colors.primary} />}
+            title="Em Andamento"
+            countText={`${materiasEmAndamento.length} ${materiasEmAndamento.length === 1 ? 'matéria' : 'matérias'}`}
+            tint={colors.primary}
+          />
 
           {materiasEmAndamento.length === 0 ? (
-            <View style={s.emptySection}>
-              <Text style={s.emptyIcon}>🌱</Text>
-              <Text style={s.emptyTitle}>Nenhuma matéria em andamento</Text>
-              <Text style={s.emptySubtitle}>
-                Comece a estudar uma matéria para ver seu progresso aqui!
-              </Text>
-            </View>
+            <EmptyState
+              icon={<SproutIcon size={52} color={colors.textFaint} />}
+              title="Nenhuma matéria em andamento"
+              description="Comece a estudar uma matéria para ver seu progresso aqui!"
+            />
           ) : (
             materiasEmAndamento.map((materia) => {
               const progresso = getProgressoMateria(materia);
               const concluidas = materia.topicos.filter((t) => t.estudado).length;
               const total = materia.topicos.length;
+              const onPress = () => handleContinuarEstudo(materia);
 
               return (
-                <TouchableOpacity
-                  key={materia.id}
-                  style={[s.subjectCard, s.subjectCardInProgress]}
-                  activeOpacity={0.8}
-                  onPress={() => handleContinuarEstudo(materia)}
-                >
-                  <View style={s.subjectHeader}>
-                    <Text style={s.subjectName}>{materia.nome}</Text>
-                    <Text style={s.subjectProgressText}>{progresso}%</Text>
-                  </View>
-                  <View style={s.progressBarContainer}>
-                    <View
-                      style={[
-                        s.progressBar,
-                        s.progressBarInProgress,
-                        { width: `${progresso}%` },
-                      ]}
-                    />
-                  </View>
-                  <View style={s.subjectMeta}>
-                    <Text style={s.subjectTopics}>{concluidas} de {total} tópicos concluídos</Text>
-                  </View>
-                  <View style={s.subjectActionButton}>
-                    <Text style={s.subjectActionButtonText}>Continuar estudando</Text>
-                    <Text style={s.subjectActionButtonText}>→</Text>
-                  </View>
+                <TouchableOpacity key={materia.id} activeOpacity={0.9} onPress={onPress} accessibilityRole="button">
+                  <SubjectCard
+                    nome={materia.nome}
+                    progresso={progresso}
+                    metaTexto={`${concluidas} de ${total} tópicos concluídos`}
+                    botaoTexto="Continuar estudando"
+                    onPress={onPress}
+                    icon={<BookOpenIcon size={24} color={colors.primary} />}
+                  />
                 </TouchableOpacity>
               );
             })
@@ -347,25 +338,23 @@ export default function ProgressScreen({ navigation }) {
 
         {/* Concluídas */}
         <View style={s.subjectSection}>
-          <View style={s.subjectSectionHeader}>
-            <Text style={s.sectionTitle}>✅ Concluídas</Text>
-            <Text style={s.sectionSubtitle}>
-              {materiasConcluidas.length} {materiasConcluidas.length === 1 ? 'matéria' : 'matérias'}
-            </Text>
-          </View>
+          <SectionHeader
+            icon={<TrophyIcon size={18} color={colors.success} />}
+            title="Concluídas"
+            countText={`${materiasConcluidas.length} ${materiasConcluidas.length === 1 ? 'matéria' : 'matérias'}`}
+            tint={colors.success}
+          />
 
           {materiasConcluidas.length === 0 ? (
-            <View style={s.emptySection}>
-              <Text style={s.emptyIcon}>🏆</Text>
-              <Text style={s.emptyTitle}>Nenhuma matéria concluída ainda</Text>
-              <Text style={s.emptySubtitle}>
-                Complete todos os tópicos de uma matéria para vê-la aqui!
-              </Text>
-            </View>
+            <EmptyState
+              icon={<TrophyIcon size={52} color={colors.textFaint} />}
+              title="Nenhuma matéria concluída ainda"
+              description="Complete todos os tópicos de uma matéria para vê-la aqui!"
+            />
           ) : (
             materiasConcluidas.map((materia) => {
               const ultimaSessao = sessoes
-                .filter((s) => s.subject_id === materia.id)
+                .filter((sn) => sn.subject_id === materia.id)
                 .sort((a, b) => new Date(b.started_at) - new Date(a.started_at))[0];
 
               const dataConclusao = ultimaSessao
@@ -374,69 +363,52 @@ export default function ProgressScreen({ navigation }) {
                     month: '2-digit',
                   })
                 : '—';
+              const onPress = () => handleRevisar(materia);
 
               return (
-                <TouchableOpacity
-                  key={materia.id}
-                  style={[s.subjectCard, s.subjectCardCompleted]}
-                  activeOpacity={0.8}
-                  onPress={() => handleRevisar(materia)}
-                >
-                  <View style={s.subjectHeader}>
-                    <Text style={s.subjectName}>{materia.nome}</Text>
-                    <Text style={[s.subjectProgressText, s.subjectProgressTextCompleted]}>100%</Text>
-                  </View>
-                  <View style={s.progressBarContainer}>
-                    <View style={[s.progressBar, s.progressBarCompleted, { width: '100%' }]} />
-                  </View>
-                  <View style={s.subjectMeta}>
-                    <Text style={s.subjectTopics}>{materia.topicos.length} tópicos • {materia.topicos.length} concluídos</Text>
-                    <Text style={s.subjectCompletedDate}>Concluída em {dataConclusao}</Text>
-                  </View>
-                  <View style={[s.subjectActionButton, s.subjectActionButtonCompleted]}>
-                    <Text style={[s.subjectActionButtonText, s.subjectActionButtonTextCompleted]}>Revisar</Text>
-                    <Text style={[s.subjectActionButtonText, s.subjectActionButtonTextCompleted]}>→</Text>
-                  </View>
+                <TouchableOpacity key={materia.id} activeOpacity={0.9} onPress={onPress} accessibilityRole="button">
+                  <SubjectCard
+                    nome={materia.nome}
+                    progresso={100}
+                    metaTexto={`${materia.topicos.length} tópicos • ${materia.topicos.length} concluídos`}
+                    botaoTexto="Revisar"
+                    onPress={onPress}
+                    variant="completed"
+                    dataConclusao={dataConclusao}
+                    icon={<CheckIcon size={24} color={colors.success} />}
+                  />
                 </TouchableOpacity>
               );
             })
           )}
         </View>
 
-        {/* Não Iniciadas - opcional, pode remover se quiser */}
+        {/* Não Iniciadas */}
         {materiasNaoIniciadas.length > 0 && (
           <View style={s.subjectSection}>
-            <View style={s.subjectSectionHeader}>
-              <Text style={s.sectionTitle}>📝 Não Iniciadas</Text>
-              <Text style={s.sectionSubtitle}>
-                {materiasNaoIniciadas.length} {materiasNaoIniciadas.length === 1 ? 'matéria' : 'matérias'}
-              </Text>
-            </View>
-            {materiasNaoIniciadas.slice(0, 3).map((materia) => (
-              <TouchableOpacity
-                key={materia.id}
-                style={s.subjectCard}
-                activeOpacity={0.8}
-                onPress={() => handleContinuarEstudo(materia)}
-              >
-                <View style={s.subjectHeader}>
-                  <Text style={s.subjectName}>{materia.nome}</Text>
-                  <Text style={s.subjectProgressText}>0%</Text>
-                </View>
-                <View style={s.progressBarContainer}>
-                  <View style={[s.progressBar, { width: '0%' }]} />
-                </View>
-                <View style={s.subjectMeta}>
-                  <Text style={s.subjectTopics}>{materia.topicos?.length || 0} tópicos para estudar</Text>
-                </View>
-                <View style={s.subjectActionButton}>
-                  <Text style={s.subjectActionButtonText}>Começar</Text>
-                  <Text style={s.subjectActionButtonText}>→</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            <SectionHeader
+              icon={<PencilIcon size={18} color={colors.info} />}
+              title="Não Iniciadas"
+              countText={`${materiasNaoIniciadas.length} ${materiasNaoIniciadas.length === 1 ? 'matéria' : 'matérias'}`}
+              tint={colors.info}
+            />
+            {materiasNaoIniciadas.slice(0, 3).map((materia) => {
+              const onPress = () => handleContinuarEstudo(materia);
+              return (
+                <TouchableOpacity key={materia.id} activeOpacity={0.9} onPress={onPress} accessibilityRole="button">
+                  <SubjectCard
+                    nome={materia.nome}
+                    progresso={0}
+                    metaTexto={`${materia.topicos?.length || 0} tópicos para estudar`}
+                    botaoTexto="Começar"
+                    onPress={onPress}
+                    icon={<PencilIcon size={24} color={colors.info} />}
+                  />
+                </TouchableOpacity>
+              );
+            })}
             {materiasNaoIniciadas.length > 3 && (
-              <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>
+              <Text style={s.moreLink}>
                 +{materiasNaoIniciadas.length - 3} mais na tela Início
               </Text>
             )}
