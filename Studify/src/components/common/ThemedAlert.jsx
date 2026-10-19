@@ -6,24 +6,30 @@ import { useTheme } from '../../shared/theme/ThemeContext';
  * ThemedAlert - substitui Alert.alert nativo com visual do Studify (light/dark).
  * Uso:
  *   <ThemedAlert
- *     visible={show}
- *     title="Título"
- *     message="Mensagem"
- *     buttons={[
- *       { text: 'Cancelar', style: 'cancel', onPress: () => setShow(false) },
- *       { text: 'Confirmar', style: 'destructive', onPress: handleConfirm },
- *     ]}
- *     onClose={() => setShow(false)}
+ *     config={alertConfig}
+ *     onClose={hideAlert}
  *   />
+ * 
+ * alertConfig = {
+ *   title: string,
+ *   message: string,
+ *   buttons: [
+ *     { text: 'Cancelar', style: 'cancel', onPress: () => {} },
+ *     { text: 'Confirmar', style: 'destructive', onPress: () => {} },
+ *     { text: 'OK', style: 'primary', onPress: () => {} },
+ *   ]
+ * }
  */
-export default function ThemedAlert({ visible, title, message, buttons = [], onClose }) {
+export default function ThemedAlert({ config, onClose }) {
   const { colors } = useTheme();
   const s = getThemedAlertStyles(colors);
 
-  if (!visible) return null;
+  if (!config) return null;
+
+  const { title, message, buttons = [] } = config;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={true} transparent animationType="fade" onRequestClose={onClose}>
       <View style={s.overlay}>
         <TouchableOpacity style={s.backdrop} activeOpacity={1} onPress={onClose} />
         <View style={s.card}>

@@ -6,12 +6,12 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
-  Alert,
   StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../shared/theme/ThemeContext';
 import { useUserId } from '../hooks/useUserId';
+import { useThemedAlert, ThemedAlert } from '../hooks/useThemedAlert';
 import {
   carregarMaterias,
   atualizarMateria,
@@ -34,6 +34,7 @@ export default function ReviewScreen({ route, navigation }) {
   const { colors } = useTheme();
   const styles = useMemo(() => getReviewStyles(colors), [colors]);
   const userId = useUserId();
+  const { alertConfig, showAlert, hideAlert } = useThemedAlert();
   const materiaFiltro = route?.params?.materiaId;
 
   const [materias, setMaterias] = useState([]);
@@ -96,14 +97,14 @@ export default function ReviewScreen({ route, navigation }) {
     try {
       const { questoes } = await gerarQuiz(item.materiaNome, [item.topicoNome], { qtd: 3 });
       if (!questoes || questoes.length === 0) {
-        Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente novamente.');
+        showAlert({ title: 'Quiz indisponível', message: 'A IA não retornou perguntas. Tente novamente.', buttons: [{ text: 'OK', style: 'cancel' }] });
         setAtivo(null);
         return;
       }
       setQuizQuestoes(questoes);
       setQuizVisible(true);
     } catch (e) {
-      Alert.alert('Quiz indisponível', e?.message || 'Erro ao gerar o quiz de revisão.');
+      showAlert({ title: 'Quiz indisponível', message: e?.message || 'Erro ao gerar o quiz de revisão.', buttons: [{ text: 'OK', style: 'cancel' }] });
       setAtivo(null);
     } finally {
       setQuizLoading(false);
@@ -129,13 +130,10 @@ export default function ReviewScreen({ route, navigation }) {
         const atualizados = await carregarMaterias(userId);
         setMaterias(atualizados || []);
         const novo = topicos[item.topicoIndex];
-        Alert.alert(
-          'Revisão registrada ✅',
-          `${correct}/${total} acertos.\nPróxima revisão em ${formatDueDate(novo?.due_date)}.`
-        );
+        showAlert({ title: 'Revisão registrada ✅', message: `${correct}/${total} acertos.\nPróxima revisão em ${formatDueDate(novo?.due_date)}.`, buttons: [{ text: 'OK', style: 'cancel' }] });
       }
     } catch (e) {
-      Alert.alert('Erro ao salvar revisão', e?.message || 'Tente novamente.');
+      showAlert({ title: 'Erro ao salvar revisão', message: e?.message || 'Tente novamente.', buttons: [{ text: 'OK', style: 'cancel' }] });
     } finally {
       setAtivo(null);
     }
@@ -246,6 +244,7 @@ export default function ReviewScreen({ route, navigation }) {
         onFinish={finalizarRevisao}
         onClose={fecharQuiz}
       />
+      <ThemedAlert config={alertConfig} onClose={hideAlert} />
     </View>
   );
 }

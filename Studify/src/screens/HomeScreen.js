@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  Alert,
   StatusBar,
   Image,
 } from 'react-native';
@@ -40,11 +39,14 @@ import {
   getWeeklyGoalProgress,
   getProfileStats,
 } from '../services/subjectsDb';
+import { useThemedAlert } from '../hooks/useThemedAlert';
+import ThemedAlert from '../components/common/ThemedAlert';
 
 export default function HomeScreen({ navigation }) {
   const userId = useUserId();
   const { colors } = useTheme();
   const styles = useMemo(() => getHomeStyles(colors), [colors]);
+  const { alertConfig, showAlert, hideAlert } = useThemedAlert();
   const [user, setUser] = useState(null);
   const [userAvatar, setUserAvatar] = useState(null);
   const [revisados, setRevisados] = useState([]);
@@ -121,7 +123,7 @@ export default function HomeScreen({ navigation }) {
   const adicionarMateria = async () => {
     const v = validarNomeMateria(novaMateria);
     if (!v.ok) {
-      Alert.alert('Nome inválido', v.message);
+      showAlert({ title: 'Nome inválido', message: v.message, buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
     const topicosValidos = novosTopicos.filter((t) => t.nome.trim());
@@ -129,7 +131,7 @@ export default function HomeScreen({ navigation }) {
       const nova = await criarMateria(userId, novaMateria.trim(), topicosValidos);
       setRevisados((prev) => [nova, ...prev]);
     } catch (e) {
-      Alert.alert('Erro', 'Não foi possível salvar a matéria.');
+      showAlert({ title: 'Erro', message: 'Não foi possível salvar a matéria.', buttons: [{ text: 'OK', style: 'cancel' }] });
     }
     setNovaMateria('');
     setNovosTopicos([]);
@@ -181,7 +183,7 @@ export default function HomeScreen({ navigation }) {
   const salvarEdicao = async () => {
     const v = validarNomeMateria(editNome);
     if (!v.ok) {
-      Alert.alert('Nome inválido', v.message);
+      showAlert({ title: 'Nome inválido', message: v.message, buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
     const topicosValidos = editTopicos.filter((t) => t.nome.trim());
@@ -212,7 +214,7 @@ export default function HomeScreen({ navigation }) {
     setSelectedMateria(null);
     setEditNome('');
     setEditTopicos([]);
-    Alert.alert('Excluído', 'Matéria removida com sucesso!');
+    showAlert({ title: 'Excluído', message: 'Matéria removida com sucesso!', buttons: [{ text: 'OK', style: 'cancel' }] });
   };
 
   const toggleTopicoEstudado = async (materiaId, topicoIndex) => {
@@ -349,6 +351,7 @@ export default function HomeScreen({ navigation }) {
         setEditTopicoInput={setEditTopicoInput}
         MAX_TOPICOS={MAX_TOPICOS}
       />
+      <ThemedAlert config={alertConfig} onClose={hideAlert} />
     </View>
   );
 }

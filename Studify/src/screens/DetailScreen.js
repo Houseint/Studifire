@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, StatusBar, StyleSheet, ActivityIndicator, Linking, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,6 +14,7 @@ import { QuizModal } from '../features/study';
 import ThemedAlert from '../components/common/ThemedAlert';
 import { useTheme } from '../shared/theme/ThemeContext';
 import { useTimer } from '../shared/timer/TimerContext';
+import { useThemedAlert } from '../hooks/useThemedAlert';
 import { SparklesIcon, CameraIcon, ImageIcon, FileTextIcon } from '../components/common/FeatherIcons';
 
 export default function DetailScreen({ route, navigation }) {
@@ -40,8 +41,7 @@ export default function DetailScreen({ route, navigation }) {
   // Modo foco: enquanto ativo, o back da matéria é bloqueado (o timer continua).
   const [focusMode, setFocusMode] = useState(false);
   // Themed alerts (substituem Alert.alert nativo)
-  const [alertFocus, setAlertFocus] = useState(null); // { onConfirm }
-  const [alertMinTime, setAlertMinTime] = useState(null); // { hojeMinutos, onStudy }
+  const { alertConfig, showAlert, hideAlert } = useThemedAlert();
 
   useEffect(() => {
     if (!id || !userId) {
@@ -82,7 +82,14 @@ export default function DetailScreen({ route, navigation }) {
       return;
     }
     if (hojeMinutos < MIN_MINUTOS) {
-      setAlertMinTime({ hojeMinutos, onStudy: startStudy });
+      showAlert({
+        title: 'Tempo mínimo não atingido',
+        message: `Estude pelo menos ${MIN_MINUTOS} min nesta matéria antes de concluir um tópico. Você tem ${hojeMinutos} min registrados hoje.`,
+        buttons: [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Estudar agora', style: 'primary', onPress: startStudy },
+        ],
+      });
       return;
     }
     await iniciarQuizTopico(index);
@@ -101,14 +108,14 @@ export default function DetailScreen({ route, navigation }) {
 
   const startStudy = () => {
     if (timer.session && timer.session.materiaId !== id) {
-      Alert.alert(
-        'Sessão em andamento',
-        `Já existe um timer em "${timer.session.materiaNome}". Deseja substituir?`,
-        [
+      showAlert({
+        title: 'Sessão em andamento',
+        message: `Já existe um timer em "${timer.session.materiaNome}". Deseja substituir?`,
+        buttons: [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Substituir', style: 'destructive', onPress: doStart },
-        ]
-      );
+        ],
+      });
       return;
     }
     doStart();
@@ -129,13 +136,21 @@ export default function DetailScreen({ route, navigation }) {
       // Quiz automático pós-sessão: oferece 1x por sessão (sem auto-modal).
       if (oferecerQuiz && !quizOfertadoRef.current && materia?.topicos?.length) {
         quizOfertadoRef.current = true;
-        Alert.alert('Sessão salva! 🎉', 'Fazer um quiz rápido do tópico?', [
-          { text: 'Agora não', style: 'cancel' },
-          { text: 'Fazer quiz', onPress: iniciarQuiz },
-        ]);
+        showAlert({
+          title: 'Sessão salva! 🎉',
+          message: 'Fazer um quiz rápido do tópico?',
+          buttons: [
+            { text: 'Agora não', style: 'cancel' },
+            { text: 'Fazer quiz', style: 'primary', onPress: iniciarQuiz },
+          ],
+        });
       }
     } else if (snap.elapsed > 0 && !snap.finished) {
-      Alert.alert('Tempo muito curto', 'A sessão precisa ter pelo menos 1 minuto para ser registrada.', [{ text: 'OK' }]);
+      showAlert({
+        title: 'Tempo muito curto',
+        message: 'A sessão precisa ter pelo menos 1 minuto para ser registrada.',
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
     }
   };
 
@@ -161,17 +176,23 @@ export default function DetailScreen({ route, navigation }) {
       const active = timerRef.current.session;
       if (allowLeaveRef.current || !active || active.materiaId !== id || !active.focus) return;
       e.preventDefault();
-      setAlertFocus({
-        onConfirm: async () => {
-          const snap = timerRef.current.stop();
-          if (snap) await salvarSessaoRef.current(snap);
-          allowLeaveRef.current = true;
-          navigation.dispatch(e.data.action);
-        },
+      showAlert({
+        title: 'Modo foco ativo 🔒',
+        message: 'Você está em modo foco. Parar a sessão agora perderá o progresso não salvo.',
+        buttons: [
+          { text: 'Continuar estudando', style: 'cancel', onPress: () => {} },
+          { text: 'Parar e sair', style: 'destructive', onPress: async () => {
+              const snap = timerRef.current.stop();
+              if (snap) await salvarSessaoRef.current(snap);
+              allowLeaveRef.current = true;
+              navigation.dispatch(e.data.action);
+            }
+          },
+        ],
       });
     });
     return unsubscribe;
-  }, [navigation, id]);
+  }, [navigation, id, showAlert]);
 
   // Fim do bloco Pomodoro (mesmo se a Detail estiver desmontada, o provider
   // segue contando; ao voltar, este effect salva o bloco e oferece a pausa).
@@ -186,13 +207,16 @@ export default function DetailScreen({ route, navigation }) {
     const snap = timer.stop();
     if (snap) {
       salvarSessao(snap, { oferecerQuiz: false });
-      Alert.alert(
-        'Pomodoro concluído! 🎉',
-        `Bloco de ${snap.duration} min finalizado. Faça uma pausa de ${snap.duration === 25 ? 5 : 10} min.`,
-        [{ text: 'Continuar livre' }, { text: 'Descansar' }]
-      );
+      showAlert({
+        title: 'Pomodoro concluído! 🎉',
+        message: `Bloco de ${snap.duration} min finalizado. Faça uma pausa de ${snap.duration === 25 ? 5 : 10} min.`,
+        buttons: [
+          { text: 'Continuar livre', style: 'primary', onPress: () => {} },
+          { text: 'Descansar', style: 'cancel', onPress: () => {} },
+        ],
+      });
     }
-  }, [session?.finished]);
+  }, [session?.finished, showAlert]);
 
   // Quiz pós-sessão (FASE 2.2): testa o tópico em foco e ajusta o FSRS.
   const [quizVisible, setQuizVisible] = useState(false);
@@ -237,7 +261,11 @@ export default function DetailScreen({ route, navigation }) {
   const iniciarQuiz = async () => {
     pendingCompleteRef.current = null;
     if (!materia || !materia.topicos?.length) {
-      Alert.alert('Sem tópicos', 'Adicione tópicos à matéria para gerar o quiz.');
+      showAlert({
+        title: 'Sem tópicos',
+        message: 'Adicione tópicos à matéria para gerar o quiz.',
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
       return;
     }
     // Foco: tópicos já estudados (os que a sessão cobriu), até 5; senão o primeiro pendente.
@@ -257,14 +285,22 @@ export default function DetailScreen({ route, navigation }) {
     try {
       const { questoes } = await gerarQuiz(materia.nome, topicosFoco);
       if (!questoes || questoes.length === 0) {
-        Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente de novo.');
+        showAlert({
+          title: 'Quiz indisponível',
+          message: 'A IA não retornou perguntas. Tente de novo.',
+          buttons: [{ text: 'OK', style: 'cancel' }],
+        });
         return;
       }
       setQuizTopicIndexes(idxs);
       setQuizQuestoes(questoes);
       setQuizVisible(true);
     } catch (e) {
-      Alert.alert('Quiz indisponível', e?.message || 'Erro ao gerar quiz.');
+      showAlert({
+        title: 'Quiz indisponível',
+        message: e?.message || 'Erro ao gerar quiz.',
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
     } finally {
       setQuizLoading(false);
     }
@@ -283,7 +319,11 @@ export default function DetailScreen({ route, navigation }) {
       );
       if (!questoes || questoes.length === 0) {
         pendingCompleteRef.current = null;
-        Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente de novo para concluir o tópico.');
+        showAlert({
+          title: 'Quiz indisponível',
+          message: 'A IA não retornou perguntas. Tente de novo para concluir o tópico.',
+          buttons: [{ text: 'OK', style: 'cancel' }],
+        });
         return;
       }
       setQuizTopicIndexes([index]);
@@ -291,7 +331,11 @@ export default function DetailScreen({ route, navigation }) {
       setQuizVisible(true);
     } catch (e) {
       pendingCompleteRef.current = null;
-      Alert.alert('Quiz indisponível', e?.message || 'Erro ao gerar quiz.');
+      showAlert({
+        title: 'Quiz indisponível',
+        message: e?.message || 'Erro ao gerar quiz.',
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
     } finally {
       setQuizLoading(false);
     }
@@ -310,10 +354,11 @@ export default function DetailScreen({ route, navigation }) {
     if (gateIdx != null && !passed) {
       pendingCompleteRef.current = null;
       setQuizVisible(false);
-      Alert.alert(
-        'Quase lá!',
-        `Você acertou ${correct}/${total}. Revise o tópico e tente de novo para concluí-lo.`
-      );
+      showAlert({
+        title: 'Quase lá!',
+        message: `Você acertou ${correct}/${total}. Revise o tópico e tente de novo para concluí-lo.`,
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
       return;
     }
     let topicosAtualizados = null;
@@ -348,20 +393,21 @@ export default function DetailScreen({ route, navigation }) {
       const topicosFinais = topicosAtualizados || materia.topicos;
       const concluiuTudo = topicosFinais.every((t) => t.estudado);
       if (concluiuTudo) {
-        Alert.alert(
-          'Matéria concluída! 🎉',
-          `Você concluiu todos os tópicos de ${materia.nome}. A próxima revisão já está agendada.`,
-          [
-            { text: 'Ver progresso', onPress: () => navigation?.navigate?.('Progress') },
+        showAlert({
+          title: 'Matéria concluída! 🎉',
+          message: `Você concluiu todos os tópicos de ${materia.nome}. A próxima revisão já está agendada.`,
+          buttons: [
+            { text: 'Ver progresso', style: 'primary', onPress: () => navigation?.navigate?.('Progress') },
             { text: 'Fechar', style: 'cancel' },
-          ]
-        );
+          ],
+        });
       } else {
         const due = formatDueDate(topicosFinais[gateIdx]?.due_date);
-        Alert.alert(
-          'Tópico concluído! ✅',
-          due ? `Próxima revisão em ${due}.` : 'A próxima revisão já está agendada.'
-        );
+        showAlert({
+          title: 'Tópico concluído! ✅',
+          message: due ? `Próxima revisão em ${due}.` : 'A próxima revisão já está agendada.',
+          buttons: [{ text: 'OK', style: 'cancel' }],
+        });
       }
     }
   };
@@ -390,7 +436,14 @@ export default function DetailScreen({ route, navigation }) {
   const toggleIaSelect = (idx) => setIaGenSelected((p) => ({ ...p, [idx]: !p[idx] }));
   const handleIaAddSelected = async () => {
     const sel = iaGenSugestoes.filter((_, i) => iaGenSelected[i]);
-    if (sel.length === 0) { Alert.alert('Nada selecionado', 'Marque pelo menos 1 sugestão.'); return; }
+    if (sel.length === 0) { 
+      showAlert({
+        title: 'Nada selecionado',
+        message: 'Marque pelo menos 1 sugestão.',
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
+      return; 
+    }
     const slots = 10 - materia.topicos.length;
     const paraAdd = sel.slice(0, slots);
     const novosTopicos = [...materia.topicos, ...paraAdd];
@@ -424,11 +477,14 @@ export default function DetailScreen({ route, navigation }) {
     }
   };
 
-  const alertSemPermissao = (nome) => Alert.alert(
-    `Permissão de ${nome} negada`,
-    `Libere o acesso nas configurações do celular para importar o material.`,
-    [{ text: 'Abrir ajustes', onPress: () => Linking.openSettings() }, { text: 'OK' }],
-  );
+  const alertSemPermissao = (nome) => showAlert({
+    title: `Permissão de ${nome} negada`,
+    message: `Libere o acesso nas configurações do celular para importar o material.`,
+    buttons: [
+      { text: 'Abrir ajustes', style: 'primary', onPress: () => Linking.openSettings() },
+      { text: 'OK', style: 'cancel' },
+    ],
+  });
 
   const importarViaCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync().catch(() => null);
@@ -452,11 +508,14 @@ export default function DetailScreen({ route, navigation }) {
     const file = res.assets[0];
     const nome = (file.name || '').toLowerCase();
     if (file.mimeType === 'application/pdf' || nome.endsWith('.pdf')) {
-      Alert.alert(
-        'PDF ainda não suportado',
-        'O app ainda não lê PDF direto. Fotografe as páginas que eu extraio os tópicos.',
-        [{ text: 'Fotografar agora', onPress: importarViaCamera }, { text: 'OK' }],
-      );
+      showAlert({
+        title: 'PDF ainda não suportado',
+        message: 'O app ainda não lê PDF direto. Fotografe as páginas que eu extraio os tópicos.',
+        buttons: [
+          { text: 'Fotografar agora', style: 'primary', onPress: importarViaCamera },
+          { text: 'OK', style: 'cancel' },
+        ],
+      });
       return;
     }
     try {
@@ -860,26 +919,7 @@ export default function DetailScreen({ route, navigation }) {
         onClose={() => { pendingCompleteRef.current = null; setQuizVisible(false); }}
       />
       {/* Themed alerts (substituem Alert.alert nativo) */}
-      <ThemedAlert
-        visible={!!alertFocus}
-        title="Modo foco ativo 🔒"
-        message="Sair agora encerra a sessão e salva o tempo estudado."
-        buttons={[
-          { text: 'Continuar estudando', style: 'cancel', onPress: () => setAlertFocus(null) },
-          { text: 'Parar e sair', style: 'destructive', onPress: () => { alertFocus?.onConfirm?.(); setAlertFocus(null); } },
-        ]}
-        onClose={() => setAlertFocus(null)}
-      />
-      <ThemedAlert
-        visible={!!alertMinTime}
-        title="Tempo mínimo não atingido"
-        message={`Estude pelo menos ${MIN_MINUTOS} min nesta matéria antes de concluir um tópico. Você tem ${alertMinTime?.hojeMinutos ?? 0} min registrados hoje.`}
-        buttons={[
-          { text: 'Cancelar', style: 'cancel', onPress: () => setAlertMinTime(null) },
-          { text: 'Estudar agora', style: 'primary', onPress: () => { alertMinTime?.onStudy?.(); setAlertMinTime(null); } },
-        ]}
-        onClose={() => setAlertMinTime(null)}
-      />
+      <ThemedAlert config={alertConfig} onClose={hideAlert} />
     </View>
   );
 }

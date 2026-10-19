@@ -7,7 +7,6 @@ import {
   StatusBar,
   Image,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -17,10 +16,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { registerUser } from '../services/authDb';
 import { useTheme } from '../shared/theme/ThemeContext';
 import { getAuthScreenStyles } from '../styles/AuthScreenStyles.js';
+import { useThemedAlert } from '../hooks/useThemedAlert';
+import ThemedAlert from '../components/common/ThemedAlert';
 
 export default function StudifyRegisterScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = useMemo(() => getAuthScreenStyles(colors), [colors]);
+  const { alertConfig, showAlert, hideAlert } = useThemedAlert();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -28,7 +30,7 @@ export default function StudifyRegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (!email.trim() || !senha.trim() || !confirmarSenha.trim()) {
-      Alert.alert('Atenção', 'Preencha todos os campos.');
+      showAlert({ title: 'Atenção', message: 'Preencha todos os campos.', buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
 
@@ -38,34 +40,33 @@ export default function StudifyRegisterScreen({ navigation }) {
       email.includes('.') &&
       email.split('@')[0].trim().length > 0;
     if (!emailValido) {
-      Alert.alert('Atenção', 'Digite um e-mail válido (ex: nome@exemplo.com).');
+      showAlert({ title: 'Atenção', message: 'Digite um e-mail válido (ex: nome@exemplo.com).', buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
 
     if (senha.length < 6) {
-      Alert.alert('Atenção', 'A senha deve ter pelo menos 6 caracteres.');
+      showAlert({ title: 'Atenção', message: 'A senha deve ter pelo menos 6 caracteres.', buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
 
     if (senha !== confirmarSenha) {
-      Alert.alert('Atenção', 'As senhas não conferem.');
+      showAlert({ title: 'Atenção', message: 'As senhas não conferem.', buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
 
     try {
       setLoading(true);
       await registerUser(email, senha);
-      Alert.alert('Sucesso', 'Conta criada com sucesso!');
-      navigation.navigate('Login');
+      showAlert({ title: 'Sucesso', message: 'Conta criada com sucesso!', buttons: [{ text: 'OK', style: 'cancel', onPress: () => navigation.navigate('Login') }] });
     } catch (error) {
       const code = error?.code || error?.message;
       if (code === 'EMAIL_EXISTS') {
-        Alert.alert('Atenção', 'Este e-mail já está cadastrado.');
+        showAlert({ title: 'Atenção', message: 'Este e-mail já está cadastrado.', buttons: [{ text: 'OK', style: 'cancel' }] });
       } else if (code === 'DB_UNAVAILABLE') {
-        Alert.alert('Erro', 'Não foi possível conectar ao banco de dados. Tente novamente.');
+        showAlert({ title: 'Erro', message: 'Não foi possível conectar ao banco de dados. Tente novamente.', buttons: [{ text: 'OK', style: 'cancel' }] });
       } else {
         console.error('Erro ao cadastrar usuário:', error);
-        Alert.alert('Erro', 'Não foi possível cadastrar agora. Tente novamente.');
+        showAlert({ title: 'Erro', message: 'Não foi possível cadastrar agora. Tente novamente.', buttons: [{ text: 'OK', style: 'cancel' }] });
       }
     } finally {
       setLoading(false);
@@ -162,6 +163,7 @@ export default function StudifyRegisterScreen({ navigation }) {
           </Text>
         </View>
       </View>
+      <ThemedAlert config={alertConfig} onClose={hideAlert} />
     </KeyboardAvoidingView>
   );
 }

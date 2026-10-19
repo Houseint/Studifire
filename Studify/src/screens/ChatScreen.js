@@ -2,13 +2,15 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StatusBar, KeyboardAvoidingView, Platform, StyleSheet,
-  Modal, Alert,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../shared/theme/ThemeContext';
 import { dark } from '../shared/theme/colors';
 import * as AiService from '../services/aiService';
 import { useUserId } from '../hooks/useUserId';
+import { useThemedAlert } from '../hooks/useThemedAlert';
+import ThemedAlert from '../components/common/ThemedAlert';
 import {
   criarConversa,
   listarConversas,
@@ -24,6 +26,7 @@ export default function ChatScreen({ navigation }) {
   const { colors } = useTheme();
   const s = useMemo(() => getChatStyles(colors), [colors]);
   const userId = useUserId();
+  const { alertConfig, showAlert, hideAlert } = useThemedAlert();
   const [conversaId, setConversaId] = useState(null);
   const [mensagens, setMensagens] = useState([]);
   const [input, setInput] = useState('');
@@ -107,7 +110,7 @@ export default function ChatScreen({ navigation }) {
       userMsg = await salvarMensagem(userId, conversaId, 'user', texto);
     } catch (e) {
       console.error('Erro ao salvar mensagem do usuário:', e);
-      Alert.alert('Erro', 'Não foi possível enviar a mensagem.');
+      showAlert({ title: 'Erro', message: 'Não foi possível enviar a mensagem.', buttons: [{ text: 'OK', style: 'cancel' }] });
       setStatus('online');
       return;
     }
@@ -150,18 +153,22 @@ export default function ChatScreen({ navigation }) {
   };
 
   const excluirConversa = (id, titulo) => {
-    Alert.alert('Excluir conversa', `"${titulo}" será removida.`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: async () => {
-          await deletarConversa(userId, id);
-          if (id === conversaId) await novaConversa();
-          else abrirHistorico();
+    showAlert({
+      title: 'Excluir conversa',
+      message: `"${titulo}" será removida.`,
+      buttons: [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            await deletarConversa(userId, id);
+            if (id === conversaId) await novaConversa();
+            else abrirHistorico();
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const formatarData = (iso) => {
@@ -296,6 +303,7 @@ export default function ChatScreen({ navigation }) {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      <ThemedAlert config={alertConfig} onClose={hideAlert} />
     </KeyboardAvoidingView>
   );
 }

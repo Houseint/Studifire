@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextInput, Alert } from 'react-native';
+import { TextInput } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
 jest.mock('../src/features/auth/authDb', () => ({
@@ -7,21 +7,23 @@ jest.mock('../src/features/auth/authDb', () => ({
   loginUser: jest.fn(),
 }));
 
+jest.mock('../src/hooks/useThemedAlert', () => ({
+  useThemedAlert: () => ({
+    alertConfig: null,
+    showAlert: jest.fn(),
+    hideAlert: jest.fn(),
+  }),
+}));
+
 import { registerUser, loginUser } from '../src/features/auth/authDb';
+import { useThemedAlert } from '../src/hooks/useThemedAlert';
 
 const RegisterScreen = require('../src/screens/RegisterScreen').default;
 const LoginScreen = require('../src/screens/LoginScreen').default;
 
 describe('0.20 - Telas de autenticação', () => {
-  let alertSpy;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    alertSpy.mockRestore();
   });
 
   describe('RegisterScreen', () => {
@@ -35,7 +37,12 @@ describe('0.20 - Telas de autenticação', () => {
       const { screen, navigation } = renderRegister();
       fireEvent.press(screen.getByText('Cadastrar'));
 
-      expect(alertSpy).toHaveBeenCalledWith('Atenção', 'Preencha todos os campos.');
+      expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Atenção',
+          message: 'Preencha todos os campos.',
+        })
+      );
       expect(registerUser).not.toHaveBeenCalled();
       expect(navigation.navigate).not.toHaveBeenCalled();
     });
@@ -47,9 +54,11 @@ describe('0.20 - Telas de autenticação', () => {
       fireEvent.changeText(inputs[2], '12345');
       fireEvent.press(screen.getByText('Cadastrar'));
 
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Atenção',
-        'A senha deve ter pelo menos 6 caracteres.'
+      expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Atenção',
+          message: 'A senha deve ter pelo menos 6 caracteres.',
+        })
       );
       expect(registerUser).not.toHaveBeenCalled();
     });
@@ -61,7 +70,12 @@ describe('0.20 - Telas de autenticação', () => {
       fireEvent.changeText(inputs[2], 'senha456');
       fireEvent.press(screen.getByText('Cadastrar'));
 
-      expect(alertSpy).toHaveBeenCalledWith('Atenção', 'As senhas não conferem.');
+      expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Atenção',
+          message: 'As senhas não conferem.',
+        })
+      );
       expect(registerUser).not.toHaveBeenCalled();
     });
 
@@ -76,7 +90,12 @@ describe('0.20 - Telas de autenticação', () => {
       await waitFor(() => {
         expect(registerUser).toHaveBeenCalledWith('novo@b.com', 'senha123');
       });
-      expect(alertSpy).toHaveBeenCalledWith('Sucesso', 'Conta criada com sucesso!');
+      expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Sucesso',
+          message: 'Conta criada com sucesso!',
+        })
+      );
       expect(navigation.navigate).toHaveBeenCalledWith('Login');
     });
 
@@ -89,7 +108,12 @@ describe('0.20 - Telas de autenticação', () => {
       fireEvent.press(screen.getByText('Cadastrar'));
 
       await waitFor(() => {
-        expect(alertSpy).toHaveBeenCalledWith('Atenção', 'Este e-mail já está cadastrado.');
+        expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Atenção',
+            message: 'Este e-mail já está cadastrado.',
+          })
+        );
       });
     });
 
@@ -102,9 +126,11 @@ describe('0.20 - Telas de autenticação', () => {
       fireEvent.press(screen.getByText('Cadastrar'));
 
       await waitFor(() => {
-        expect(alertSpy).toHaveBeenCalledWith(
-          'Erro',
-          'Não foi possível conectar ao banco de dados. Tente novamente.'
+        expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Erro',
+            message: 'Não foi possível conectar ao banco de dados. Tente novamente.',
+          })
         );
       });
     });
@@ -119,9 +145,11 @@ describe('0.20 - Telas de autenticação', () => {
       fireEvent.press(screen.getByText('Cadastrar'));
 
       await waitFor(() => {
-        expect(alertSpy).toHaveBeenCalledWith(
-          'Erro',
-          'Não foi possível cadastrar agora. Tente novamente.'
+        expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Erro',
+            message: 'Não foi possível cadastrar agora. Tente novamente.',
+          })
         );
       });
       expect(errorSpy).toHaveBeenCalled();
@@ -140,7 +168,12 @@ describe('0.20 - Telas de autenticação', () => {
       const { screen, navigation } = renderLogin();
       fireEvent.press(screen.getByText('Entrar'));
 
-      expect(alertSpy).toHaveBeenCalledWith('Atenção', 'Preencha e-mail e senha.');
+      expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Atenção',
+          message: 'Preencha e-mail e senha.',
+        })
+      );
       expect(loginUser).not.toHaveBeenCalled();
       expect(navigation.reset).not.toHaveBeenCalled();
     });
@@ -155,7 +188,12 @@ describe('0.20 - Telas de autenticação', () => {
       await waitFor(() => {
         expect(loginUser).toHaveBeenCalledWith('errado@b.com', 'senhaErrada');
       });
-      expect(alertSpy).toHaveBeenCalledWith('Login inválido', 'E-mail ou senha incorretos.');
+      expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Login inválido',
+          message: 'E-mail ou senha incorretos.',
+        })
+      );
       expect(navigation.reset).not.toHaveBeenCalled();
     });
 
@@ -174,7 +212,7 @@ describe('0.20 - Telas de autenticação', () => {
       });
     });
 
-    test('erro no login: alerta genérico', async () => {
+test('erro no login: alerta genérico', async () => {
       loginUser.mockRejectedValue(new Error('falha'));
       const { screen, inputs, navigation } = renderLogin();
       fireEvent.changeText(inputs[0], 'x@b.com');
@@ -182,11 +220,16 @@ describe('0.20 - Telas de autenticação', () => {
       fireEvent.press(screen.getByText('Entrar'));
 
       await waitFor(() => {
-        expect(alertSpy).toHaveBeenCalledWith(
-          'Erro',
-          'Não foi possível fazer login agora.'
+        expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Erro',
+            message: 'Não foi possível fazer login agora. Tente novamente.',
+          })
         );
       });
+    });
+  });
+});
       expect(navigation.reset).not.toHaveBeenCalled();
     });
   });

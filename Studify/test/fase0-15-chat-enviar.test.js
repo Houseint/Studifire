@@ -6,6 +6,14 @@ jest.mock('../src/hooks/useUserId', () => ({
   useUserId: () => 1,
 }));
 
+jest.mock('../src/hooks/useThemedAlert', () => ({
+  useThemedAlert: () => ({
+    alertConfig: null,
+    showAlert: jest.fn(),
+    hideAlert: jest.fn(),
+  }),
+}));
+
 jest.mock('../src/services/aiService', () => ({
   enviarMensagem: jest.fn(),
 }));

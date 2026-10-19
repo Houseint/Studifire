@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StatusBar,
   StyleSheet,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -18,17 +17,20 @@ import { loginUser } from '../features/auth/authDb';
 import { getUserSettings } from '../services/subjectsDb';
 import { useTheme } from '../shared/theme/ThemeContext';
 import { getAuthScreenStyles } from '../styles/AuthScreenStyles.js';
+import { useThemedAlert } from '../hooks/useThemedAlert';
+import ThemedAlert from '../components/common/ThemedAlert';
 
 export default function LoginScreen({ navigation }) {
   const { colors, setMode } = useTheme();
   const styles = useMemo(() => getAuthScreenStyles(colors), [colors]);
+  const { alertConfig, showAlert, hideAlert } = useThemedAlert();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !senha.trim()) {
-      Alert.alert('Atenção', 'Preencha e-mail e senha.');
+      showAlert({ title: 'Atenção', message: 'Preencha e-mail e senha.', buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
 
@@ -38,7 +40,7 @@ export default function LoginScreen({ navigation }) {
       email.includes('.') &&
       email.split('@')[0].trim().length > 0;
     if (!emailValido) {
-      Alert.alert('Atenção', 'Digite um e-mail válido (ex: nome@exemplo.com).');
+      showAlert({ title: 'Atenção', message: 'Digite um e-mail válido (ex: nome@exemplo.com).', buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
 
@@ -47,7 +49,7 @@ export default function LoginScreen({ navigation }) {
       const user = await loginUser(email, senha);
 
       if (!user) {
-        Alert.alert('Login inválido', 'E-mail ou senha incorretos.');
+        showAlert({ title: 'Login inválido', message: 'E-mail ou senha incorretos.', buttons: [{ text: 'OK', style: 'cancel' }] });
         return;
       }
 
@@ -61,7 +63,7 @@ export default function LoginScreen({ navigation }) {
 
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível fazer login agora.');
+      showAlert({ title: 'Erro', message: 'Não foi possível fazer login agora.', buttons: [{ text: 'OK', style: 'cancel' }] });
     } finally {
       setLoading(false);
     }
@@ -141,6 +143,7 @@ export default function LoginScreen({ navigation }) {
           </Text>
         </View>
       </View>
+      <ThemedAlert config={alertConfig} onClose={hideAlert} />
     </KeyboardAvoidingView>
   );
 }

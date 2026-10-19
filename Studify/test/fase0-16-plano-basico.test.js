@@ -9,6 +9,14 @@ jest.mock('expo-crypto', () => ({
   encoding: { Base64: { encode: jest.fn() } },
 }));
 
+jest.mock('../src/hooks/useThemedAlert', () => ({
+  useThemedAlert: () => ({
+    alertConfig: null,
+    showAlert: jest.fn(),
+    hideAlert: jest.fn(),
+  }),
+}));
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 describe('0.16 - Plano básico (M5 + L1 + L2 + L3)', () => {
