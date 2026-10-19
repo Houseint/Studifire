@@ -27,6 +27,8 @@ import {
   checkAndAwardBadges,
   getProfileStats,
   getWeeklyGoalProgress,
+  getBadgeDefinitions,
+  carregarHistorico,
 } from '../subjects/subjectsDb';
 import {
   requestReminderPermission,
@@ -51,6 +53,7 @@ import {
   CalendarIcon,
   ZapIcon,
   XIcon,
+  LockIcon,
 } from '../../components/common/FeatherIcons';
 
 const BADGE_COLORS = {
@@ -82,12 +85,35 @@ export default function ProfileScreen({ navigation }) {
   });
   const [weeklyGoal, setWeeklyGoal] = useState({ goalMinutes: 300, currentMinutes: 0, percent: 0 });
   const [badges, setBadges] = useState([]);
+  const [allBadges, setAllBadges] = useState([]);
   const [newBadges, setNewBadges] = useState([]);
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const [reminder, setReminder] = useState({ enabled: false, hour: 20, minute: 0 });
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  const [reminderDraft, setReminderDraft] = useState({ hour: 20, minute: 0 });
+  // Dias (0=Dom ... 6=Sáb) com sessão na semana atual — check-in do Estudante Pro.
+  const [activeDays, setActiveDays] = useState([]);
+  // Matérias estudadas em cada dia da semana (mesma janela) — deixa o card útil.
+  const [weekLog, setWeekLog] = useState({});
   const { mode, colors, setMode } = useTheme();
   const s = useMemo(() => getProfileStyles(colors), [colors]);
+
+  // Catálogo de conquistas: todas as 8 (mesmo bloqueadas) para o usuário ver
+  // o que falta. Se o catálogo não carregar, cai para as já desbloqueadas.
+  const badgeCatalog = allBadges.length
+    ? allBadges.map((def) => ({
+        ...def,
+        unlocked: badges.some((b) => b.badge_id === def.id),
+      }))
+    : badges.map((b) => ({
+        id: b.badge_id,
+        name: b.name,
+        description: b.description,
+        icon: b.icon,
+        color: b.color,
+        unlocked: true,
+      }));
 
   useEffect(() => {
     getSessionUser().then(setUser);
@@ -117,17 +143,53 @@ export default function ProfileScreen({ navigation }) {
           }
 
           // Carrega dados em paralelo
-          const [profileStats, goalProgress, userBadges, settings] = await Promise.all([
+          const [profileStats, goalProgress, userBadges, settings, badgeDefs] = await Promise.all([
             getProfileStats(userId),
             getWeeklyGoalProgress(userId),
             getUserBadges(userId),
             getUserSettings(userId),
+            getBadgeDefinitions().catch(() => []),
           ]);
+
+          // Check-in semanal: dias com sessão nesta semana (seg → dom).
+          let weekDays = [];
+          let weekLogData = {};
+          try {
+            if (typeof carregarHistorico === 'function') {
+              const hist = await carregarHistorico(userId);
+              const start = new Date();
+              start.setHours(0, 0, 0, 0);
+              start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+              const days = new Set(
+                (hist || [])
+                  .map((s) => new Date(s.started_at))
+                  .filter((d) => !Number.isNaN(d.getTime()) && d >= start)
+                  .map((d) => d.getDay())
+              );
+              weekDays = [...days];
+              (hist || []).forEach((sess) => {
+                const d = new Date(sess.started_at);
+                if (Number.isNaN(d.getTime()) || d < start) return;
+                const dow = d.getDay();
+                if (!weekLogData[dow]) weekLogData[dow] = [];
+                if (sess.subject_nome && !weekLogData[dow].includes(sess.subject_nome)) {
+                  weekLogData[dow].push(sess.subject_nome);
+                }
+              });
+            }
+          } catch (e) {
+            console.error('Erro ao carregar histórico do perfil:', e);
+          }
+          if (mounted) {
+            setActiveDays(weekDays);
+            setWeekLog(weekLogData);
+          }
 
           if (mounted) {
             setStats(profileStats);
             setWeeklyGoal(goalProgress);
             setBadges(userBadges);
+            setAllBadges(badgeDefs || []);
             setReminder({
               enabled: !!settings.reminder_enabled,
               hour: settings.reminder_hour ?? 20,
@@ -369,6 +431,17 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const openReminderModal = () => {
+    setReminderDraft({ hour: reminder.hour, minute: reminder.minute });
+    setReminderModalVisible(true);
+  };
+
+  const saveReminderTime = async () => {
+    const { hour, minute } = reminderDraft;
+    setReminderModalVisible(false);
+    await handlePickReminderTime(hour, minute);
+  };
+
   // Tema light/dark: troca imediata na UI + persiste no user_settings (como o lembrete).
   const handleToggleTheme = async () => {
     if (!userId) return;
@@ -421,6 +494,25 @@ export default function ProfileScreen({ navigation }) {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return m > 0 ? `${h}h ${m}min` : `${h}h`;
+  };
+
+  // Progresso dos badges bloqueados: mostra o quanto falta para desbloquear.
+  const badgeProgressLabel = (badge) => {
+    if (!badge?.trigger_type || !badge?.trigger_value) return null;
+    const currentByTrigger = {
+      total_minutes: stats.totalMinutos,
+      topics_completed: stats.topicosConcluidos,
+      subjects_count: stats.totalMaterias,
+      sessions_count: stats.totalSessoes,
+      streak_days: stats.streak,
+      weekly_minutes: stats.minutosSemana,
+    };
+    const current = currentByTrigger[badge.trigger_type];
+    if (current == null) return null;
+    const target = badge.trigger_value;
+    const isMinutes = badge.trigger_type === 'total_minutes' || badge.trigger_type === 'weekly_minutes';
+    const fmt = (v) => (isMinutes ? formatMinutes(v) : String(v));
+    return `${fmt(Math.min(current, target))} / ${fmt(target)}`;
   };
 
   if (!userId) {
@@ -492,8 +584,65 @@ export default function ProfileScreen({ navigation }) {
           </View>
           <Text style={s.userName}>{displayName}</Text>
           <Text style={s.userEmail}>{user?.email || '...'}</Text>
-          <View style={s.badgePill}>
-            <Text style={s.badgeText}>Estudante Pro</Text>
+          <View style={s.proCard}>
+            <View style={s.proHeader}>
+              <Text style={s.proTitle}>Estudante Pro</Text>
+              <Text style={s.proWeekCount}>{activeDays.length}/7 dias esta semana</Text>
+            </View>
+            <View style={s.proDots}>
+              {[
+                { dow: 1, label: 'S' },
+                { dow: 2, label: 'T' },
+                { dow: 3, label: 'Q' },
+                { dow: 4, label: 'Q' },
+                { dow: 5, label: 'S' },
+                { dow: 6, label: 'S' },
+                { dow: 0, label: 'D' },
+              ].map(({ dow, label }) => {
+                const done = activeDays.includes(dow);
+                const isToday = new Date().getDay() === dow;
+                return (
+                  <View
+                    key={`dow-${dow}`}
+                    style={[s.proDot, done && s.proDotActive, isToday && !done && s.proDotToday]}
+                  >
+                    <Text style={[s.proDotText, done && s.proDotTextActive]}>{label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+            <View style={s.proWeekLog}>
+              {[
+                { dow: 1, label: 'Seg' },
+                { dow: 2, label: 'Ter' },
+                { dow: 3, label: 'Qua' },
+                { dow: 4, label: 'Qui' },
+                { dow: 5, label: 'Sex' },
+                { dow: 6, label: 'Sáb' },
+                { dow: 0, label: 'Dom' },
+              ].map(({ dow, label }) => {
+                const nomes = weekLog[dow] || [];
+                const isToday = new Date().getDay() === dow;
+                return (
+                  <View key={`log-${dow}`} style={s.proWeekLogRow}>
+                    <Text style={[s.proWeekLogDay, isToday && s.proWeekLogDayToday]}>
+                      {label}
+                    </Text>
+                    <Text
+                      style={[s.proWeekLogText, !nomes.length && s.proWeekLogTextEmpty]}
+                      numberOfLines={1}
+                    >
+                      {nomes.length ? nomes.join(', ') : '—'}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            <Text style={s.proCaption}>
+              {activeDays.includes(new Date().getDay())
+                ? 'Check-in de hoje feito — continue assim!'
+                : 'Estude hoje para manter o posto'}
+            </Text>
           </View>
         </View>
 
@@ -601,6 +750,11 @@ export default function ProfileScreen({ navigation }) {
                 );
               })}
             </View>
+            <TouchableOpacity style={s.customTimeBtn} activeOpacity={0.7} onPress={openReminderModal}>
+              <ClockIcon size={14} color={colors.accent} />
+              <Text style={s.customTimeText}>Outro horário</Text>
+              <Text style={s.customTimeValue}>{formatReminderTime(reminder.hour, reminder.minute)}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -611,9 +765,11 @@ export default function ProfileScreen({ navigation }) {
               <TrophyIcon size={16} color={colors.accent} />
               <Text style={s.sectionTitle}>Conquistas</Text>
             </View>
-            <Text style={s.sectionSubtitle}>{badges.length} de 8 desbloqueadas</Text>
+            <Text style={s.sectionSubtitle}>
+              {badges.length} de {badgeCatalog.length || 8} desbloqueadas
+            </Text>
           </View>
-          {badges.length === 0 ? (
+          {badgeCatalog.length === 0 ? (
             <View style={s.emptyBadges}>
               <Text style={s.emptyIcon}>🏅</Text>
               <Text style={s.emptyTitle}>Nenhuma conquista ainda</Text>
@@ -623,31 +779,45 @@ export default function ProfileScreen({ navigation }) {
             </View>
           ) : (
             <View style={s.badgesScroll} horizontal showsHorizontalScrollIndicator={false}>
-              {badges.map((badge) => (
-                <TouchableOpacity
-                  key={badge.badge_id}
+              {badgeCatalog.map((badge) => (
+                <View
+                  key={badge.id}
                   style={[
                     s.badgeCard,
-                    { backgroundColor: BADGE_COLORS[badge.color] || 'rgba(111, 82, 255, 0.15)', borderColor: badge.color },
+                    badge.unlocked
+                      ? {
+                          backgroundColor:
+                            BADGE_COLORS[badge.color] || 'rgba(111, 82, 255, 0.15)',
+                          borderColor: badge.color,
+                        }
+                      : s.badgeCardLocked,
                   ]}
-                  activeOpacity={0.8}
                 >
-                  <Text style={s.badgeIcon}>{badge.icon}</Text>
+                  {badge.unlocked ? (
+                    <Text style={s.badgeIcon}>{badge.icon}</Text>
+                  ) : (
+                    <LockIcon size={24} color={colors.textMuted} />
+                  )}
                   <View style={s.badgeInfo}>
-                    <Text style={[s.badgeName, { color: badge.color }]}>{badge.name}</Text>
-                    <Text style={s.badgeDesc}>{badge.description}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-              {badges.length < 8 && (
-                <View style={[s.badgeCard, s.badgeCardLocked]}>
-                  <Text style={s.badgeIconLocked}>🔒</Text>
-                  <View style={s.badgeInfo}>
-                    <Text style={s.badgeNameLocked}>Bloqueada</Text>
-                    <Text style={s.badgeDescLocked}>Continue estudando para desbloquear</Text>
+                    <Text
+                      style={[
+                        badge.unlocked ? s.badgeName : s.badgeNameLocked,
+                        badge.unlocked && { color: badge.color },
+                      ]}
+                    >
+                      {badge.name}
+                    </Text>
+                    <Text style={badge.unlocked ? s.badgeDesc : s.badgeDescLocked}>
+                      {badge.description}
+                    </Text>
+                    {!badge.unlocked && badgeProgressLabel(badge) && (
+                      <Text style={s.badgeProgress}>
+                        {badgeProgressLabel(badge)}
+                      </Text>
+                    )}
                   </View>
                 </View>
-              )}
+              ))}
             </View>
           )}
         </View>
@@ -750,6 +920,94 @@ export default function ProfileScreen({ navigation }) {
           ))}
         </TouchableOpacity>
       )}
+
+      {/* Modal Lembrete — escolher horário */}
+      <Modal
+        visible={reminderModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReminderModalVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <TouchableOpacity
+            style={s.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setReminderModalVisible(false)}
+          />
+          <View style={s.modalCard}>
+            <View style={s.modalTitleRow}>
+              <BellIcon size={18} color={colors.accent} />
+              <Text style={s.modalTitle}>Lembrete diário</Text>
+            </View>
+            <Text style={s.modalSubtitle}>Escolha o horário do aviso diário</Text>
+
+            <View style={s.timePickerRow}>
+              <View style={s.timeColumnWrap}>
+                <Text style={s.timeColumnLabel}>Hora</Text>
+                <ScrollView style={s.timeColumn} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 24 }, (_, h) => h).map((h) => {
+                    const active = reminderDraft.hour === h;
+                    return (
+                      <TouchableOpacity
+                        key={`hora-${h}`}
+                        style={[s.timeOption, active && s.timeOptionActive]}
+                        activeOpacity={0.7}
+                        onPress={() => setReminderDraft((d) => ({ ...d, hour: h }))}
+                      >
+                        <Text style={[s.timeOptionText, active && s.timeOptionTextActive]}>
+                          {String(h).padStart(2, '0')}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+              <Text style={s.timeColon}>:</Text>
+              <View style={s.timeColumnWrap}>
+                <Text style={s.timeColumnLabel}>Minuto</Text>
+                <ScrollView style={s.timeColumn} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 60 }, (_, i) => i).map((m) => {
+                    const active = reminderDraft.minute === m;
+                    return (
+                      <TouchableOpacity
+                        key={`minuto-${m}`}
+                        style={[s.timeOption, active && s.timeOptionActive]}
+                        activeOpacity={0.7}
+                        onPress={() => setReminderDraft((d) => ({ ...d, minute: m }))}
+                      >
+                        <Text style={[s.timeOptionText, active && s.timeOptionTextActive]}>
+                          {String(m).padStart(2, '0')}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+
+            <Text style={s.timePreview}>
+              Aviso todo dia às {formatReminderTime(reminderDraft.hour, reminderDraft.minute)}
+            </Text>
+
+            <View style={s.modalButtons}>
+              <TouchableOpacity
+                style={[s.modalButton, s.modalButtonCancel]}
+                activeOpacity={0.7}
+                onPress={() => setReminderModalVisible(false)}
+              >
+                <Text style={s.modalButtonCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modalButton, s.modalButtonConfirm]}
+                activeOpacity={0.7}
+                onPress={saveReminderTime}
+              >
+                <Text style={s.modalButtonConfirmText}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal Meta Semanal */}
       <Modal

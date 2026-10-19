@@ -151,6 +151,98 @@ export function getProfileStyles(colors) {
     fontSize: 14,
     fontWeight: '600',
   },
+  proCard: {
+    marginTop: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    minWidth: 260,
+  },
+  proHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 10,
+  },
+  proTitle: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  proWeekCount: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  proDots: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  proDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card2,
+  },
+  proDotActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  proDotToday: {
+    borderColor: colors.accent,
+  },
+  proDotText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  proDotTextActive: {
+    color: '#FFFFFF',
+  },
+  proCaption: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  proWeekLog: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 8,
+  },
+  proWeekLogRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  proWeekLogDay: {
+    width: 34,
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textMuted,
+  },
+  proWeekLogDayToday: {
+    color: colors.accent,
+  },
+  proWeekLogText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.text,
+  },
+  proWeekLogTextEmpty: {
+    color: colors.textMuted,
+  },
 
   // Stats Grid (2x2)
   statsGrid: {
@@ -401,6 +493,12 @@ export function getProfileStyles(colors) {
     fontSize: 11,
     lineHeight: 16,
   },
+  badgeProgress: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 3,
+  },
 
   // Insights
   insightsGrid: {
@@ -536,6 +634,85 @@ export function getProfileStyles(colors) {
     color: colors.textMuted,
     fontSize: 10,
     marginTop: 4,
+  },
+
+  // Escolher horário do lembrete
+  customTimeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.card2,
+  },
+  customTimeText: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  customTimeValue: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 'auto',
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  timeColumnWrap: {
+    flex: 1,
+  },
+  timeColumnLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  timeColumn: {
+    maxHeight: 190,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card2,
+  },
+  timeOption: {
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  timeOptionActive: {
+    backgroundColor: colors.accent,
+  },
+  timeOptionText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  timeOptionTextActive: {
+    color: '#FFFFFF',
+  },
+  timeColon: {
+    color: colors.textMuted,
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 16,
+  },
+  timePreview: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
+    fontWeight: '600',
   },
 
   // Modal Meta Semanal

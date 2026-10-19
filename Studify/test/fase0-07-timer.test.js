@@ -1,6 +1,6 @@
 import React from 'react';
-import { Alert } from 'react-native';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { TimerProvider } from '../src/shared/timer/TimerContext';
 
 jest.mock('../src/hooks/useUserId', () => ({
   useUserId: () => 1,
@@ -37,10 +37,12 @@ const materia = {
 
 function renderScreen(navigation) {
   return render(
-    <DetailScreen
-      route={{ params: { id: 1 } }}
-      navigation={navigation || { goBack: jest.fn() }}
-    />
+    <TimerProvider>
+      <DetailScreen
+        route={{ params: { id: 1 } }}
+        navigation={navigation || { goBack: jest.fn() }}
+      />
+    </TimerProvider>
   );
 }
 
@@ -72,8 +74,9 @@ test('inicia estudo, avança 65s e para: salva 1 minuto', async () => {
   });
 });
 
-test('navegar para fora durante estudo limpa o interval e não salva sem consentimento', async () => {
-  const screen = renderScreen();
+test('voltar durante o estudo não salva: a sessão continua no timer global', async () => {
+  const goBack = jest.fn();
+  const screen = renderScreen({ goBack });
   await act(async () => {});
 
   fireEvent.press(screen.getByText('▶ Iniciar Estudos'));
@@ -81,18 +84,10 @@ test('navegar para fora durante estudo limpa o interval e não salva sem consent
     jest.advanceTimersByTime(30000);
   });
 
-  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   fireEvent.press(screen.getByText('←'));
 
-  expect(alertSpy).toHaveBeenCalled();
-  const buttons = alertSpy.mock.calls[0][2];
-  const sairSemSalvar = buttons.find((b) => b.text === 'Sair sem salvar');
-  act(() => {
-    sairSemSalvar.onPress();
-  });
-
+  expect(goBack).toHaveBeenCalled();
   expect(registrarSessao).not.toHaveBeenCalled();
-  alertSpy.mockRestore();
 });
 
 test('após unmount o interval não continua atualizando estado', async () => {
@@ -116,8 +111,9 @@ test('após unmount o interval não continua atualizando estado', async () => {
   errorSpy.mockRestore();
 });
 
-test('opção "Salvar e sair" persiste o tempo parcial correto', async () => {
-  const screen = renderScreen();
+test('sair da tela não interrompe nem salva a sessão (timer global)', async () => {
+  const goBack = jest.fn();
+  const screen = renderScreen({ goBack });
   await act(async () => {});
 
   fireEvent.press(screen.getByText('▶ Iniciar Estudos'));
@@ -125,17 +121,10 @@ test('opção "Salvar e sair" persiste o tempo parcial correto', async () => {
     jest.advanceTimersByTime(120000);
   });
 
-  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   fireEvent.press(screen.getByText('←'));
 
-  const buttons = alertSpy.mock.calls[0][2];
-  const salvarESair = buttons.find((b) => b.text === 'Salvar e sair');
-  await act(async () => {
-    await salvarESair.onPress();
-  });
-
-  expect(registrarSessao).toHaveBeenCalledWith(1, 1, 2);
-  alertSpy.mockRestore();
+  expect(goBack).toHaveBeenCalled();
+  expect(registrarSessao).not.toHaveBeenCalled();
 });
 
 test('pausar limpa o interval: tempo não avança enquanto pausado', async () => {

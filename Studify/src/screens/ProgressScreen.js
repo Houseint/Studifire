@@ -12,6 +12,7 @@ import { getProgressScreenStyles } from '../styles/screens/ProgressScreenStyles.
 import { useTheme } from '../shared/theme/ThemeContext';
 import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
+import { getDueTopics } from '../shared/utils/fsrs';
 import SectionHeader from '../components/progress/SectionHeader';
 import EmptyState from '../components/progress/EmptyState';
 import StatCard from '../components/progress/StatCard';
@@ -154,11 +155,21 @@ export default function ProgressScreen({ navigation }) {
       const sessoesDia = sessoes.filter((s) => new Date(s.started_at).toDateString() === dataStr);
       const minutos = sessoesDia.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
 
+      // Matérias estudadas nesse dia (sem repetir)
+      const nomesDia = [
+        ...new Set(
+          sessoesDia
+            .map((s) => materias.find((m) => m.id === s.subject_id)?.nome)
+            .filter(Boolean)
+        ),
+      ];
+
       dados.push({
         dia: DIAS_SEMANA[data.getDay()],
         minutos,
         horas: Math.round(minutos / 60 * 10) / 10,
         isHoje: data.toDateString() === agora.toDateString(),
+        materias: nomesDia,
       });
     }
     return dados;
@@ -181,12 +192,15 @@ export default function ProgressScreen({ navigation }) {
   };
 
   const handleContinuarEstudo = (materia) => {
-    navigation.navigate('Detail', { materia });
+    // DetailScreen lê route.params.id — sem o id ela faz goBack() e volta pra Home.
+    navigation.navigate('Detail', { id: materia.id });
   };
 
   const handleRevisar = (materia) => {
-    navigation.navigate('Detail', { materia, revisar: true });
+    navigation.navigate('Review', { materiaId: materia.id });
   };
+
+  const dueHoje = useMemo(() => getDueTopics(materias).length, [materias]);
 
   if (!userId) {
     return (
@@ -296,6 +310,32 @@ export default function ProgressScreen({ navigation }) {
             tint={colors.primary}
           />
           <WeeklyChart dados={dadosGrafico} maxMinutos={maxMinutos} formatarTempo={formatarTempo} />
+        </View>
+
+        {/* Revisão espaçada */}
+        <View style={s.reviewSection}>
+          <View style={s.reviewCard}>
+            <View style={s.reviewIcon}>
+              <ClockIcon size={22} color={colors.warn} />
+            </View>
+            <View style={s.reviewBody}>
+              <Text style={s.reviewTitle}>Revisões para hoje</Text>
+              <Text style={s.reviewText}>
+                {dueHoje > 0
+                  ? `${dueHoje} ${dueHoje === 1 ? 'tópico vencido' : 'tópicos vencidos'} — revise antes de esquecer.`
+                  : 'Nada vencido. O app só sugere revisão quando o tópico vence.'}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={s.reviewButton}
+            onPress={() => navigation.navigate('Review')}
+            accessibilityRole="button"
+          >
+            <Text style={s.reviewButtonText}>
+              {dueHoje > 0 ? `Abrir revisão (${dueHoje})` : 'Ver próxima revisão'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Em Andamento */}

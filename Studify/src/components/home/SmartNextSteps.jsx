@@ -6,7 +6,7 @@ import { SproutIcon, FlameIcon, ClockIcon, BookOpenIcon, TrophyIcon } from '../c
 
 // Lógica pura e testável: decide o próximo passo a partir de dados que o Home já tem.
 // FASE 2.1: revisão vencida (FSRS) tem prioridade — aparece aqui sem prop nova.
-export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, weeklyRemaining = 0 } = {}) {
+export function getNextStep({ streak = 0, materias = [] } = {}) {
   const all = Array.isArray(materias) ? materias : [];
   if (all.length === 0) {
     return { icon: 'sprout', text: 'Crie sua primeira matéria para começar' };
@@ -29,11 +29,14 @@ export function getNextStep({ streak = 0, materias = [], weeklyPercent = 0, week
   const zero = withPct.find((m) => m.pct === 0);
   if (zero) return { icon: 'sprout', text: `Comece: ${zero.nome}`, materiaId: zero.id };
   const low = withPct.sort((a, b) => a.pct - b.pct)[0];
-  if (low && low.pct < 50) return { icon: 'book', text: `Continue: ${low.nome} (${low.pct}%)`, materiaId: low.id };
-  if ((weeklyPercent || 0) < 100 && (weeklyRemaining || 0) > 0) {
-    return { icon: 'clock', text: `Faltam ${weeklyRemaining} min para a meta semanal` };
+  // Sempre sugere CONTEÚDO (nunca repete a meta semanal do anel).
+  if (low && low.pct < 100) {
+    return { icon: 'book', text: `Continue: ${low.nome} (${low.pct}%)`, materiaId: low.id };
   }
-  return { icon: 'trophy', text: 'Meta no rumo! Revise um tópico de hoje' };
+  return {
+    icon: 'trophy',
+    text: 'Tudo concluído! Revise quando vencer ou crie uma nova matéria',
+  };
 }
 
 const STEP_ICONS = {
@@ -44,10 +47,10 @@ const STEP_ICONS = {
   trophy: TrophyIcon,
 };
 
-const SmartNextSteps = ({ streak = 0, materias = [], weeklyPercent = 0, weeklyRemaining = 0, onPress }) => {
+const SmartNextSteps = ({ streak = 0, materias = [], onPress }) => {
   const { colors } = useTheme();
   const s = useMemo(() => getNextStepsStyles(colors), [colors]);
-  const step = getNextStep({ streak, materias, weeklyPercent, weeklyRemaining });
+  const step = getNextStep({ streak, materias });
   // Toque abre a matéria indicada (quando o passo tem alvo); sem alvo, o card fica inerte.
   const canOpen = step.materiaId != null && typeof onPress === 'function';
   const Icon = STEP_ICONS[step.icon] || SproutIcon;

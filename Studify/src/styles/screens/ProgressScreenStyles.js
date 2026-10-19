@@ -477,6 +477,42 @@ export const getProgressScreenStyles = (colors) => StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  // Revisão espaçada (FSRS)
+  reviewSection: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+  },
+  reviewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,170,0,0.3)',
+    padding: 14,
+  },
+  reviewIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,170,0,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reviewBody: { flex: 1 },
+  reviewTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  reviewText: { color: colors.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 17 },
+  reviewButton: {
+    marginTop: 8,
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,170,0,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,170,0,0.35)',
+  },
+  reviewButtonText: { color: colors.warn, fontSize: 13, fontWeight: '800' },
 });
 
 export const ProgressScreenStyles = getProgressScreenStyles(dark);

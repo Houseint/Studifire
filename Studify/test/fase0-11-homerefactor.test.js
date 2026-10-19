@@ -174,21 +174,24 @@ describe('HomeHeader (extraído)', () => {
 });
 
 describe('ProgressCards (extraído)', () => {
-  test('calcula percentual global e contadores', () => {
+  test('mostra conteúdos vistos e revisões vencidas sem barra enganosa', () => {
     const screen = render(
       <ProgressCards historico={[materiaNaoFixada]} revisados={[materiaNaoFixada]} fixados={[materiaFixada]} busca="" />
     );
 
     expect(screen.getByText('SEU PROGRESSO')).toBeTruthy();
+    expect(screen.getByText('Conteúdos vistos')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
-    expect(screen.getByText('33%')).toBeTruthy();
-    expect(screen.getByText('1/3 tópicos')).toBeTruthy();
+    expect(screen.getByText('Para revisar')).toBeTruthy();
+    expect(screen.getByText('nada vencido hoje')).toBeTruthy();
   });
 
-  test('sem matérias mostra 0%', () => {
+  test('sem matérias mostra zeros honestos', () => {
     const screen = render(<ProgressCards historico={[]} revisados={[]} fixados={[]} busca="" />);
-    expect(screen.getByText('0%')).toBeTruthy();
-    expect(screen.getByText('0/0 tópicos')).toBeTruthy();
+    expect(screen.getByText('Conteúdos vistos')).toBeTruthy();
+    expect(screen.getByText('Para revisar')).toBeTruthy();
+    expect(screen.getByText('nada vencido hoje')).toBeTruthy();
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
   });
 });
 

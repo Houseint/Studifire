@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { TimerProvider } from '../src/shared/timer/TimerContext';
 
 jest.mock('../src/hooks/useUserId', () => ({
   useUserId: () => 1,
@@ -52,7 +53,9 @@ const QUESTOES = [
 
 function renderScreen() {
   return render(
-    <DetailScreen route={{ params: { id: 1 } }} navigation={{ goBack: jest.fn() }} />
+    <TimerProvider>
+      <DetailScreen route={{ params: { id: 1 } }} navigation={{ goBack: jest.fn() }} />
+    </TimerProvider>
   );
 }
 

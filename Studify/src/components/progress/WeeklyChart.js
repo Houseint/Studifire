@@ -21,6 +21,7 @@ export default function WeeklyChart({ dados = [], maxMinutos = 1, formatarTempo 
   const totalMin = useMemo(() => (dados || []).reduce((a, d) => a + (d.minutos || 0), 0), [dados]);
   const scale = Math.max(maxMinutos || 1, META_DIARIA_MIN, 1);
   const goalBottom = (META_DIARIA_MIN / scale) * AREA_H;
+  const abreviar = (nome) => (nome && nome.length > 7 ? `${nome.slice(0, 6)}.` : nome);
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -49,6 +50,11 @@ export default function WeeklyChart({ dados = [], maxMinutos = 1, formatarTempo 
                 <Text style={[styles.mins, { color: d.isHoje ? colors.primaryLight : colors.text, fontWeight: d.isHoje ? '700' : '600' }]}>
                   {d.horas > 0 ? `${d.horas}h` : `${d.minutos}min`}
                 </Text>
+                {d.materias && d.materias.length > 0 && (
+                  <Text style={[styles.subjects, { color: colors.textMuted }]} numberOfLines={2}>
+                    {d.materias.map(abreviar).join(', ')}
+                  </Text>
+                )}
               </View>
             );
           })}
@@ -142,6 +148,12 @@ const styles = StyleSheet.create({
   mins: {
     fontSize: 10,
     marginTop: 2,
+  },
+  subjects: {
+    fontSize: 8,
+    lineHeight: 10,
+    marginTop: 2,
+    textAlign: 'center',
   },
   legendRow: {
     flexDirection: 'row',

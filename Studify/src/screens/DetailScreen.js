@@ -7,11 +7,12 @@ import * as FileSystem from 'expo-file-system';
 import { getMateriaById, atualizarMateria, registrarSessao, carregarSessoesPorMateria, registrarQuizAttempt, carregarQuizAttempts, getSubjectGoal, setSubjectGoal, getSubjectWeekMinutes } from '../services/subjectsDb';
 import { useUserId } from '../hooks/useUserId';
 import { formatarTempo, formatarCronometro } from '../shared/utils/formatTime';
-import { toggleTopicoWithFsrs, aplicarResultadoQuiz } from '../shared/utils/fsrs';
+import { toggleTopicoWithFsrs, aplicarResultadoQuiz, formatDueDate } from '../shared/utils/fsrs';
 import { gerarTopicosComplementares, gerarTopicosDeMaterial, gerarQuiz } from '../services/aiService';
 import TopicCoachCard from '../components/TopicCoachCard';
 import { QuizModal } from '../features/study';
 import { useTheme } from '../shared/theme/ThemeContext';
+import { useTimer } from '../shared/timer/TimerContext';
 import { SparklesIcon, CameraIcon, ImageIcon, FileTextIcon } from '../components/common/FeatherIcons';
 
 export default function DetailScreen({ route, navigation }) {
@@ -19,12 +20,10 @@ export default function DetailScreen({ route, navigation }) {
   const s = useMemo(() => getDetailStyles(colors), [colors]);
   const userId = useUserId();
   const id = route?.params?.id;
+  const timer = useTimer();
+  const session = timer.session && timer.session.materiaId === id ? timer.session : null;
   const [materia, setMateria] = useState(null);
   const [sessoes, setSessoes] = useState([]);
-  const [studying, setStudying] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const intervalRef = useRef(null);
   // IA expand (C híbrido - Detail)
   const [iaGenLoading, setIaGenLoading] = useState(false);
   const [iaGenError, setIaGenError] = useState('');
@@ -37,14 +36,8 @@ export default function DetailScreen({ route, navigation }) {
   // Timer revitalizado: Pomodoro
   const [timerMode, setTimerMode] = useState('free'); // free | pomodoro
   const [pomodoroDuration, setPomodoroDuration] = useState(25);
-  const [pomodoroLeft, setPomodoroLeft] = useState(25 * 60);
-
-  const clearTimer = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
+  // Modo foco: enquanto ativo, o back da matéria é bloqueado (o timer continua).
+  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
     if (!id || !userId) {
@@ -71,71 +64,65 @@ export default function DetailScreen({ route, navigation }) {
     })();
   }, [id, userId]);
 
-  // Timer interval: free = count up, pomodoro = count down
-  useEffect(() => {
-    if (studying && !paused) {
-      intervalRef.current = setInterval(() => {
-        if (timerMode === 'pomodoro') {
-          setPomodoroLeft((prev) => {
-            if (prev <= 1) {
-              clearTimer();
-              // fim do bloco
-              Alert.alert('Pomodoro concluído! 🎉', `Bloco de ${pomodoroDuration} min finalizado. Faça uma pausa de ${pomodoroDuration === 25 ? 5 : 10} min.`, [
-                { text: 'Continuar livre', onPress: () => { setTimerMode('free'); setStudying(false); setPaused(false); } },
-                { text: 'Descansar', style: 'default', onPress: async () => { await stopStudyInternal(prev); } },
-              ]);
-              return 0;
-            }
-            return prev - 1;
-          });
-        } else {
-          setElapsedSeconds((prev) => prev + 1);
-        }
-      }, 1000);
-    } else {
-      clearTimer();
-    }
-    return clearTimer;
-  }, [studying, paused, timerMode, pomodoroDuration]);
-
-  useEffect(() => {
-    return () => clearTimer();
-  }, []);
-
-  // sincroniza pomodoroLeft quando muda duração e não está estudando
-  useEffect(() => {
-    if (!studying) setPomodoroLeft(pomodoroDuration * 60);
-  }, [pomodoroDuration, studying]);
-
+  // Conclusão de tópico exige estudo real: 10 min registrados hoje + mini quiz.
+  // Desmarcar continua livre (corrigir um engano não pode virar labirinto).
   const toggleTopico = async (index) => {
     if (!materia) return;
-    // FASE 2.1 FSRS-lite: marcar feito agenda a próxima revisão (due_date no JSON).
-    const novosTopicos = toggleTopicoWithFsrs(materia.topicos, index);
-    await atualizarMateria(userId, id, { topicos: novosTopicos });
-    setMateria({ ...materia, topicos: novosTopicos });
+    const topico = materia.topicos[index];
+    if (!topico) return;
+    if (topico.estudado) {
+      // FASE 2.1 FSRS-lite: marcar feito agenda a próxima revisão (due_date no JSON).
+      const novosTopicos = toggleTopicoWithFsrs(materia.topicos, index);
+      await atualizarMateria(userId, id, { topicos: novosTopicos });
+      setMateria({ ...materia, topicos: novosTopicos });
+      return;
+    }
+    if (hojeMinutos < MIN_MINUTOS) {
+      Alert.alert(
+        'Tempo mínimo não atingido',
+        `Estude pelo menos ${MIN_MINUTOS} min nesta matéria antes de concluir um tópico. Você tem ${hojeMinutos} min registrados hoje.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Estudar agora', onPress: startStudy },
+        ]
+      );
+      return;
+    }
+    await iniciarQuizTopico(index);
+  };
+
+  const doStart = () => {
+    quizOfertadoRef.current = false;
+    timer.start({
+      materiaId: id,
+      materiaNome: materia?.nome,
+      mode: timerMode,
+      duration: pomodoroDuration,
+      focus: focusMode,
+    });
   };
 
   const startStudy = () => {
-    if (timerMode === 'pomodoro') setPomodoroLeft(pomodoroDuration * 60);
-    else setElapsedSeconds(0);
-    setPaused(false);
-    setStudying(true);
-    quizOfertadoRef.current = false;
+    if (timer.session && timer.session.materiaId !== id) {
+      Alert.alert(
+        'Sessão em andamento',
+        `Já existe um timer em "${timer.session.materiaNome}". Deseja substituir?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Substituir', style: 'destructive', onPress: doStart },
+        ]
+      );
+      return;
+    }
+    doStart();
   };
 
-  // internal helper for pomodoro finish
-  const stopStudyInternal = async (overrideLeft) => {
-    clearTimer();
-    let minutos = 0;
-    if (timerMode === 'pomodoro') {
-      const left = typeof overrideLeft === 'number' ? overrideLeft : pomodoroLeft;
-      const elapsed = pomodoroDuration * 60 - left;
-      minutos = Math.floor(elapsed / 60);
-      // se terminou bloco completo, conta bloco inteiro
-      if (left === 0) minutos = pomodoroDuration;
-    } else {
-      minutos = Math.floor(elapsedSeconds / 60);
-    }
+  // Salva um snapshot vindo do timer global (stop manual ou fim de pomodoro).
+  const salvarSessao = async (snap, { oferecerQuiz = true } = {}) => {
+    if (!snap) return;
+    const minutos = snap.mode === 'pomodoro'
+      ? (snap.finished ? snap.duration : Math.floor(snap.elapsed / 60))
+      : Math.floor(snap.elapsed / 60);
     if (minutos >= 1 && userId && id) {
       await registrarSessao(userId, id, minutos);
       const s = await carregarSessoesPorMateria(userId, id);
@@ -143,29 +130,81 @@ export default function DetailScreen({ route, navigation }) {
       // Meta da matéria anda junto com a sessão salva.
       getSubjectWeekMinutes(userId, id).then((w) => setMeta((prev) => ({ ...prev, week: w }))).catch(() => {});
       // Quiz automático pós-sessão: oferece 1x por sessão (sem auto-modal).
-      if (!quizOfertadoRef.current && materia?.topicos?.length) {
+      if (oferecerQuiz && !quizOfertadoRef.current && materia?.topicos?.length) {
         quizOfertadoRef.current = true;
         Alert.alert('Sessão salva! 🎉', 'Fazer um quiz rápido do tópico?', [
           { text: 'Agora não', style: 'cancel' },
           { text: 'Fazer quiz', onPress: iniciarQuiz },
         ]);
       }
-    } else if ((timerMode === 'free' ? elapsedSeconds : (pomodoroDuration * 60 - pomodoroLeft)) > 0) {
-      // só alerta se não for fim de pomodoro já tratado
-      if (!(timerMode === 'pomodoro' && pomodoroLeft === 0)) {
-        Alert.alert('Tempo muito curto', 'A sessão precisa ter pelo menos 1 minuto para ser registrada.', [{ text: 'OK' }]);
-      }
+    } else if (snap.elapsed > 0 && !snap.finished) {
+      Alert.alert('Tempo muito curto', 'A sessão precisa ter pelo menos 1 minuto para ser registrada.', [{ text: 'OK' }]);
     }
-    setStudying(false);
-    setPaused(false);
-    setElapsedSeconds(0);
-    setPomodoroLeft(pomodoroDuration * 60);
   };
 
-  const stopStudy = async () => stopStudyInternal();
+  const stopStudy = async () => {
+    const snap = timer.stop();
+    if (snap) await salvarSessao(snap);
+  };
 
-  const pauseStudy = () => setPaused(true);
-  const resumeStudy = () => setPaused(false);
+  const pauseStudy = () => timer.pause();
+  const resumeStudy = () => timer.resume();
+
+  // Modo foco: o back (gesto/botão do Android) não abandona a matéria sem
+  // encerrar a sessão. Refs evitam re-registrar o listener a cada segundo.
+  const allowLeaveRef = useRef(false);
+  const timerRef = useRef(timer);
+  timerRef.current = timer;
+  const salvarSessaoRef = useRef(salvarSessao);
+  salvarSessaoRef.current = salvarSessao;
+
+  useEffect(() => {
+    if (!navigation?.addListener) return undefined;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      const active = timerRef.current.session;
+      if (allowLeaveRef.current || !active || active.materiaId !== id || !active.focus) return;
+      e.preventDefault();
+      Alert.alert(
+        'Modo foco ativo 🔒',
+        'Sair agora encerra a sessão e salva o tempo estudado.',
+        [
+          { text: 'Continuar estudando', style: 'cancel' },
+          {
+            text: 'Parar e sair',
+            style: 'destructive',
+            onPress: async () => {
+              const snap = timerRef.current.stop();
+              if (snap) await salvarSessaoRef.current(snap);
+              allowLeaveRef.current = true;
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, id]);
+
+  // Fim do bloco Pomodoro (mesmo se a Detail estiver desmontada, o provider
+  // segue contando; ao voltar, este effect salva o bloco e oferece a pausa).
+  const finishedRef = useRef(false);
+  useEffect(() => {
+    if (!session?.finished) {
+      finishedRef.current = false;
+      return;
+    }
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    const snap = timer.stop();
+    if (snap) {
+      salvarSessao(snap, { oferecerQuiz: false });
+      Alert.alert(
+        'Pomodoro concluído! 🎉',
+        `Bloco de ${snap.duration} min finalizado. Faça uma pausa de ${snap.duration === 25 ? 5 : 10} min.`,
+        [{ text: 'Continuar livre' }, { text: 'Descansar' }]
+      );
+    }
+  }, [session?.finished]);
 
   // Quiz pós-sessão (FASE 2.2): testa o tópico em foco e ajusta o FSRS.
   const [quizVisible, setQuizVisible] = useState(false);
@@ -194,8 +233,21 @@ export default function DetailScreen({ route, navigation }) {
   };
   // Quiz automático: garante 1 oferta por sessão (ref é síncrono — sem duplo Alert).
   const quizOfertadoRef = useRef(false);
+  // Gate de conclusão: guarda o índice do tópico que está esperando o mini quiz.
+  const pendingCompleteRef = useRef(null);
+  const MIN_MINUTOS = 10;
+  const hojeMinutos = useMemo(() => {
+    const hoje = new Date().toDateString();
+    return sessoes.reduce((acc, sessao) => {
+      if (!sessao?.started_at) return acc;
+      return new Date(sessao.started_at).toDateString() === hoje
+        ? acc + (Number(sessao.duration_minutes) || 0)
+        : acc;
+    }, 0);
+  }, [sessoes]);
 
   const iniciarQuiz = async () => {
+    pendingCompleteRef.current = null;
     if (!materia || !materia.topicos?.length) {
       Alert.alert('Sem tópicos', 'Adicione tópicos à matéria para gerar o quiz.');
       return;
@@ -230,11 +282,53 @@ export default function DetailScreen({ route, navigation }) {
     }
   };
 
+  const iniciarQuizTopico = async (index) => {
+    const topico = materia?.topicos?.[index];
+    if (!topico) return;
+    pendingCompleteRef.current = index;
+    setQuizLoading(true);
+    try {
+      const { questoes } = await gerarQuiz(
+        materia.nome,
+        [topico.nome || topico.titulo || 'tópico'],
+        { qtd: 2 }
+      );
+      if (!questoes || questoes.length === 0) {
+        pendingCompleteRef.current = null;
+        Alert.alert('Quiz indisponível', 'A IA não retornou perguntas. Tente de novo para concluir o tópico.');
+        return;
+      }
+      setQuizTopicIndexes([index]);
+      setQuizQuestoes(questoes);
+      setQuizVisible(true);
+    } catch (e) {
+      pendingCompleteRef.current = null;
+      Alert.alert('Quiz indisponível', e?.message || 'Erro ao gerar quiz.');
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
   const finalizarQuiz = async ({ total, correct }) => {
-    const idxs = quizTopicIndexes.length ? quizTopicIndexes : [0];
+    const gateIdx = pendingCompleteRef.current;
+    const passed = total > 0 && correct / total >= 0.6;
+    const idxs = gateIdx != null
+      ? [gateIdx]
+      : (quizTopicIndexes.length ? quizTopicIndexes : [0]);
     const nomes = idxs
       .map((i) => materia?.topicos?.[i]?.nome || materia?.topicos?.[i]?.titulo)
       .filter(Boolean);
+    // Mini quiz de conclusão: reprovou, o tópico NÃO é marcado como estudado.
+    if (gateIdx != null && !passed) {
+      pendingCompleteRef.current = null;
+      setQuizVisible(false);
+      Alert.alert(
+        'Quase lá!',
+        `Você acertou ${correct}/${total}. Revise o tópico e tente de novo para concluí-lo.`
+      );
+      return;
+    }
+    let topicosAtualizados = null;
     try {
       if (userId && id) {
         await registrarQuizAttempt(userId, {
@@ -251,6 +345,7 @@ export default function DetailScreen({ route, navigation }) {
         }
         await atualizarMateria(userId, id, { topicos });
         setMateria({ ...materia, topicos });
+        topicosAtualizados = topicos;
         const q = await carregarQuizAttempts(userId, id).catch(() => []);
         setQuizHistory(q);
       }
@@ -258,6 +353,28 @@ export default function DetailScreen({ route, navigation }) {
       console.warn('Quiz: falha ao salvar resultado', e?.message || e);
     } finally {
       setQuizVisible(false);
+      pendingCompleteRef.current = null;
+    }
+    // Parabéns de verdade: fechou a matéria (ou só o tópico) depois do gate.
+    if (gateIdx != null && passed) {
+      const topicosFinais = topicosAtualizados || materia.topicos;
+      const concluiuTudo = topicosFinais.every((t) => t.estudado);
+      if (concluiuTudo) {
+        Alert.alert(
+          'Matéria concluída! 🎉',
+          `Você concluiu todos os tópicos de ${materia.nome}. A próxima revisão já está agendada.`,
+          [
+            { text: 'Ver progresso', onPress: () => navigation?.navigate?.('Progress') },
+            { text: 'Fechar', style: 'cancel' },
+          ]
+        );
+      } else {
+        const due = formatDueDate(topicosFinais[gateIdx]?.due_date);
+        Alert.alert(
+          'Tópico concluído! ✅',
+          due ? `Próxima revisão em ${due}.` : 'A próxima revisão já está agendada.'
+        );
+      }
     }
   };
 
@@ -372,21 +489,8 @@ export default function DetailScreen({ route, navigation }) {
     fn();
   };
 
-  const handleBack = () => {
-    if (studying) {
-      Alert.alert(
-        'Estudo em andamento',
-        'Você tem uma sessão ativa. Deseja salvar o tempo parcial antes de sair?',
-        [
-          { text: 'Sair sem salvar', style: 'destructive', onPress: () => { clearTimer(); navigation.goBack(); } },
-          { text: 'Salvar e sair', onPress: async () => { await stopStudy(); navigation.goBack(); } },
-        ]
-      );
-    } else {
-      clearTimer();
-      navigation.goBack();
-    }
-  };
+  // O timer vive no provider global: sair da tela não interrompe a sessão.
+  const handleBack = () => navigation.goBack();
 
   if (!materia) {
     return (
@@ -397,6 +501,12 @@ export default function DetailScreen({ route, navigation }) {
     );
   }
 
+  const studying = !!session;
+  const paused = !!session?.paused;
+  const isPomodoro = session?.mode === 'pomodoro';
+  const displaySeconds = session
+    ? (isPomodoro ? Math.max(0, session.duration * 60 - session.elapsed) : session.elapsed)
+    : (timerMode === 'pomodoro' ? pomodoroDuration * 60 : 0);
   const concluidos = materia.topicos.filter((t) => t.estudado).length;
   const total = materia.topicos.length;
   const progresso = total > 0 ? concluidos / total : 0;
@@ -430,19 +540,22 @@ export default function DetailScreen({ route, navigation }) {
         {studying ? (
           <View style={s.timerCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Text style={s.timerLabel}>{paused ? 'Pausado' : timerMode === 'pomodoro' ? `Pomodoro ${pomodoroDuration}:00` : 'Estudando'}</Text>
-              {timerMode === 'pomodoro' && (
+              <Text style={s.timerLabel}>{paused ? 'Pausado' : isPomodoro ? `Pomodoro ${session.duration}:00` : 'Estudando'}</Text>
+              {isPomodoro && (
                 <View style={{ backgroundColor: 'rgba(138,104,255,0.18)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ color: colors.accent, fontSize: 10, fontWeight: '800' }}>foco</Text>
+                  <Text style={{ color: colors.accent, fontSize: 10, fontWeight: '800' }}>pomodoro</Text>
+                </View>
+              )}
+              {session.focus && (
+                <View style={{ backgroundColor: 'rgba(255,170,0,0.18)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ color: '#FFAA00', fontSize: 10, fontWeight: '800' }}>🔒 foco</Text>
                 </View>
               )}
             </View>
-            <Text style={s.timerDisplay}>
-              {timerMode === 'pomodoro' ? formatarCronometro(pomodoroLeft) : formatarCronometro(elapsedSeconds)}
-            </Text>
-            {timerMode === 'pomodoro' && !paused && (
+            <Text style={s.timerDisplay}>{formatarCronometro(displaySeconds)}</Text>
+            {isPomodoro && !paused && (
               <View style={{ width: '100%', height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: 'hidden', marginBottom: 12 }}>
-                <View style={{ width: `${((pomodoroDuration * 60 - pomodoroLeft) / (pomodoroDuration * 60)) * 100}%`, height: '100%', backgroundColor: colors.accent }} />
+                <View style={{ width: `${(session.elapsed / (session.duration * 60)) * 100}%`, height: '100%', backgroundColor: colors.accent }} />
               </View>
             )}
             <View style={s.timerRow}>
@@ -482,6 +595,36 @@ export default function DetailScreen({ route, navigation }) {
                 </TouchableOpacity>
               </View>
             )}
+            <TouchableOpacity
+              onPress={() => setFocusMode((v) => !v)}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 10,
+                backgroundColor: focusMode ? 'rgba(138,104,255,0.16)' : colors.card,
+                borderWidth: 1,
+                borderColor: focusMode ? colors.accentStrong : colors.border,
+                borderRadius: 12, padding: 12, marginBottom: 12,
+              }}
+            >
+              <Text style={{ fontSize: 18 }}>{focusMode ? '🔒' : '🔓'}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: focusMode ? colors.accent : colors.text, fontWeight: '800', fontSize: 13 }}>
+                  Modo foco {focusMode ? 'ativado' : 'desativado'}
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                  {focusMode
+                    ? 'A saída da matéria fica bloqueada durante a sessão.'
+                    : 'Você pode navegar pelo app enquanto estuda.'}
+                </Text>
+              </View>
+              <View style={{
+                width: 42, height: 24, borderRadius: 12,
+                backgroundColor: focusMode ? colors.accentStrong : colors.border,
+                padding: 3, alignItems: focusMode ? 'flex-end' : 'flex-start',
+              }}>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff' }} />
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity style={s.startButton} activeOpacity={0.8} onPress={startStudy}>
               <Text style={s.startButtonText}>{timerMode === 'pomodoro' ? `▶ Iniciar Pomodoro ${pomodoroDuration} min` : '▶ Iniciar Estudos'}</Text>
             </TouchableOpacity>
@@ -506,6 +649,9 @@ export default function DetailScreen({ route, navigation }) {
         )}
 
         <Text style={s.sectionTitle}>Tópicos</Text>
+        <Text style={s.topicGateHint}>
+          Para concluir: 10 min registrados nesta matéria + mini quiz (60% de acerto).
+        </Text>
         {materia.topicos.map((topico, index) => (
           <View key={index} style={{ marginBottom: 8 }}>
             <View style={[s.topicoRow, topico.estudado && s.topicoRowDone]}>
@@ -520,6 +666,9 @@ export default function DetailScreen({ route, navigation }) {
                 <Text style={[s.topicoLabel, topico.estudado && s.topicoLabelDone]}>
                   {topico.nome}
                 </Text>
+                {!!topico.estudado && !!topico.due_date && (
+                  <Text style={s.topicDue}>Revisar em {formatDueDate(topico.due_date)}</Text>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setExpandedIdx(expandedIdx === index ? null : index)}
@@ -720,7 +869,7 @@ export default function DetailScreen({ route, navigation }) {
         visible={quizVisible}
         questoes={quizQuestoes}
         onFinish={finalizarQuiz}
-        onClose={() => setQuizVisible(false)}
+        onClose={() => { pendingCompleteRef.current = null; setQuizVisible(false); }}
       />
     </View>
   );
@@ -765,6 +914,8 @@ export function getDetailStyles(colors) {
     color: colors.textMuted, fontSize: 14, fontWeight: '600', textTransform: 'uppercase',
     letterSpacing: 1, marginBottom: 12,
   },
+  topicGateHint: { color: colors.textMuted, fontSize: 12, marginTop: -6, marginBottom: 10 },
+  topicDue: { color: colors.accent, fontSize: 11, fontWeight: '700', marginTop: 3 },
   topicoRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.card,

@@ -1,8 +1,16 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { TimerProvider } from '../src/shared/timer/TimerContext';
 
 jest.mock('../src/hooks/useUserId', () => ({
   useUserId: () => 1,
+}));
+
+jest.mock('../src/services/aiService', () => ({
+  gerarTopicosComplementares: jest.fn(),
+  gerarTopicosDeMaterial: jest.fn(),
+  gerarQuiz: jest.fn(),
 }));
 
 jest.mock('../src/services/subjectsDb', () => ({
@@ -23,6 +31,7 @@ import {
   registrarSessao,
   carregarSessoesPorMateria,
 } from '../src/services/subjectsDb';
+import { gerarQuiz } from '../src/services/aiService';
 
 const DetailScreen = require('../src/screens/DetailScreen').default;
 
@@ -37,10 +46,12 @@ const materia = {
 
 function renderScreen(navigation) {
   return render(
-    <DetailScreen
-      route={{ params: { id: 1 } }}
-      navigation={navigation || { goBack: jest.fn() }}
-    />
+    <TimerProvider>
+      <DetailScreen
+        route={{ params: { id: 1 } }}
+        navigation={navigation || { goBack: jest.fn() }}
+      />
+    </TimerProvider>
   );
 }
 
@@ -51,6 +62,10 @@ beforeEach(() => {
   carregarSessoesPorMateria.mockResolvedValue([]);
   registrarSessao.mockResolvedValue(undefined);
   atualizarMateria.mockResolvedValue(undefined);
+  gerarQuiz.mockResolvedValue({
+    questoes: [{ pergunta: 'Quanto é 2+2?', alternativas: ['4', '3', '5', '6'], correta: 0 }],
+  });
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -101,23 +116,41 @@ describe('DetailScreen — A2: timer unificado sem refs', () => {
     });
   });
 
-  test('toggleTopico persiste e marca o checkbox', async () => {
+  test('sem tempo mínimo: avisa e não conclui o tópico', async () => {
     const screen = renderScreen();
     await act(async () => {});
 
     fireEvent.press(screen.getByText('Álgebra'));
 
     await waitFor(() => {
-      // FASE 2.1 FSRS-lite: marcar feito agenda due_date (não quebra o check).
-      expect(atualizarMateria).toHaveBeenCalledWith(1, 1, {
-        topicos: [
-          expect.objectContaining({ nome: 'Álgebra', estudado: true, difficulty: 2, reps: 1 }),
-        ],
-      });
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Tempo mínimo não atingido',
+        expect.stringContaining('10 min'),
+        expect.any(Array)
+      );
+    });
+    expect(atualizarMateria).not.toHaveBeenCalled();
+    expect(gerarQuiz).not.toHaveBeenCalled();
+  });
+
+  test('com 10 min registrados: abre mini quiz antes de concluir', async () => {
+    const hoje = new Date().toISOString();
+    carregarSessoesPorMateria.mockResolvedValue([
+      { started_at: hoje, duration_minutes: 12 },
+    ]);
+    const screen = renderScreen();
+    await act(async () => {});
+
+    fireEvent.press(screen.getByText('Álgebra'));
+
+    await waitFor(() => {
+      expect(gerarQuiz).toHaveBeenCalledWith('Matemática', ['Álgebra'], { qtd: 2 });
     });
     await waitFor(() => {
-      expect(screen.getByText('✓')).toBeTruthy();
+      expect(screen.getByText('Quanto é 2+2?')).toBeTruthy();
     });
+    // Ainda não concluiu: só marca depois de acertar 60% no quiz.
+    expect(atualizarMateria).not.toHaveBeenCalled();
   });
 
   test('sem id na rota volta para a tela anterior', async () => {

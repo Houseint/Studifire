@@ -287,8 +287,6 @@ export default function HomeScreen({ navigation }) {
         <SmartNextSteps
           streak={streak}
           materias={[...revisados, ...fixados]}
-          weeklyPercent={weeklyGoal.percent}
-          weeklyRemaining={Math.max(0, weeklyGoal.goalMinutes - weeklyGoal.currentMinutes)}
           onPress={(materiaId) => navigation?.navigate('Detail', { id: materiaId })}
         />
 
@@ -302,6 +300,8 @@ export default function HomeScreen({ navigation }) {
           historico={historico}
           revisados={revisados}
           fixados={fixados}
+          materias={[...revisados, ...fixados]}
+          onPressReview={() => navigation?.navigate('Review')}
           busca={busca}
         />
 

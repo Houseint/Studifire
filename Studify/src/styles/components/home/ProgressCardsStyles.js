@@ -46,18 +46,11 @@ export const getProgressCardsStyles = (colors) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  progressoLinha: {
+  progressoHint: {
+    color: colors.warn,
+    fontSize: 11,
+    fontWeight: '800',
     marginTop: 8,
-    height: 4,
-    width: '100%',
-    backgroundColor: colors.mode === 'light' ? 'rgba(20,27,51,0.12)' : 'rgba(255,255,255,0.12)',
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  progressoLinhaFill: {
-    height: '100%',
-    backgroundColor: '#F59E0B',
-    borderRadius: 999,
   },
 });
 

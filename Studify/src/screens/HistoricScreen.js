@@ -21,6 +21,17 @@ const FILTROS = [
   { key: 'mes', label: 'Este mês' },
 ];
 
+// Ordem de exibição da semana (seg → dom).
+const DIAS_SEMANA = [
+  { dow: 1, label: 'Seg' },
+  { dow: 2, label: 'Ter' },
+  { dow: 3, label: 'Qua' },
+  { dow: 4, label: 'Qui' },
+  { dow: 5, label: 'Sex' },
+  { dow: 6, label: 'Sáb' },
+  { dow: 0, label: 'Dom' },
+];
+
 function getFiltroData(filtro) {
   const now = new Date();
   switch (filtro) {
@@ -78,6 +89,25 @@ export default function HistoricScreen({ navigation }) {
   const sections = agruparPorData(sessoesFiltradas);
   const heatmap = buildActivityHeatmap(sessoes);
   const heatmapColors = getHeatmapColors(colors);
+
+  // Matérias estudadas em cada dia da semana atual — responde "o que eu
+  // estudo sábado/domingo?" sem precisar caçar sessão por sessão.
+  const materiasPorDia = useMemo(() => {
+    const inicio = new Date();
+    inicio.setHours(0, 0, 0, 0);
+    inicio.setDate(inicio.getDate() - ((inicio.getDay() + 6) % 7));
+    const byDay = {};
+    sessoes.forEach((sess) => {
+      const d = new Date(sess.started_at);
+      if (Number.isNaN(d.getTime()) || d < inicio) return;
+      const dow = d.getDay();
+      if (!byDay[dow]) byDay[dow] = [];
+      if (sess.subject_nome && !byDay[dow].includes(sess.subject_nome)) {
+        byDay[dow].push(sess.subject_nome);
+      }
+    });
+    return byDay;
+  }, [sessoes]);
 
   return (
     <View style={s.container}>
@@ -139,6 +169,30 @@ export default function HistoricScreen({ navigation }) {
             </View>
           ))}
         </View>
+      </View>
+
+      <View style={s.heatmapCard}>
+        <Text style={s.heatmapTitle}>Matérias da semana</Text>
+        {DIAS_SEMANA.map(({ dow, label }) => {
+          const nomes = materiasPorDia[dow] || [];
+          const isToday = new Date().getDay() === dow;
+          return (
+                <View
+                  key={`dia-${dow}`}
+                  style={[s.weekDayRow, dow !== 1 && s.weekDayRowBorder]}
+                >
+                  <Text style={[s.weekDayLabel, isToday && s.weekDayLabelToday]}>
+                    {label}
+                  </Text>
+                  <Text
+                    style={[s.weekDayText, !nomes.length && s.weekDayTextEmpty]}
+                    numberOfLines={1}
+                  >
+                {nomes.length ? nomes.join(', ') : '—'}
+              </Text>
+            </View>
+          );
+        })}
       </View>
 
       <SectionList
@@ -242,6 +296,12 @@ export function getHistoricStyles(colors) {
     heatmapDotToday: { borderWidth: 2, borderColor: colors.text },
     heatmapWeekday: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
     heatmapWeekdayToday: { color: colors.text },
+    weekDayRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
+    weekDayRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+    weekDayLabel: { width: 36, fontSize: 11, fontWeight: '800', color: colors.textMuted },
+    weekDayLabelToday: { color: colors.accent },
+    weekDayText: { flex: 1, fontSize: 12, color: colors.text },
+    weekDayTextEmpty: { color: colors.textMuted },
     listContent: { paddingHorizontal: 20, paddingBottom: 40 },
     sectionHeader: {
       color: colors.textMuted, fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
