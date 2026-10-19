@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
  *   // No JSX: <ThemedAlert config={alertConfig} onClose={hideAlert} />
  *   // Para mostrar: showAlert({ title, message, buttons, onClose })
  */
-export default function useThemedAlert() {
+export function useThemedAlert() {
   const [alertConfig, setAlertConfig] = useState(null);
 
   const showAlert = useCallback((config) => {

@@ -47,8 +47,11 @@ export default function ThemedAlert({ config, onClose }) {
                 ]}
                 activeOpacity={0.8}
                 onPress={() => {
+                  // Fecha sempre, inclusive botões "cancel"/OK.
+                  // Fecha antes do callback para que ações que abrem outro
+                  // alerta (ex.: "Estudar agora") não sejam sobrescritas.
+                  onClose?.();
                   btn.onPress?.();
-                  if (btn.style !== 'cancel') onClose?.();
                 }}
               >
                 <Text style={[

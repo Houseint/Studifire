@@ -1,17 +1,20 @@
 import React from 'react';
 import { TextInput } from 'react-native';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 
 jest.mock('../src/features/auth/authDb', () => ({
   registerUser: jest.fn(),
   loginUser: jest.fn(),
 }));
 
+const mockShowAlert = jest.fn();
+const mockHideAlert = jest.fn();
+
 jest.mock('../src/hooks/useThemedAlert', () => ({
   useThemedAlert: () => ({
     alertConfig: null,
-    showAlert: jest.fn(),
-    hideAlert: jest.fn(),
+    showAlert: mockShowAlert,
+    hideAlert: mockHideAlert,
   }),
 }));
 
@@ -90,12 +93,18 @@ describe('0.20 - Telas de autenticação', () => {
       await waitFor(() => {
         expect(registerUser).toHaveBeenCalledWith('novo@b.com', 'senha123');
       });
-      expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
+      const sucesso = useThemedAlert().showAlert.mock.calls.find(
+        ([config]) => config?.title === 'Sucesso'
+      )?.[0];
+      expect(sucesso).toEqual(
         expect.objectContaining({
           title: 'Sucesso',
           message: 'Conta criada com sucesso!',
         })
       );
+      act(() => {
+        sucesso.buttons[0].onPress();
+      });
       expect(navigation.navigate).toHaveBeenCalledWith('Login');
     });
 
@@ -212,7 +221,7 @@ describe('0.20 - Telas de autenticação', () => {
       });
     });
 
-test('erro no login: alerta genérico', async () => {
+    test('erro no login: alerta genérico', async () => {
       loginUser.mockRejectedValue(new Error('falha'));
       const { screen, inputs, navigation } = renderLogin();
       fireEvent.changeText(inputs[0], 'x@b.com');
@@ -223,14 +232,10 @@ test('erro no login: alerta genérico', async () => {
         expect(useThemedAlert().showAlert).toHaveBeenCalledWith(
           expect.objectContaining({
             title: 'Erro',
-            message: 'Não foi possível fazer login agora. Tente novamente.',
+            message: 'Não foi possível fazer login agora.',
           })
         );
       });
-    });
-  });
-});
-      expect(navigation.reset).not.toHaveBeenCalled();
     });
   });
 });

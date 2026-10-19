@@ -11,7 +11,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../shared/theme/ThemeContext';
 import { useUserId } from '../hooks/useUserId';
-import { useThemedAlert, ThemedAlert } from '../hooks/useThemedAlert';
+import { useThemedAlert } from '../hooks/useThemedAlert';
+import ThemedAlert from '../components/common/ThemedAlert';
 import {
   carregarMaterias,
   atualizarMateria,
