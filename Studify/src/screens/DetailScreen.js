@@ -11,6 +11,7 @@ import { toggleTopicoWithFsrs, aplicarResultadoQuiz, formatDueDate } from '../sh
 import { gerarTopicosComplementares, gerarTopicosDeMaterial, gerarQuiz } from '../services/aiService';
 import TopicCoachCard from '../components/TopicCoachCard';
 import { QuizModal } from '../features/study';
+import ThemedAlert from '../components/common/ThemedAlert';
 import { useTheme } from '../shared/theme/ThemeContext';
 import { useTimer } from '../shared/timer/TimerContext';
 import { SparklesIcon, CameraIcon, ImageIcon, FileTextIcon } from '../components/common/FeatherIcons';
@@ -38,6 +39,9 @@ export default function DetailScreen({ route, navigation }) {
   const [pomodoroDuration, setPomodoroDuration] = useState(25);
   // Modo foco: enquanto ativo, o back da matéria é bloqueado (o timer continua).
   const [focusMode, setFocusMode] = useState(false);
+  // Themed alerts (substituem Alert.alert nativo)
+  const [alertFocus, setAlertFocus] = useState(null); // { onConfirm }
+  const [alertMinTime, setAlertMinTime] = useState(null); // { hojeMinutos, onStudy }
 
   useEffect(() => {
     if (!id || !userId) {
@@ -78,14 +82,7 @@ export default function DetailScreen({ route, navigation }) {
       return;
     }
     if (hojeMinutos < MIN_MINUTOS) {
-      Alert.alert(
-        'Tempo mínimo não atingido',
-        `Estude pelo menos ${MIN_MINUTOS} min nesta matéria antes de concluir um tópico. Você tem ${hojeMinutos} min registrados hoje.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Estudar agora', onPress: startStudy },
-        ]
-      );
+      setAlertMinTime({ hojeMinutos, onStudy: startStudy });
       return;
     }
     await iniciarQuizTopico(index);
@@ -164,23 +161,14 @@ export default function DetailScreen({ route, navigation }) {
       const active = timerRef.current.session;
       if (allowLeaveRef.current || !active || active.materiaId !== id || !active.focus) return;
       e.preventDefault();
-      Alert.alert(
-        'Modo foco ativo 🔒',
-        'Sair agora encerra a sessão e salva o tempo estudado.',
-        [
-          { text: 'Continuar estudando', style: 'cancel' },
-          {
-            text: 'Parar e sair',
-            style: 'destructive',
-            onPress: async () => {
-              const snap = timerRef.current.stop();
-              if (snap) await salvarSessaoRef.current(snap);
-              allowLeaveRef.current = true;
-              navigation.dispatch(e.data.action);
-            },
-          },
-        ]
-      );
+      setAlertFocus({
+        onConfirm: async () => {
+          const snap = timerRef.current.stop();
+          if (snap) await salvarSessaoRef.current(snap);
+          allowLeaveRef.current = true;
+          navigation.dispatch(e.data.action);
+        },
+      });
     });
     return unsubscribe;
   }, [navigation, id]);
@@ -870,6 +858,27 @@ export default function DetailScreen({ route, navigation }) {
         questoes={quizQuestoes}
         onFinish={finalizarQuiz}
         onClose={() => { pendingCompleteRef.current = null; setQuizVisible(false); }}
+      />
+      {/* Themed alerts (substituem Alert.alert nativo) */}
+      <ThemedAlert
+        visible={!!alertFocus}
+        title="Modo foco ativo 🔒"
+        message="Sair agora encerra a sessão e salva o tempo estudado."
+        buttons={[
+          { text: 'Continuar estudando', style: 'cancel', onPress: () => setAlertFocus(null) },
+          { text: 'Parar e sair', style: 'destructive', onPress: () => { alertFocus?.onConfirm?.(); setAlertFocus(null); } },
+        ]}
+        onClose={() => setAlertFocus(null)}
+      />
+      <ThemedAlert
+        visible={!!alertMinTime}
+        title="Tempo mínimo não atingido"
+        message={`Estude pelo menos ${MIN_MINUTOS} min nesta matéria antes de concluir um tópico. Você tem ${alertMinTime?.hojeMinutos ?? 0} min registrados hoje.`}
+        buttons={[
+          { text: 'Cancelar', style: 'cancel', onPress: () => setAlertMinTime(null) },
+          { text: 'Estudar agora', style: 'primary', onPress: () => { alertMinTime?.onStudy?.(); setAlertMinTime(null); } },
+        ]}
+        onClose={() => setAlertMinTime(null)}
       />
     </View>
   );

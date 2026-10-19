@@ -123,11 +123,8 @@ describe('DetailScreen — A2: timer unificado sem refs', () => {
     fireEvent.press(screen.getByText('Álgebra'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Tempo mínimo não atingido',
-        expect.stringContaining('10 min'),
-        expect.any(Array)
-      );
+      expect(screen.getByText('Tempo mínimo não atingido')).toBeTruthy();
+      expect(screen.queryByText(/10 min/)).toBeTruthy();
     });
     expect(atualizarMateria).not.toHaveBeenCalled();
     expect(gerarQuiz).not.toHaveBeenCalled();
