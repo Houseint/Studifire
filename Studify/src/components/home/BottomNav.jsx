@@ -15,7 +15,7 @@ const BottomNav = ({ navigation, onAddPress }) => {
     </TouchableOpacity>
     <TouchableOpacity style={styles.navItem} activeOpacity={0.8} onPress={() => navigation?.navigate('Chat')}>
       <View style={styles.navIcon}><BotIcon size={17} color={colors.textMuted} /></View>
-      <Text style={styles.navLabel} numberOfLines={1}>IA</Text>
+      <Text style={styles.navLabel} numberOfLines={1}>Chatbot IA</Text>
     </TouchableOpacity>
     <TouchableOpacity style={[styles.navItem, styles.navItemPlus]} activeOpacity={0.85} onPress={onAddPress}>
       <Text style={styles.navPlusText}>+</Text>

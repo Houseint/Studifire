@@ -282,7 +282,7 @@ describe('BottomNav (extraído)', () => {
     fireEvent.press(screen.getByText('Início'));
     expect(nav.navigate).toHaveBeenCalledWith('Home');
 
-    fireEvent.press(screen.getByText('IA'));
+    fireEvent.press(screen.getByText('Chatbot IA'));
     expect(nav.navigate).toHaveBeenCalledWith('Chat');
 
     fireEvent.press(screen.getByText('Progresso'));
@@ -297,8 +297,8 @@ describe('BottomNav (extraído)', () => {
 
   test('sem navigation não quebra', () => {
     const screen = render(<BottomNav navigation={null} onAddPress={jest.fn()} />);
-    fireEvent.press(screen.getByText('IA'));
-    expect(screen.getByText('IA')).toBeTruthy();
+    fireEvent.press(screen.getByText('Chatbot IA'));
+    expect(screen.getByText('Chatbot IA')).toBeTruthy();
   });
 });
 
