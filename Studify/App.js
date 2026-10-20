@@ -174,7 +174,7 @@ function SplashLoading() {
         resizeMode="contain"
         style={[splashStyles.mark, { transform: [{ scale }], opacity: glow }]}
       />
-      <Text style={splashStyles.wordmark}>Studify</Text>
+      <Text style={splashStyles.wordmark}>Studifire</Text>
       <Text style={splashStyles.tagline}>Seu estudo, organizado.</Text>
       <ActivityIndicator size="small" color="#8A68FF" style={splashStyles.spinner} />
     </View>

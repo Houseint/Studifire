@@ -102,7 +102,7 @@ async function scheduleDaily(hour, minute, body) {
   }
   const hh = String(hour).padStart(2, '0');
   const mm = String(minute).padStart(2, '0');
-  const finalBody = body || `Seu lembrete das ${hh}:${mm} — abra o Studify e mantenha o streak 🔥`;
+  const finalBody = body || `Seu lembrete das ${hh}:${mm} — abra o Studifire e mantenha o streak 🔥`;
   return api.scheduleNotificationAsync({
     content: {
       title: '📚 Hora de estudar!',
@@ -123,7 +123,7 @@ export async function enableDailyReminder(userId, hour, minute) {
   await configureReminderChannel();
   const hh = String(hour).padStart(2, '0');
   const mm = String(minute).padStart(2, '0');
-  const body = await getDueBody(userId, `Seu lembrete das ${hh}:${mm} — abra o Studify e mantenha o streak 🔥`);
+  const body = await getDueBody(userId, `Seu lembrete das ${hh}:${mm} — abra o Studifire e mantenha o streak 🔥`);
   const identifier = await scheduleDaily(hour, minute, body);
   await updateReminderSettings(userId, { enabled: true, hour, minute });
   return identifier;
@@ -156,7 +156,7 @@ export async function restoreDailyReminder(userId) {
       await configureReminderChannel();
       const hour = settings.reminder_hour ?? 20;
       const minute = settings.reminder_minute ?? 0;
-      const body = await getDueBody(userId, `Seu lembrete — abra o Studify e mantenha o streak 🔥`);
+      const body = await getDueBody(userId, `Seu lembrete — abra o Studifire e mantenha o streak 🔥`);
       await scheduleDaily(hour, minute, body);
     }
   } catch (e) {

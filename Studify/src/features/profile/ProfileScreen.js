@@ -264,7 +264,7 @@ export default function ProfileScreen({ navigation }) {
       } else {
         Alert.alert(
           'Permissão necessária',
-          `O Studify precisa de acesso ${nomeRecurso} para trocar o avatar.`
+          `O Studifire precisa de acesso ${nomeRecurso} para trocar o avatar.`
         );
       }
       return false;

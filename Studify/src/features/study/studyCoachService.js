@@ -21,7 +21,7 @@ function isFresh(payload) {
 function buildCoachPrompt(materiaNome, topicoNome, outrosTopicos) {
   const outros = (outrosTopicos || []).filter((t) => t !== topicoNome).slice(0, 5).join(', ') || 'nenhum';
   return {
-    system: `Você é um tutor especialista do Studify. Retorne APENAS JSON válido com as chaves:
+    system: `Você é um tutor especialista do Studifire. Retorne APENAS JSON válido com as chaves:
 {
   "explicacao": "string 1-2 parágrafos curtos (máx 500 chars), PT-BR, Feynman",
   "recursos": [

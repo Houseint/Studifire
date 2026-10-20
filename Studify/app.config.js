@@ -5,7 +5,7 @@ require('dotenv').config();
 // repassamos tudo com spread e só sobrescrevemos o necessário.
 module.exports = ({ config }) => ({
   ...config,
-  name: 'Studify',
+  name: 'Studifire',
   slug: 'studifire',
   version: '1.0.0',
   orientation: 'portrait',

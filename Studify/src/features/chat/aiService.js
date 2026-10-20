@@ -17,7 +17,7 @@ import { getDueTopics } from '../../shared/utils/fsrs'; // revisões vencidas en
 // Prompt base de TODA conversa: trava a IA em "assistente de estudos em PT-BR".
 // O contexto do usuário (RAG) é concatenado depois dele em enviarMensagemContextual.
 
-export const SYSTEM_PROMPT = `Você é um assistente de estudos do app Studify.
+export const SYSTEM_PROMPT = `Você é um assistente de estudos do app Studifire.
 Sua missão é ajudar o usuário a ESTUDAR. Responda a qualquer pergunta com
 potencial educacional: conteúdos de matérias escolares (Matemática, Português,
 História, Geografia, Física, Química, Biologia, Inglês, Filosofia, Sociologia...),
@@ -110,7 +110,7 @@ export async function buildUserContext(userId) {
   if (!stats) return '';
 
   const linhas = [];
-  linhas.push('Contexto do usuário (dados reais do app Studify):');
+  linhas.push('Contexto do usuário (dados reais do app Studifire):');
   linhas.push(
     `- Resumo: ${stats.totalMaterias} matérias, ${stats.totalTopicos} tópicos (${stats.topicosConcluidos} concluídos), ${stats.totalSessoes} sessões, ${stats.totalHoras}h estudadas.`,
   );

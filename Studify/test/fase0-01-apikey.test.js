@@ -19,6 +19,13 @@ describe('0.1 - GROQ_API_KEY fora do bundle client', () => {
     expect((expo.extra || {}).GROQ_API_KEY).toBeUndefined();
   });
 
+  test('app.config.js usa o nome Studifire', () => {
+    const exported = require('../app.config.js');
+    const config = typeof exported === 'function' ? exported({ config: {} }) : exported;
+    const expo = config.expo || config;
+    expect(expo.name).toBe('Studifire');
+  });
+
   test('aiService não lê a chave via Constants.expoConfig.extra', () => {
     jest.doMock('expo-constants', () => ({
       __esModule: true,
