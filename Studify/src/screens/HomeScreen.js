@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -68,6 +68,7 @@ export default function HomeScreen({ navigation }) {
   const [editTopicoInput, setEditTopicoInput] = useState('');
 
   const MAX_TOPICOS = 10;
+  const loadRequestRef = useRef(0);
 
   useEffect(() => {
     getSessionUser().then(setUser);
@@ -92,11 +93,15 @@ export default function HomeScreen({ navigation }) {
 
   const loadHomeData = async () => {
     if (!userId) return;
+    const requestId = ++loadRequestRef.current;
     try {
       const [materias, userData] = await Promise.all([
         carregarMaterias(userId),
         getUserById(userId),
       ]);
+      // Ignora respostas antigas: uma matéria recém-criada não pode ser
+      // sobrescrita por uma carga que começou antes da criação.
+      if (requestId !== loadRequestRef.current) return;
       const revisadas = materias.filter((m) => !m.fixada);
       const fix = materias.filter((m) => m.fixada);
       setRevisados(revisadas);
@@ -110,6 +115,7 @@ export default function HomeScreen({ navigation }) {
           getWeeklyGoalProgress(userId),
           getProfileStats(userId),
         ]);
+        if (requestId !== loadRequestRef.current) return;
         setWeeklyGoal(goal);
         setStreak(stats?.streak || 0);
       } catch (e) {
@@ -126,17 +132,31 @@ export default function HomeScreen({ navigation }) {
       showAlert({ title: 'Nome inválido', message: v.message, buttons: [{ text: 'OK', style: 'cancel' }] });
       return;
     }
+    if (!userId) {
+      showAlert({
+        title: 'Aguarde',
+        message: 'Sua conta ainda está carregando. Tente novamente em instantes.',
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
+      return;
+    }
     const topicosValidos = novosTopicos.filter((t) => t.nome.trim());
     try {
       const nova = await criarMateria(userId, novaMateria.trim(), topicosValidos);
-      setRevisados((prev) => [nova, ...prev]);
+      // Invalida cargas iniciadas antes da criação para que a nova matéria
+      // não seja removida por uma resposta antiga do banco.
+      loadRequestRef.current += 1;
+      setRevisados((prev) => [nova, ...prev.filter((m) => m.id !== nova.id)]);
+      setHistorico((prev) => [nova, ...prev.filter((m) => m.id !== nova.id)].slice(0, 10));
+      setBusca('');
+      setNovaMateria('');
+      setNovosTopicos([]);
+      setTopicoInput('');
+      setModalVisible(false);
     } catch (e) {
+      console.error('Erro ao criar matéria:', e);
       showAlert({ title: 'Erro', message: 'Não foi possível salvar a matéria.', buttons: [{ text: 'OK', style: 'cancel' }] });
     }
-    setNovaMateria('');
-    setNovosTopicos([]);
-    setTopicoInput('');
-    setModalVisible(false);
   };
 
   const acessarMateria = async (materia) => {

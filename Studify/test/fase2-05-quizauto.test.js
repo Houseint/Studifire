@@ -1,7 +1,12 @@
 import React from 'react';
-import { Alert } from 'react-native';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import { TimerProvider } from '../src/shared/timer/TimerContext';
+
+const mockShowAlert = jest.fn();
+
+jest.mock('../src/hooks/useThemedAlert', () => ({
+  useThemedAlert: () => ({ alertConfig: null, showAlert: mockShowAlert, hideAlert: jest.fn() }),
+}));
 
 jest.mock('../src/hooks/useUserId', () => ({
   useUserId: () => 1,
@@ -36,7 +41,7 @@ import { gerarQuiz } from '../src/services/aiService';
 
 const DetailScreen = require('../src/screens/DetailScreen').default;
 
-const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
 
 const materia = {
   id: 1,
@@ -69,7 +74,7 @@ async function estudar60s(screen) {
 }
 
 function ofertaQuizCalls() {
-  return alertSpy.mock.calls.filter((c) => c[0] === 'Sessão salva! 🎉');
+  return mockShowAlert.mock.calls.filter((c) => c[0]?.title === 'Sessão salva! 🎉');
 }
 
 beforeEach(() => {
@@ -126,7 +131,7 @@ describe('Quiz automático pós-sessão', () => {
     });
 
     // Aceita a oferta: onPress do botão "Fazer quiz".
-    const fazerQuiz = ofertaQuizCalls()[0][2].find((b) => b.text === 'Fazer quiz');
+    const fazerQuiz = ofertaQuizCalls()[0][0].buttons.find((b) => b.text === 'Fazer quiz');
     await act(async () => {
       await fazerQuiz.onPress();
     });

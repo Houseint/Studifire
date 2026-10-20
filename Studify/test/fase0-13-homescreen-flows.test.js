@@ -84,11 +84,75 @@ describe('HomeScreen — fluxos de criar/editar/excluir (C1 + modais extraídos)
     await waitFor(() => {
       expect(criarMateria).toHaveBeenCalledWith(1, 'História', [{ nome: 'Idade Média', estudado: false }]);
     });
-    expect(screen.getAllByText('História').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('História').length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('matéria nova continua visível quando uma carga antiga termina depois', async () => {
+    let resolverCargaAntiga;
+    const cargaAntiga = new Promise((resolve) => {
+      resolverCargaAntiga = resolve;
+    });
+    carregarMaterias.mockReturnValueOnce(cargaAntiga);
+    const nova = {
+      id: 3,
+      nome: 'História',
+      topicos: [{ nome: 'Idade Média', estudado: false }],
+      fixada: false,
+      created_at: '2026-01-03T00:00:00.000Z',
+      accessed_at: '2026-01-03T00:00:00.000Z',
+    };
+    criarMateria.mockResolvedValue(nova);
+
+    const { screen } = renderHome();
+    await waitFor(() => {
+      expect(carregarMaterias).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.press(screen.getByText('Adicionar'));
+    fireEvent.changeText(inputPorPlaceholder(screen, 'Ex: Matemática, Física...'), 'História');
+    fireEvent.press(screen.getAllByText('Adicionar')[1]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('História').length).toBeGreaterThanOrEqual(2);
+    });
+
+    await act(async () => {
+      resolverCargaAntiga([materia]);
+    });
+
+    expect(screen.getAllByText('História').length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('criar matéria limpa a busca e mostra a nova matéria em Para revisar', async () => {
+    const nova = {
+      id: 3,
+      nome: 'História',
+      topicos: [{ nome: 'Idade Média', estudado: false }],
+      fixada: false,
+      created_at: '2026-01-03T00:00:00.000Z',
+      accessed_at: '2026-01-03T00:00:00.000Z',
+    };
+    criarMateria.mockResolvedValue(nova);
+
+    const { screen } = renderHome();
+    await waitFor(() => {
+      expect(screen.getAllByText('Matemática').length).toBeGreaterThan(0);
+    });
+
+    const busca = screen.getByPlaceholderText('Pesquisar conteúdos...');
+    fireEvent.changeText(busca, 'Matemática');
+
+    fireEvent.press(screen.getByText('Adicionar'));
+    fireEvent.changeText(inputPorPlaceholder(screen, 'Ex: Matemática, Física...'), 'História');
+    fireEvent.press(screen.getAllByText('Adicionar')[1]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('História').length).toBeGreaterThanOrEqual(2);
+    });
+    expect(screen.getByPlaceholderText('Pesquisar conteúdos...').props.value).toBe('');
   });
 
   test('criar matéria com nome vazio: alerta e não persiste', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const { screen } = renderHome();
     await waitFor(() => {
       expect(carregarMaterias).toHaveBeenCalled();
@@ -97,13 +161,14 @@ describe('HomeScreen — fluxos de criar/editar/excluir (C1 + modais extraídos)
     fireEvent.press(screen.getByText('Adicionar'));
     fireEvent.press(screen.getAllByText('Adicionar')[1]);
 
-    expect(alertSpy).toHaveBeenCalledWith('Nome inválido', 'Nome precisa de 3+ letras.');
+    await waitFor(() => {
+      expect(screen.getByText('Nome inválido')).toBeTruthy();
+    });
+    expect(screen.getByText('Nome precisa de 3+ letras.')).toBeTruthy();
     expect(criarMateria).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
   });
 
   test('criar matéria com baboseira (asdf): alerta e não persiste', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const { screen } = renderHome();
     await waitFor(() => {
       expect(carregarMaterias).toHaveBeenCalled();
@@ -113,9 +178,11 @@ describe('HomeScreen — fluxos de criar/editar/excluir (C1 + modais extraídos)
     fireEvent.changeText(inputPorPlaceholder(screen, 'Ex: Matemática, Física...'), 'asdf');
     fireEvent.press(screen.getAllByText('Adicionar')[1]);
 
-    expect(alertSpy).toHaveBeenCalledWith('Nome inválido', expect.stringContaining('teclado'));
+    await waitFor(() => {
+      expect(screen.getByText('Nome inválido')).toBeTruthy();
+    });
+    expect(screen.getByText(/teclado/)).toBeTruthy();
     expect(criarMateria).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
   });
 
   test('editar matéria: abre modal pelo card do histórico, salva nome e atualiza a lista', async () => {

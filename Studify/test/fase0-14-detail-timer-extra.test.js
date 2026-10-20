@@ -124,7 +124,7 @@ describe('DetailScreen — A2: timer unificado sem refs', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Tempo mínimo não atingido')).toBeTruthy();
-      expect(screen.queryByText(/10 min/)).toBeTruthy();
+      expect(screen.getByText(/Estude pelo menos 10 min/)).toBeTruthy();
     });
     expect(atualizarMateria).not.toHaveBeenCalled();
     expect(gerarQuiz).not.toHaveBeenCalled();
