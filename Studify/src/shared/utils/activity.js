@@ -124,3 +124,117 @@ export function buildWeeklyActivity(sessions, materias, opts = {}) {
   });
   return byDay;
 }
+
+const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function startOfDay(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function dayKeyOf(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Monta os dias do histórico conforme o filtro escolhido.
+ * - hoje: apenas hoje.
+ * - semana: segunda → domingo da semana atual.
+ * - mes: do dia 1 até hoje.
+ * - todos: apenas dias com sessão ou tópico concluído, mais recentes primeiro.
+ *
+ * Cada dia traz sessões e tópicos concluídos no mesmo formato usado pelo
+ * plano semanal da Home (trilha de dias + agenda do dia selecionado).
+ *
+ * @param {Array} sessions
+ * @param {Array} materias
+ * @param {{period?:'todos'|'hoje'|'semana'|'mes', now?:Date}} [opts]
+ * @returns {Array<{key:string,date:Date,weekday:string,day:number,isToday:boolean,sessions:Array,topics:Array,totalMinutes:number}>}
+ */
+export function buildHistoryDays(sessions, materias, opts = {}) {
+  const period = ['hoje', 'semana', 'mes'].includes(opts.period) ? opts.period : 'todos';
+  const now = opts.now instanceof Date ? opts.now : new Date();
+  const today = startOfDay(now);
+  const todayKey = dayKeyOf(today);
+
+  const sessionsByDay = new Map();
+  const topicsByDay = new Map();
+  const ensure = (map, key) => {
+    if (!map.has(key)) map.set(key, []);
+    return map.get(key);
+  };
+
+  for (const sess of Array.isArray(sessions) ? sessions : []) {
+    const d = new Date(sess?.started_at);
+    if (Number.isNaN(d.getTime())) continue;
+    ensure(sessionsByDay, dayKeyOf(d)).push(sess);
+  }
+
+  for (const m of Array.isArray(materias) ? materias : []) {
+    for (const t of Array.isArray(m?.topicos) ? m.topicos : []) {
+      const completedAt = getTopicCompletedAt(t);
+      if (!completedAt) continue;
+      const topicoNome = t?.nome || t?.titulo || 'tópico';
+      const key = `${m?.id ?? m?.nome}-${topicoNome}`;
+      const list = ensure(topicsByDay, dayKeyOf(completedAt));
+      if (list.some((x) => x.key === key)) continue;
+      list.push({
+        key,
+        materiaId: m?.id,
+        materiaNome: m?.nome || 'Matéria',
+        topicoNome,
+        completedAt,
+      });
+    }
+  }
+
+  const dates = [];
+  if (period === 'hoje') {
+    dates.push(today);
+  } else if (period === 'semana') {
+    const start = startOfWeekMonday(today);
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      dates.push(d);
+    }
+  } else if (period === 'mes') {
+    for (let day = 1; day <= today.getDate(); day += 1) {
+      dates.push(new Date(today.getFullYear(), today.getMonth(), day));
+    }
+  } else {
+    const keys = new Set([...sessionsByDay.keys(), ...topicsByDay.keys()]);
+    [...keys]
+      .map((key) => {
+        const [y, m, d] = key.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      })
+      .filter((d) => d <= today)
+      .sort((a, b) => b - a)
+      .forEach((d) => dates.push(d));
+  }
+
+  return dates.map((date) => {
+    const key = dayKeyOf(date);
+    const daySessions = (sessionsByDay.get(key) || [])
+      .slice()
+      .sort((a, b) => new Date(a.started_at) - new Date(b.started_at));
+    const topics = (topicsByDay.get(key) || [])
+      .slice()
+      .sort((a, b) => a.completedAt - b.completedAt);
+    return {
+      key,
+      date,
+      weekday: WEEKDAY_LABELS[date.getDay()],
+      day: date.getDate(),
+      isToday: key === todayKey,
+      sessions: daySessions,
+      topics,
+      totalMinutes: daySessions.reduce(
+        (acc, sess) => acc + (Number(sess?.duration_minutes) || 0),
+        0
+      ),
+    };
+  });
+}

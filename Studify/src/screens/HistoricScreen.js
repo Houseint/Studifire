@@ -1,19 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, SectionList, StatusBar, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StatusBar, StyleSheet, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
-import { buildActivityHeatmap, buildWeeklyActivity } from '../shared/utils/activity';
+import { buildHistoryDays } from '../shared/utils/activity';
 import { getTopicCompletedAt } from '../shared/utils/fsrs';
+import { BookOpenIcon, CheckIcon, CalendarIcon } from '../components/common/FeatherIcons';
 import { useTheme } from '../shared/theme/ThemeContext';
-
-const HEATMAP_COLORS_DARK = ['#1B2342', '#2E3A6E', '#4A569E', '#6F52FF', '#9D86FF'];
-const HEATMAP_COLORS_LIGHT = ['#E1E6F5', '#C3CBEE', '#9AA4DF', '#6F52FF', '#4B32CC'];
-
-function getHeatmapColors(colors) {
-  return colors.mode === 'light' ? HEATMAP_COLORS_LIGHT : HEATMAP_COLORS_DARK;
-}
 
 const FILTROS = [
   { key: 'todos', label: 'Todos' },
@@ -21,35 +15,6 @@ const FILTROS = [
   { key: 'semana', label: 'Esta semana' },
   { key: 'mes', label: 'Este mês' },
 ];
-
-// Ordem de exibição da semana (seg → dom).
-const DIAS_SEMANA = [
-  { dow: 1, label: 'Seg' },
-  { dow: 2, label: 'Ter' },
-  { dow: 3, label: 'Qua' },
-  { dow: 4, label: 'Qui' },
-  { dow: 5, label: 'Sex' },
-  { dow: 6, label: 'Sáb' },
-  { dow: 0, label: 'Dom' },
-];
-
-function getFiltroData(filtro) {
-  const now = new Date();
-  switch (filtro) {
-    case 'hoje':
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    case 'semana': {
-      const d = new Date(now);
-      d.setDate(d.getDate() - d.getDay());
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }
-    case 'mes':
-      return new Date(now.getFullYear(), now.getMonth(), 1);
-    default:
-      return null;
-  }
-}
 
 export default function HistoricScreen({ navigation }) {
   const userId = useUserId();
@@ -59,6 +24,7 @@ export default function HistoricScreen({ navigation }) {
   const [materias, setMaterias] = useState([]);
   const [sessoes, setSessoes] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
+  const [selectedDayKey, setSelectedDayKey] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -77,26 +43,78 @@ export default function HistoricScreen({ navigation }) {
     }, [userId])
   );
 
-  const filtroData = getFiltroData(filtro);
-  const sessoesFiltradas = filtroData
-    ? sessoes.filter((s) => new Date(s.started_at) >= filtroData)
-    : sessoes;
-
-  const totalMaterias = materias.length;
-  const totalEstudadoMin = sessoes.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
-  const diasAtivos = new Set(
-    sessoes.map((s) => new Date(s.started_at).toDateString())
-  ).size;
-
-  const sections = agruparPorData(sessoesFiltradas);
-  const heatmap = buildActivityHeatmap(sessoes);
-  const heatmapColors = getHeatmapColors(colors);
-
-  // Atividade da semana atual (seg → dom): sessões + tópicos concluídos.
-  const atividadeSemana = useMemo(
-    () => buildWeeklyActivity(sessoes, materias),
-    [sessoes, materias]
+  const historyDays = useMemo(
+    () => buildHistoryDays(sessoes, materias, { period: filtro }),
+    [sessoes, materias, filtro]
   );
+  const sessoesPeriodo = useMemo(
+    () => historyDays.flatMap((d) => d.sessions),
+    [historyDays]
+  );
+  const selectedDay = useMemo(
+    () =>
+      historyDays.find((d) => d.key === selectedDayKey) ||
+      historyDays.find((d) => d.isToday) ||
+      historyDays[0] ||
+      null,
+    [historyDays, selectedDayKey]
+  );
+  const totalSessoes = sessoesPeriodo.length;
+  const totalMaterias = new Set(
+    [
+      ...sessoesPeriodo.map((sess) => sess.subject_nome),
+      ...historyDays.flatMap((d) => d.topics.map((t) => t.materiaNome)),
+    ].filter(Boolean)
+  ).size;
+  const totalEstudadoMin = sessoesPeriodo.reduce(
+    (acc, sess) => acc + (sess.duration_minutes || 0),
+    0
+  );
+  const diasAtivos = historyDays.filter(
+    (d) => d.sessions.length > 0 || d.topics.length > 0
+  ).length;
+
+  const renderDayPill = (d, fixed = false) => {
+    const selected = selectedDay?.key === d.key;
+    const temAtividade = d.sessions.length > 0 || d.topics.length > 0;
+    return (
+      <TouchableOpacity
+        key={d.key}
+        style={[
+          s.dayPill,
+          fixed && s.dayPillFixed,
+          historyDays.length === 1 && s.dayPillSingle,
+          d.isToday && s.dayPillToday,
+          selected && s.dayPillSelected,
+        ]}
+        activeOpacity={0.7}
+        onPress={() => setSelectedDayKey(d.key)}
+        accessibilityRole="button"
+        accessibilityLabel={`Dia ${d.weekday} ${String(d.day).padStart(2, '0')}`}
+        accessibilityState={{ selected }}
+      >
+        <Text
+          style={[
+            s.dayPillLabel,
+            d.isToday && s.dayPillLabelToday,
+            selected && s.dayPillLabelSelected,
+          ]}
+        >
+          {d.weekday}
+        </Text>
+        <Text style={[s.dayPillNumber, selected && s.dayPillNumberSelected]}>
+          {String(d.day).padStart(2, '0')}
+        </Text>
+        <View
+          style={[
+            s.dayDot,
+            temAtividade && s.dayDotActive,
+            selected && s.dayDotSelected,
+          ]}
+        />
+      </TouchableOpacity>
+    );
+  };
 
   // Tópicos concluídos no mesmo dia da sessão selecionada.
   const selectedTopics = useMemo(() => {
@@ -162,97 +180,128 @@ export default function HistoricScreen({ navigation }) {
         ))}
       </View>
 
-      <View style={s.heatmapCard}>
-        <Text style={s.heatmapTitle}>Últimos 7 dias</Text>
-        <View style={s.heatmapRow}>
-          {heatmap.map((d) => (
-            <View key={d.key} style={s.heatmapCell}>
-              <View
-                style={[
-                  s.heatmapDot,
-                  { backgroundColor: heatmapColors[d.level] || heatmapColors[0] },
-                  d.isToday && s.heatmapDotToday,
-                ]}
-              />
-              <Text style={[s.heatmapWeekday, d.isToday && s.heatmapWeekdayToday]}>
-                {d.weekday}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={s.heatmapCard}>
-        <Text style={s.heatmapTitle}>Sua semana</Text>
-        {DIAS_SEMANA.map(({ dow, label }) => {
-          const atividade = atividadeSemana[dow] || { sessoes: [], topicos: [] };
-          const isToday = new Date().getDay() === dow;
-          const temSessoes = atividade.sessoes.length > 0;
-          const temTopicos = atividade.topicos.length > 0;
-          return (
-            <View
-              key={`dia-${dow}`}
-              style={[s.weekDayRow, dow !== 1 && s.weekDayRowBorder]}
-            >
-              <Text style={[s.weekDayLabel, isToday && s.weekDayLabelToday]}>
-                {label}
-              </Text>
-              <View style={s.weekDayContent}>
-                {temSessoes ? (
-                  <Text style={s.weekDayText} numberOfLines={1}>
-                    {atividade.sessoes.join(', ')}
-                  </Text>
-                ) : null}
-                {temTopicos ? (
-                  <Text style={s.weekDayTopicText} numberOfLines={2}>
-                    ✓ {atividade.topicos.map((t) => `${t.materiaNome} · ${t.topicoNome}`).join(', ')}
-                  </Text>
-                ) : null}
-                {!temSessoes && !temTopicos ? (
-                  <Text style={[s.weekDayText, s.weekDayTextEmpty]}>—</Text>
-                ) : null}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={s.sessionItem}
-            activeOpacity={0.7}
-            onPress={() => setSelectedSession(item)}
-            accessibilityRole="button"
-            accessibilityLabel={`Ver sessão de ${item.subject_nome}`}
-          >
-            <View style={s.sessionLeft}>
-              <Text style={s.sessionSubject}>{item.subject_nome}</Text>
-              <Text style={s.sessionTime}>
-                {new Date(item.started_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-            <View style={s.sessionRight}>
-              <Text style={s.sessionDuration}>
-                {item.duration_minutes > 0 ? formatarTempo(item.duration_minutes) : '—'}
-              </Text>
-              <Text style={s.sessionChevron}>›</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        renderSectionHeader={({ section: { title } }) => (
-          <Text style={s.sectionHeader}>{title}</Text>
-        )}
+      <ScrollView
+        style={s.contentScroll}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={s.empty}>
-            <Text style={s.emptyText}>Nenhuma sessão encontrada</Text>
+      >
+        <View style={s.historyCard}>
+          <View style={s.cardHeader}>
+            <View style={s.cardIconWrap}>
+              <CalendarIcon size={16} color={colors.accent} />
+            </View>
+            <View style={s.cardHeaderBody}>
+              <Text style={s.cardLabel}>HISTÓRICO</Text>
+              <Text style={s.cardText}>
+                {totalSessoes} {totalSessoes === 1 ? 'sessão' : 'sessões'} · {formatarTempo(totalEstudadoMin)}
+              </Text>
+            </View>
           </View>
-        }
-      />
+
+          {historyDays.length === 0 ? (
+            <Text style={s.emptyDayText}>
+              Nenhuma sessão registrada nesse período.
+            </Text>
+          ) : (
+            <>
+              {historyDays.length <= 7 ? (
+                <View style={s.weekStrip}>
+                  {historyDays.map((d) => renderDayPill(d))}
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.weekStripScroll}
+                >
+                  {historyDays.map((d) => renderDayPill(d, true))}
+                </ScrollView>
+              )}
+
+              {selectedDay ? (
+                <View style={[s.dayBlock, selectedDay.isToday && s.dayBlockToday]}>
+                  <View style={s.dayHeader}>
+                    <Text style={s.dayLabel}>
+                      {selectedDay.weekday} · {String(selectedDay.day).padStart(2, '0')}
+                    </Text>
+                    {selectedDay.isToday ? (
+                      <Text style={s.todayBadge}>HOJE</Text>
+                    ) : null}
+                  </View>
+
+                  {selectedDay.sessions.length === 0 && selectedDay.topics.length === 0 ? (
+                    <Text style={s.emptyDayText}>
+                      Nenhuma sessão registrada nesse dia.
+                    </Text>
+                  ) : (
+                    <>
+                      {selectedDay.sessions.map((sess, idx) => (
+                        <TouchableOpacity
+                          key={`sess-${sess.id ?? idx}`}
+                          style={s.itemRow}
+                          activeOpacity={0.7}
+                          onPress={() => setSelectedSession(sess)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Ver sessão de ${sess.subject_nome}`}
+                        >
+                          <View style={s.itemIcon}>
+                            <BookOpenIcon size={14} color={colors.accent} />
+                          </View>
+                          <View style={s.itemBody}>
+                            <Text style={s.itemName} numberOfLines={1}>
+                              {sess.subject_nome}
+                            </Text>
+                            <Text style={s.itemMeta} numberOfLines={1}>
+                              {formatHora(sess.started_at)} ·{' '}
+                              {sess.duration_minutes > 0
+                                ? formatarTempo(sess.duration_minutes)
+                                : '—'}
+                            </Text>
+                          </View>
+                          <Text style={s.itemTag}>SESSÃO</Text>
+                          <Text style={s.sessionChevron}>›</Text>
+                        </TouchableOpacity>
+                      ))}
+
+                      {selectedDay.topics.length > 0 ? (
+                        <View style={s.topicsBlock}>
+                          <Text style={s.topicsLabel}>TÓPICOS CONCLUÍDOS</Text>
+                          {selectedDay.topics.map((topico) => (
+                            <TouchableOpacity
+                              key={topico.key}
+                              style={s.itemRow}
+                              activeOpacity={0.7}
+                              disabled={topico.materiaId == null}
+                              onPress={() =>
+                                navigation?.navigate('Detail', { id: topico.materiaId })
+                              }
+                              accessibilityRole="button"
+                              accessibilityLabel={`Abrir ${topico.materiaNome}`}
+                            >
+                              <View style={[s.itemIcon, s.topicIcon]}>
+                                <CheckIcon size={14} color={colors.accent} />
+                              </View>
+                              <View style={s.itemBody}>
+                                <Text style={s.itemName} numberOfLines={1}>
+                                  {topico.topicoNome}
+                                </Text>
+                                <Text style={s.itemMeta} numberOfLines={1}>
+                                  {topico.materiaNome} · Concluído
+                                </Text>
+                              </View>
+                              <Text style={s.itemTag}>TÓPICO</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : null}
+                    </>
+                  )}
+                </View>
+              ) : null}
+            </>
+          )}
+        </View>
+      </ScrollView>
 
       <Modal
         visible={!!selectedSession}
@@ -345,18 +394,6 @@ function formatarTempo(minutos) {
   return m > 0 ? `${h}h${m}min` : `${h}h`;
 }
 
-function agruparPorData(sessoes) {
-  const map = {};
-  sessoes.forEach((s) => {
-    const data = new Date(s.started_at).toLocaleDateString('pt-BR', {
-      day: '2-digit', month: 'long', year: 'numeric',
-    });
-    if (!map[data]) map[data] = [];
-    map[data].push(s);
-  });
-  return Object.entries(map).map(([title, data]) => ({ title, data }));
-}
-
 function formatSessionDate(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -418,45 +455,94 @@ export function getHistoricStyles(colors) {
     filtroBtnAtivo: { backgroundColor: 'rgba(111,82,255,0.2)' },
     filtroBtnText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
     filtroBtnTextAtivo: { color: colors.accent },
-    heatmapCard: {
-      backgroundColor: colors.card, borderRadius: 14,
-      borderWidth: 1, borderColor: colors.border,
-      paddingVertical: 12, paddingHorizontal: 16,
-      marginHorizontal: 20, marginBottom: 12,
-    },
-    heatmapTitle: { color: colors.textMuted, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
-    heatmapRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    heatmapCell: { alignItems: 'center' },
-    heatmapDot: { width: 26, height: 26, borderRadius: 8, marginBottom: 6 },
-    heatmapDotToday: { borderWidth: 2, borderColor: colors.text },
-    heatmapWeekday: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-    heatmapWeekdayToday: { color: colors.text },
-    weekDayRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 5 },
-    weekDayRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-    weekDayLabel: { width: 36, fontSize: 11, fontWeight: '800', color: colors.textMuted, paddingTop: 1 },
-    weekDayLabelToday: { color: colors.accent },
-    weekDayContent: { flex: 1 },
-    weekDayText: { fontSize: 12, color: colors.text },
-    weekDayTextEmpty: { color: colors.textMuted },
-    weekDayTopicText: { fontSize: 11, color: colors.accent, marginTop: 3, lineHeight: 15 },
+    contentScroll: { flex: 1 },
     listContent: { paddingHorizontal: 20, paddingBottom: 40 },
-    sectionHeader: {
-      color: colors.textMuted, fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
-      letterSpacing: 0.8, marginTop: 16, marginBottom: 8,
+    historyCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginBottom: 16,
     },
-    sessionItem: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: colors.card, borderRadius: 12,
-      padding: 14, marginBottom: 8,
+    cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+    cardIconWrap: {
+      width: 32, height: 32, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center', marginRight: 10,
+      backgroundColor: 'rgba(111,82,255,0.14)',
+      borderWidth: 1, borderColor: 'rgba(111,82,255,0.30)',
     },
-    sessionLeft: { flex: 1 },
-    sessionSubject: { color: colors.text, fontSize: 15, fontWeight: '600' },
-    sessionTime: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
-    sessionRight: { flexDirection: 'row', alignItems: 'center', marginLeft: 10 },
-    sessionDuration: { color: colors.accent, fontSize: 14, fontWeight: '600' },
-    sessionChevron: { color: colors.textMuted, fontSize: 20, marginLeft: 6, lineHeight: 20 },
-    empty: { alignItems: 'center', marginTop: 60 },
-    emptyText: { color: colors.textMuted, fontSize: 15 },
+    cardHeaderBody: { flex: 1 },
+    cardLabel: {
+      color: colors.textMuted, fontSize: 10, fontWeight: '800',
+      textTransform: 'uppercase', letterSpacing: 0.6,
+    },
+    cardText: { color: colors.textMuted, fontSize: 11, marginTop: 3 },
+    weekStrip: { flexDirection: 'row', gap: 4, marginBottom: 10 },
+    weekStripScroll: { gap: 6, paddingBottom: 8, marginBottom: 2 },
+    dayPill: {
+      flex: 1, alignItems: 'center', paddingVertical: 7,
+      borderRadius: 10, borderWidth: 1, borderColor: 'transparent',
+      backgroundColor: colors.card2,
+    },
+    dayPillFixed: { flex: 0, width: 54 },
+    dayPillSingle: { flex: 0, width: 72 },
+    dayPillToday: { borderColor: 'rgba(111,82,255,0.35)' },
+    dayPillSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
+    dayPillLabel: {
+      color: colors.textMuted, fontSize: 9, fontWeight: '800',
+      textTransform: 'uppercase', letterSpacing: 0.3,
+    },
+    dayPillLabelToday: { color: colors.accent },
+    dayPillLabelSelected: { color: '#fff' },
+    dayPillNumber: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 3 },
+    dayPillNumberSelected: { color: '#fff' },
+    dayDot: {
+      width: 4, height: 4, borderRadius: 2, marginTop: 4,
+      backgroundColor: colors.textMuted, opacity: 0.25,
+    },
+    dayDotActive: { backgroundColor: colors.accent, opacity: 1 },
+    dayDotSelected: { backgroundColor: '#fff', opacity: 1 },
+    dayBlock: {
+      borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10,
+    },
+    dayBlockToday: {},
+    dayHeader: {
+      flexDirection: 'row', alignItems: 'center',
+      justifyContent: 'space-between', marginBottom: 8,
+    },
+    dayLabel: { color: colors.text, fontSize: 12, fontWeight: '800' },
+    todayBadge: {
+      color: colors.accent, fontSize: 9, fontWeight: '800', letterSpacing: 0.5,
+      borderWidth: 1, borderColor: 'rgba(111,82,255,0.35)', borderRadius: 6,
+      paddingHorizontal: 6, paddingVertical: 2, overflow: 'hidden',
+    },
+    emptyDayText: { color: colors.textMuted, fontSize: 12, paddingVertical: 10 },
+    itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7 },
+    itemIcon: {
+      width: 30, height: 30, borderRadius: 9,
+      alignItems: 'center', justifyContent: 'center', marginRight: 9,
+      backgroundColor: 'rgba(111,82,255,0.12)',
+      borderWidth: 1, borderColor: 'rgba(111,82,255,0.25)',
+    },
+    topicIcon: { backgroundColor: 'rgba(111,82,255,0.08)' },
+    itemBody: { flex: 1 },
+    itemName: { color: colors.text, fontSize: 13, fontWeight: '600' },
+    itemMeta: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+    itemTag: {
+      color: colors.accent, fontSize: 9, fontWeight: '800', letterSpacing: 0.4,
+      borderWidth: 1, borderColor: 'rgba(111,82,255,0.35)', borderRadius: 7,
+      paddingHorizontal: 6, paddingVertical: 3, overflow: 'hidden', marginLeft: 8,
+    },
+    sessionChevron: { color: colors.textMuted, fontSize: 18, marginLeft: 6, lineHeight: 18 },
+    topicsBlock: {
+      marginTop: 8, paddingTop: 8,
+      borderTopWidth: 1, borderTopColor: colors.border,
+    },
+    topicsLabel: {
+      color: colors.textMuted, fontSize: 9, fontWeight: '800',
+      letterSpacing: 0.6, marginBottom: 4,
+    },
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
       justifyContent: 'center', paddingHorizontal: 24,
