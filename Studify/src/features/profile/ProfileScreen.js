@@ -589,28 +589,6 @@ export default function ProfileScreen({ navigation }) {
               <Text style={s.proTitle}>Estudante Pro</Text>
               <Text style={s.proWeekCount}>{activeDays.length}/7 dias esta semana</Text>
             </View>
-            <View style={s.proDots}>
-              {[
-                { dow: 1, label: 'S' },
-                { dow: 2, label: 'T' },
-                { dow: 3, label: 'Q' },
-                { dow: 4, label: 'Q' },
-                { dow: 5, label: 'S' },
-                { dow: 6, label: 'S' },
-                { dow: 0, label: 'D' },
-              ].map(({ dow, label }) => {
-                const done = activeDays.includes(dow);
-                const isToday = new Date().getDay() === dow;
-                return (
-                  <View
-                    key={`dow-${dow}`}
-                    style={[s.proDot, done && s.proDotActive, isToday && !done && s.proDotToday]}
-                  >
-                    <Text style={[s.proDotText, done && s.proDotTextActive]}>{label}</Text>
-                  </View>
-                );
-              })}
-            </View>
             <View style={s.proWeekLog}>
               {[
                 { dow: 1, label: 'Seg' },
@@ -778,7 +756,12 @@ export default function ProfileScreen({ navigation }) {
               </Text>
             </View>
           ) : (
-            <View style={s.badgesScroll} horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView
+              style={s.badgesScroll}
+              contentContainerStyle={s.badgesScrollContent}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
               {badgeCatalog.map((badge) => (
                 <View
                   key={badge.id}
@@ -818,7 +801,7 @@ export default function ProfileScreen({ navigation }) {
                   </View>
                 </View>
               ))}
-            </View>
+            </ScrollView>
           )}
         </View>
 

@@ -3,6 +3,7 @@ import { View, Text, ScrollView } from 'react-native';
 import Secao from './Secao';
 import CardMateria from './CardMateria';
 import { getMateriaSectionsStyles } from '../../styles/components/home/MateriaSectionsStyles';
+import { filterRevisados } from './helpers';
 import { useTheme } from '../../shared/theme/ThemeContext';
 
 const MateriaSections = ({
@@ -14,17 +15,21 @@ const MateriaSections = ({
   onAcesso,
   onPinPress,
   navigation,
-  busca,
+  busca = '',
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => getMateriaSectionsStyles(colors), [colors]);
+  const historicoFiltrado = filterRevisados(historico, busca);
+  const fixadosFiltrados = filterRevisados(fixados, busca);
   return (
   <>
     <Secao titulo="ULTIMOS ACESSADOS">
-      {historico.length === 0 ? (
-        <Text style={styles.vazio}>Nenhum conteúdo acessado ainda.</Text>
+      {historicoFiltrado.length === 0 ? (
+        <Text style={styles.vazio}>
+          {busca ? 'Nenhuma matéria encontrada.' : 'Nenhum conteúdo acessado ainda.'}
+        </Text>
       ) : (
-        historico.map((m) => (
+        historicoFiltrado.map((m) => (
           <CardMateria
             key={m.id}
             materia={m}
@@ -58,10 +63,12 @@ const MateriaSections = ({
     </Secao>
 
     <Secao titulo="FIXADOS">
-      {fixados.length === 0 ? (
-        <Text style={styles.vazio}>Fixe uma matéria clicando no pin.</Text>
+      {fixadosFiltrados.length === 0 ? (
+        <Text style={styles.vazio}>
+          {busca ? 'Nenhuma matéria encontrada.' : 'Fixe uma matéria clicando no pin.'}
+        </Text>
       ) : (
-        fixados.map((m) => (
+        fixadosFiltrados.map((m) => (
           <CardMateria
             key={m.id}
             materia={m}

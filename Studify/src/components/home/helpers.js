@@ -25,7 +25,8 @@ export const calcProgress = (topicos) => {
 };
 
 export const filterRevisados = (revisados, busca) => {
-  const q = busca.toLowerCase();
+  const q = String(busca || '').toLowerCase();
+  if (!q) return revisados;
   return revisados.filter((m) =>
     m.nome.toLowerCase().includes(q) || m.topicos?.some((t) => t.nome.toLowerCase().includes(q))
   );

@@ -11,6 +11,8 @@ import * as AiService from '../services/aiService';
 import { useUserId } from '../hooks/useUserId';
 import { useThemedAlert } from '../hooks/useThemedAlert';
 import ThemedAlert from '../components/common/ThemedAlert';
+import MarkdownText from '../components/common/MarkdownText';
+import { ClockIcon } from '../components/common/FeatherIcons';
 import {
   criarConversa,
   listarConversas,
@@ -190,9 +192,16 @@ export default function ChatScreen({ navigation }) {
           </View>
         )}
         <View style={[s.bolhaContent, isUser && s.bolhaContentUser]}>
-          <Text style={[s.bolhaTexto, isUser ? s.bolhaTextoUser : s.bolhaTextoBot]}>
-            {item.content}
-          </Text>
+          {isUser ? (
+            <Text style={[s.bolhaTexto, s.bolhaTextoUser]}>
+              {item.content}
+            </Text>
+          ) : (
+            <MarkdownText
+              text={item.content}
+              style={[s.bolhaTexto, s.bolhaTextoBot]}
+            />
+          )}
         </View>
       </View>
     );
@@ -201,7 +210,7 @@ export default function ChatScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
@@ -219,6 +228,16 @@ export default function ChatScreen({ navigation }) {
               {status === 'online' ? 'Online' : status === 'digitando' ? 'Digitando...' : 'Conectando...'}
             </Text>
           </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.histHeaderBtn}
+          activeOpacity={0.7}
+          onPress={abrirHistorico}
+          accessibilityLabel="Histórico de conversas"
+          accessibilityRole="button"
+        >
+          <ClockIcon size={14} color={colors.textMuted} />
+          <Text style={s.histHeaderText}>Histórico</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.novaBtn} activeOpacity={0.7} onPress={novaConversa}>
           <Text style={s.novaBtnText}>+</Text>
@@ -294,7 +313,20 @@ export default function ChatScreen({ navigation }) {
                           <Text style={s.histPreview} numberOfLines={1}>{preview}</Text>
                         ) : null}
                       </View>
-                      <Text style={s.histData}>{formatarData(item.created_at)}</Text>
+                      <View style={s.histItemRight}>
+                        <Text style={s.histData}>{formatarData(item.created_at)}</Text>
+                        <TouchableOpacity
+                          style={s.histDeleteBtn}
+                          onPress={(event) => {
+                            event?.stopPropagation?.();
+                            excluirConversa(item.id, item.titulo);
+                          }}
+                          accessibilityLabel={`Excluir conversa ${item.titulo}`}
+                          accessibilityRole="button"
+                        >
+                          <Text style={s.histDeleteText}>Excluir</Text>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
                   );
                 }}
@@ -332,6 +364,15 @@ export const getChatStyles = (colors) => StyleSheet.create({
   statusDigitando: { backgroundColor: colors.warn },
   statusOffline: { backgroundColor: colors.textSecondary },
   headerStatus: { color: colors.textMuted, fontSize: 12 },
+  histHeaderBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 8, paddingVertical: 6,
+    borderRadius: 10, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card, marginLeft: 8,
+  },
+  histHeaderText: {
+    color: colors.textMuted, fontSize: 11, fontWeight: '700', marginLeft: 4,
+  },
   novaBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(111,82,255,0.15)',
@@ -414,7 +455,13 @@ export const getChatStyles = (colors) => StyleSheet.create({
   histTitulo: { color: colors.text, fontSize: 15, fontWeight: '600' },
   histTituloAtiva: { color: colors.accent },
   histPreview: { color: colors.textSecondary, fontSize: 12, marginTop: 3 },
+  histItemRight: { alignItems: 'flex-end' },
   histData: { color: colors.textMuted, fontSize: 12, fontWeight: '500' },
+  histDeleteBtn: {
+    marginTop: 4, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6, backgroundColor: 'rgba(239,68,68,0.12)',
+  },
+  histDeleteText: { color: colors.danger, fontSize: 11, fontWeight: '700' },
 });
 
 const ChatScreenStyles = getChatStyles(dark);

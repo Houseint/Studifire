@@ -20,6 +20,7 @@ import ProgressRing from '../components/progress/ProgressRing';
 import StreakCard from '../components/progress/StreakCard';
 import WeeklyChart from '../components/progress/WeeklyChart';
 import SubjectCard from '../components/progress/SubjectCard';
+import { UserIcon } from '../components/common/FeatherIcons';
 import {
   BookOpenIcon,
   CheckIcon,
@@ -257,7 +258,7 @@ export default function ProgressScreen({ navigation }) {
             accessibilityLabel="Perfil"
             accessibilityRole="button"
           >
-            <Text style={s.profileButtonText}>◌</Text>
+            <UserIcon size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 

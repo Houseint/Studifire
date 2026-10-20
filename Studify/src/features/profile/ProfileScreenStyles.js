@@ -442,6 +442,9 @@ export function getProfileStyles(colors) {
     lineHeight: 20,
   },
   badgesScroll: {
+    paddingBottom: 8,
+  },
+  badgesScrollContent: {
     flexDirection: 'row',
     gap: 12,
     paddingBottom: 8,

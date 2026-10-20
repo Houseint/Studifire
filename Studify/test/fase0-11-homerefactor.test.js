@@ -160,7 +160,7 @@ describe('HomeHeader (extraído)', () => {
     expect(screen.getByText('J')).toBeTruthy();
     expect(screen.getByText('joao')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Bom dia'));
+    fireEvent.press(screen.getByText(/Bom dia|Boa tarde|Boa noite/));
     expect(onProfilePress).toHaveBeenCalled();
     fireEvent.press(screen.getByTestId('helpButton'));
     expect(onHelpPress).toHaveBeenCalled();
@@ -224,7 +224,7 @@ describe('MateriaSections (extraído)', () => {
         onPinPress={jest.fn()} navigation={nav} busca="xyz"
       />
     );
-    expect(screen.getByText('Nenhuma matéria encontrada.')).toBeTruthy();
+    expect(screen.getAllByText('Nenhuma matéria encontrada.')).toHaveLength(3);
   });
 
   test('renderiza cards e navega para Detail ao pressionar', () => {
@@ -461,7 +461,7 @@ describe('HomeScreen — A1: focus listener e seções extraídas', () => {
     expect(screen.getByText('Fixe uma matéria clicando no pin.')).toBeTruthy();
   });
 
-  test('busca filtra a seção PARA REVISAR mas mantém histórico', async () => {
+  test('busca filtra todas as seções da Home', async () => {
     const { screen } = renderHome();
     await waitFor(() => {
       expect(screen.getAllByText('Matemática')).toHaveLength(2);
@@ -471,7 +471,7 @@ describe('HomeScreen — A1: focus listener e seções extraídas', () => {
     fireEvent.changeText(input, 'fís');
 
     expect(screen.getAllByText('Física')).toHaveLength(2);
-    expect(screen.getAllByText('Matemática')).toHaveLength(1);
+    expect(screen.queryByText('Matemática')).toBeNull();
     expect(screen.getByText('Nenhuma matéria encontrada.')).toBeTruthy();
   });
 });
