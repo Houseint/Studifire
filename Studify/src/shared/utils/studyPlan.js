@@ -29,7 +29,13 @@ export function buildStudyQueue(materias, now = new Date()) {
   const key = (m, i) => `${m?.id ?? m?.nome ?? '?'}:${i}`;
 
   for (const d of getDueTopics(all, now)) {
-    queue.push({ topicoNome: d.topicoNome, materiaNome: d.materiaNome, kind: 'revisao' });
+    queue.push({
+      topicoNome: d.topicoNome,
+      materiaNome: d.materiaNome,
+      materiaId: d.materiaId,
+      topicoIndex: d.topicoIndex,
+      kind: 'revisao',
+    });
     seen.add(key({ id: d.materiaId, nome: d.materiaNome }, d.topicoIndex));
   }
   for (const m of all) {
@@ -40,6 +46,8 @@ export function buildStudyQueue(materias, now = new Date()) {
       queue.push({
         topicoNome: t?.nome || t?.titulo || 'tópico',
         materiaNome: m?.nome || 'Matéria',
+        materiaId: m?.id,
+        topicoIndex: idx,
         kind: 'novo',
       });
     });
@@ -52,6 +60,8 @@ export function buildStudyQueue(materias, now = new Date()) {
       queue.push({
         topicoNome: t?.nome || t?.titulo || 'tópico',
         materiaNome: m?.nome || 'Matéria',
+        materiaId: m?.id,
+        topicoIndex: idx,
         kind: 'reforco',
       });
     });

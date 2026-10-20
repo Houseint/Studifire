@@ -19,11 +19,10 @@ const materias = [
 
 describe('2.3 - Planner semanal (card na Home)', () => {
   test('fila: revisão vencida antes de novo, novo antes de reforço', () => {
-    expect(buildStudyQueue(materias, NOW).map((q) => q.kind)).toEqual([
-      'revisao',
-      'novo',
-      'reforco',
-    ]);
+    const queue = buildStudyQueue(materias, NOW);
+    expect(queue.map((q) => q.kind)).toEqual(['revisao', 'novo', 'reforco']);
+    expect(queue.map((q) => q.materiaId)).toEqual([1, 1, 1]);
+    expect(queue.map((q) => q.topicoIndex)).toEqual([0, 1, 2]);
   });
 
   test('plano: 7 dias, meta restante dividida, máx 3 itens/dia', () => {
@@ -78,6 +77,27 @@ describe('2.3 - Planner semanal (card na Home)', () => {
       expect(screen.getByText('Sex ·')).toBeTruthy();
       expect(screen.getByText('Dia livre — descanse ou adiante um tópico.')).toBeTruthy();
       expect(screen.queryByText('Vencido')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('card: tocar em um item abre a matéria designada', () => {
+    jest.useFakeTimers({ now: NOW });
+    try {
+      const onItemPress = jest.fn();
+      const screen = render(
+        <StudyPlanCard
+          materias={materias}
+          goalMinutes={300}
+          currentMinutes={90}
+          onItemPress={onItemPress}
+        />
+      );
+
+      fireEvent.press(screen.getAllByLabelText('Abrir Mat')[0]);
+
+      expect(onItemPress).toHaveBeenCalledWith(1);
     } finally {
       jest.useRealTimers();
     }

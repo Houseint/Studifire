@@ -316,6 +316,7 @@ export default function HomeScreen({ navigation }) {
           materias={[...revisados, ...fixados]}
           goalMinutes={weeklyGoal.goalMinutes}
           currentMinutes={weeklyGoal.currentMinutes}
+          onItemPress={(materiaId) => navigation?.navigate('Detail', { id: materiaId })}
         />
 
         <ProgressCards

@@ -15,7 +15,7 @@ const dayNumber = (iso) => {
 
 // Card puro: recebe o que a Home já tem, sem query nova (padrão SmartNextSteps).
 // Visual: trilha dos 7 dias + agenda do dia selecionado.
-const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) => {
+const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0, onItemPress }) => {
   const { colors } = useTheme();
   const s = useMemo(() => getPlanStyles(colors), [colors]);
   const plan = buildWeeklyPlan(materias, { goalMinutes, currentMinutes });
@@ -90,7 +90,15 @@ const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) =
             const KindIcon = KIND_ICONS[it.kind] || SproutIcon;
             const tint = KIND_COLOR[it.kind] || colors.accent;
             return (
-              <View key={`${it.kind}-${idx}`} style={s.itemRow}>
+              <TouchableOpacity
+                key={`${it.kind}-${idx}`}
+                style={s.itemRow}
+                onPress={() => onItemPress?.(it.materiaId)}
+                disabled={!it.materiaId || !onItemPress}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Abrir ${it.materiaNome}`}
+              >
                 <View style={[s.itemIcon, { backgroundColor: `${tint}22`, borderColor: `${tint}55` }]}>
                   <KindIcon size={13} color={tint} />
                 </View>
@@ -103,7 +111,7 @@ const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) =
                 <Text style={[s.itemTag, { color: tint, borderColor: `${tint}55` }]}>
                   {it.kind === 'revisao' ? 'REVISAR' : it.kind === 'novo' ? 'ESTUDAR' : 'REFORÇAR'}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
