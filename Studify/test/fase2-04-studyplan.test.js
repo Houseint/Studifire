@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { buildStudyQueue, buildWeeklyPlan } from '../src/shared/utils/studyPlan';
 import StudyPlanCard from '../src/components/home/StudyPlanCard';
 
@@ -61,6 +61,23 @@ describe('2.3 - Planner semanal (card na Home)', () => {
       expect(screen.getByText('Vencido')).toBeTruthy();
       expect(screen.getByText('Novo')).toBeTruthy();
       expect(screen.getByText('Feito')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('card: seleciona um dia e mostra só a agenda dele', () => {
+    jest.useFakeTimers({ now: NOW });
+    try {
+      const screen = render(
+        <StudyPlanCard materias={materias} goalMinutes={300} currentMinutes={90} />
+      );
+
+      fireEvent.press(screen.getByLabelText('Dia Sex 11'));
+
+      expect(screen.getByText('Sex ·')).toBeTruthy();
+      expect(screen.getByText('Dia livre — descanse ou adiante um tópico.')).toBeTruthy();
+      expect(screen.queryByText('Vencido')).toBeNull();
     } finally {
       jest.useRealTimers();
     }

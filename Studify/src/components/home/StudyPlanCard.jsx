@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../shared/theme/ThemeContext';
 import { buildWeeklyPlan } from '../../shared/utils/studyPlan';
 import { ClockIcon, SproutIcon, RefreshCwIcon, CalendarIcon } from '../common/FeatherIcons';
@@ -14,12 +14,16 @@ const dayNumber = (iso) => {
 };
 
 // Card puro: recebe o que a Home já tem, sem query nova (padrão SmartNextSteps).
-// Visual: trilha dos 7 dias + agenda dos próximos dias com itens.
+// Visual: trilha dos 7 dias + agenda do dia selecionado.
 const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) => {
   const { colors } = useTheme();
   const s = useMemo(() => getPlanStyles(colors), [colors]);
   const plan = buildWeeklyPlan(materias, { goalMinutes, currentMinutes });
+  const [selectedIndex, setSelectedIndex] = useState(0);
   if (plan.totalItems === 0) return null;
+
+  const selectedDay = plan.days[selectedIndex] || plan.days[0];
+  const selectedIsToday = selectedIndex === 0;
 
   return (
     <View style={s.card}>
@@ -35,64 +39,75 @@ const StudyPlanCard = ({ materias = [], goalMinutes = 0, currentMinutes = 0 }) =
         </View>
       </View>
 
-      {/* Trilha dos 7 dias: hoje em destaque, bolinha quando há conteúdo. */}
+      {/* Trilha dos 7 dias: toque para ver a agenda do dia. */}
       <View style={s.weekStrip}>
         {plan.days.map((d, i) => {
           const today = i === 0;
+          const selected = i === selectedIndex;
           return (
-            <View key={d.date} style={[s.dayPill, today && s.dayPillToday]}>
-              <Text style={[s.dayPillLabel, today && s.dayPillLabelToday]}>{d.weekday}</Text>
-              <Text style={[s.dayPillNumber, today && s.dayPillNumberToday]}>{dayNumber(d.date)}</Text>
+            <TouchableOpacity
+              key={d.date}
+              style={[s.dayPill, today && s.dayPillToday, selected && s.dayPillSelected]}
+              onPress={() => setSelectedIndex(i)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={`Dia ${d.weekday} ${dayNumber(d.date)}`}
+              accessibilityState={{ selected }}
+            >
+              <Text style={[s.dayPillLabel, (today || selected) && s.dayPillLabelToday]}>
+                {d.weekday}
+              </Text>
+              <Text style={[s.dayPillNumber, (today || selected) && s.dayPillNumberToday]}>
+                {dayNumber(d.date)}
+              </Text>
               <View
                 style={[
                   s.dayDot,
                   { backgroundColor: d.items.length > 0 ? colors.accent : 'transparent' },
                 ]}
               />
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Agenda: só dias com itens; hoje sempre aparece (mesmo livre). */}
-      {plan.days.map((d, i) => {
-        if (i > 0 && d.items.length === 0) return null;
-        if (i > 4) return null;
-        const today = i === 0;
-        return (
-          <View key={`agenda-${d.date}`} style={[s.dayBlock, today && s.dayBlockToday]}>
-            <View style={s.dayHeader}>
-              <Text style={[s.dayLabel, today && { color: colors.accent }]}>{`${d.weekday} ·`}</Text>
-              <Text style={s.dayDate}>{dayNumber(d.date)}</Text>
-              {today ? <Text style={s.todayBadge}>HOJE</Text> : null}
-            </View>
-            {d.items.length === 0 ? (
-              <Text style={s.freeText}>Dia livre — descanse ou adiante um tópico.</Text>
-            ) : (
-              d.items.map((it, idx) => {
-                const KindIcon = KIND_ICONS[it.kind] || SproutIcon;
-                const tint = KIND_COLOR[it.kind] || colors.accent;
-                return (
-                  <View key={`${it.kind}-${idx}`} style={s.itemRow}>
-                    <View style={[s.itemIcon, { backgroundColor: `${tint}22`, borderColor: `${tint}55` }]}>
-                      <KindIcon size={13} color={tint} />
-                    </View>
-                    <View style={s.itemBody}>
-                      <Text style={s.itemName} numberOfLines={1}>{it.topicoNome}</Text>
-                      <Text style={s.itemMeta} numberOfLines={1}>
-                        {it.materiaNome} · {KIND_LABEL[it.kind] || 'Estudo'}
-                      </Text>
-                    </View>
-                    <Text style={[s.itemTag, { color: tint, borderColor: `${tint}55` }]}>
-                      {it.kind === 'revisao' ? 'REVISAR' : it.kind === 'novo' ? 'ESTUDAR' : 'REFORÇAR'}
-                    </Text>
-                  </View>
-                );
-              })
-            )}
-          </View>
-        );
-      })}
+      {/* Agenda: apenas o dia selecionado; dias livres continuam visíveis. */}
+      <View
+        key={`agenda-${selectedDay.date}`}
+        style={[s.dayBlock, selectedIsToday && s.dayBlockToday]}
+      >
+        <View style={s.dayHeader}>
+          <Text style={[s.dayLabel, selectedIsToday && { color: colors.accent }]}>
+            {`${selectedDay.weekday} ·`}
+          </Text>
+          <Text style={s.dayDate}>{dayNumber(selectedDay.date)}</Text>
+          {selectedIsToday ? <Text style={s.todayBadge}>HOJE</Text> : null}
+        </View>
+        {selectedDay.items.length === 0 ? (
+          <Text style={s.freeText}>Dia livre — descanse ou adiante um tópico.</Text>
+        ) : (
+          selectedDay.items.map((it, idx) => {
+            const KindIcon = KIND_ICONS[it.kind] || SproutIcon;
+            const tint = KIND_COLOR[it.kind] || colors.accent;
+            return (
+              <View key={`${it.kind}-${idx}`} style={s.itemRow}>
+                <View style={[s.itemIcon, { backgroundColor: `${tint}22`, borderColor: `${tint}55` }]}>
+                  <KindIcon size={13} color={tint} />
+                </View>
+                <View style={s.itemBody}>
+                  <Text style={s.itemName} numberOfLines={1}>{it.topicoNome}</Text>
+                  <Text style={s.itemMeta} numberOfLines={1}>
+                    {it.materiaNome} · {KIND_LABEL[it.kind] || 'Estudo'}
+                  </Text>
+                </View>
+                <Text style={[s.itemTag, { color: tint, borderColor: `${tint}55` }]}>
+                  {it.kind === 'revisao' ? 'REVISAR' : it.kind === 'novo' ? 'ESTUDAR' : 'REFORÇAR'}
+                </Text>
+              </View>
+            );
+          })
+        )}
+      </View>
     </View>
   );
 };
@@ -138,6 +153,10 @@ const getPlanStyles = (colors) => StyleSheet.create({
     borderColor: colors.mode === 'light' ? colors.border : 'rgba(255,255,255,0.07)',
   },
   dayPillToday: {
+    backgroundColor: colors.mode === 'light' ? `${colors.accent}22` : 'rgba(91,124,255,0.22)',
+    borderColor: colors.accent,
+  },
+  dayPillSelected: {
     backgroundColor: colors.mode === 'light' ? `${colors.accent}22` : 'rgba(91,124,255,0.22)',
     borderColor: colors.accent,
   },
