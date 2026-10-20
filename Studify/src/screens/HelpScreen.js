@@ -53,7 +53,7 @@ const SECOES = [
     metodos: [
       { icon: 'clock', nome: 'Pomodoro', desc: 'Está no timer da matéria: ciclos de 25 ou 50 min, pausa sugerida no fim e sessão salva automaticamente.' },
       { icon: 'sparkles', nome: 'Feynman', desc: 'Está no botão ✦ do tópico (TopicCoachCard): a IA pede para você explicar com suas palavras e aponta o que faltou.' },
-      { icon: 'refresh', nome: 'Flashcards + repetição espaçada', desc: 'É o motor da Revisão: quiz curto no vencimento e intervalos que crescem conforme você acerta.' },
+      { icon: 'refresh', nome: 'Mini quizz + repetição espaçada', desc: 'É o motor da Revisão: quiz curto no vencimento e intervalos que crescem conforme você acerta.' },
       { icon: 'pencil', nome: 'Estudo ativo / SQ3R', desc: 'Vira tópicos + mini quiz: em vez de só ler, você fecha o tópico explicando e respondendo perguntas.' },
       { icon: 'zap', nome: 'Pareto 80/20', desc: 'Não é uma tela separada: é o critério do próximo passo e do plano — primeiro revisões vencidas, depois o que está mais atrasado.' },
       { icon: 'map', nome: 'Mapas mentais', desc: 'Use o botão ✦ do tópico e peça um mapa/analogia à IA; o app não desenha o mapa por você.' },
