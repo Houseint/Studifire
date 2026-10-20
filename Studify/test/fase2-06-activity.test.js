@@ -1,4 +1,4 @@
-import { minutesToLevel, buildActivityHeatmap } from '../src/shared/utils/activity';
+import { minutesToLevel, buildActivityHeatmap, buildWeeklyActivity } from '../src/shared/utils/activity';
 
 describe('Heatmap de atividade (últimos 7 dias)', () => {
   test('minutesToLevel: 0/10/20/45/90 → 0/1/2/3/4', () => {
@@ -31,5 +31,47 @@ describe('Heatmap de atividade (últimos 7 dias)', () => {
     );
     expect(heat.every((d) => d.minutes === 0)).toBe(true);
     expect(buildActivityHeatmap(null)).toHaveLength(7);
+  });
+});
+
+describe('Atividade da semana (sessões + tópicos concluídos)', () => {
+  test('agrupa por dia, deduplica e ignora o que está fora da semana', () => {
+    const now = new Date('2026-09-10T12:00:00');
+    const sessions = [
+      { started_at: '2026-09-10T08:00:00', duration_minutes: 50, subject_nome: 'Matemática' },
+      { started_at: '2026-09-10T19:00:00', duration_minutes: 20, subject_nome: 'Matemática' },
+      { started_at: '2026-09-08T10:00:00', duration_minutes: 30, subject_nome: 'Biologia' },
+      { started_at: '2026-09-06T10:00:00', duration_minutes: 40, subject_nome: 'História' },
+    ];
+    const materias = [
+      {
+        id: 1,
+        nome: 'Matemática',
+        topicos: [
+          { nome: 'Álgebra', estudado: true, completed_at: '2026-09-10T09:30:00' },
+          { nome: 'Álgebra', estudado: true, completed_at: '2026-09-10T09:30:00' },
+          {
+            nome: 'Geometria',
+            estudado: true,
+            due_date: '2026-09-13T12:00:00',
+            difficulty: 2,
+          },
+          { nome: 'Trigonometria', estudado: true, completed_at: '2026-09-06T10:00:00' },
+        ],
+      },
+      {
+        id: 2,
+        nome: 'Biologia',
+        topicos: [{ nome: 'Células', estudado: true, completed_at: '2026-09-08T10:00:00' }],
+      },
+    ];
+
+    const semana = buildWeeklyActivity(sessions, materias, { now });
+
+    expect(semana[4].sessoes).toEqual(['Matemática']);
+    expect(semana[4].topicos.map((t) => t.topicoNome)).toEqual(['Álgebra', 'Geometria']);
+    expect(semana[2].sessoes).toEqual(['Biologia']);
+    expect(semana[2].topicos.map((t) => t.topicoNome)).toEqual(['Células']);
+    expect(semana[0]).toBeUndefined();
   });
 });

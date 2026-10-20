@@ -5,6 +5,7 @@ import {
   isTopicDue,
   toggleTopicoWithFsrs,
   getDueTopics,
+  getTopicCompletedAt,
 } from '../src/shared/utils/fsrs';
 import { getNextStep } from '../src/components/home/SmartNextSteps';
 
@@ -30,17 +31,33 @@ describe('2.1 - FSRS-lite (memória inteligente)', () => {
     expect(isTopicDue({ nome: 'X', estudado: false }, new Date())).toBe(false);
   });
 
-  test('toggle: marcar feito agenda due_date; desmarcar limpa', () => {
+  test('toggle: marcar feito agenda due_date e completed_at; desmarcar limpa', () => {
     const now = new Date('2026-09-10T12:00:00.000Z');
     const marcados = toggleTopicoWithFsrs([{ nome: 'Álgebra', estudado: false }], 0, { now });
     expect(marcados[0].estudado).toBe(true);
     expect(marcados[0].difficulty).toBe(2);
     expect(marcados[0].reps).toBe(1);
     expect(marcados[0].due_date).toBeTruthy();
+    expect(marcados[0].completed_at).toBe(now.toISOString());
 
     const desmarcados = toggleTopicoWithFsrs(marcados, 0, { now });
     expect(desmarcados[0].estudado).toBe(false);
     expect(desmarcados[0].due_date).toBeNull();
+    expect(desmarcados[0].completed_at).toBeNull();
+  });
+
+  test('getTopicCompletedAt: usa completed_at e cai no due_date para tópicos antigos', () => {
+    const completed = new Date('2026-09-10T12:00:00.000Z');
+    expect(getTopicCompletedAt({ estudado: true, completed_at: completed.toISOString() }))
+      .toEqual(completed);
+    expect(getTopicCompletedAt({
+      estudado: true,
+      due_date: '2026-09-13T12:00:00.000Z',
+      difficulty: 2,
+    }).toISOString()).toBe('2026-09-10T12:00:00.000Z');
+    expect(getTopicCompletedAt({ estudado: false, completed_at: completed.toISOString() }))
+      .toBeNull();
+    expect(getTopicCompletedAt({ estudado: true })).toBeNull();
   });
 
   test('getDueTopics: só lista estudado + vencido', () => {

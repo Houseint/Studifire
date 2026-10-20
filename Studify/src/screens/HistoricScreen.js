@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, SectionList, StatusBar, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, SectionList, StatusBar, StyleSheet, Modal, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserId } from '../hooks/useUserId';
 import { carregarMaterias, carregarHistorico } from '../services/subjectsDb';
-import { buildActivityHeatmap } from '../shared/utils/activity';
+import { buildActivityHeatmap, buildWeeklyActivity } from '../shared/utils/activity';
+import { getTopicCompletedAt } from '../shared/utils/fsrs';
 import { useTheme } from '../shared/theme/ThemeContext';
 
 const HEATMAP_COLORS_DARK = ['#1B2342', '#2E3A6E', '#4A569E', '#6F52FF', '#9D86FF'];
@@ -57,6 +58,7 @@ export default function HistoricScreen({ navigation }) {
   const [filtro, setFiltro] = useState('todos');
   const [materias, setMaterias] = useState([]);
   const [sessoes, setSessoes] = useState([]);
+  const [selectedSession, setSelectedSession] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -90,24 +92,33 @@ export default function HistoricScreen({ navigation }) {
   const heatmap = buildActivityHeatmap(sessoes);
   const heatmapColors = getHeatmapColors(colors);
 
-  // Matérias estudadas em cada dia da semana atual — responde "o que eu
-  // estudo sábado/domingo?" sem precisar caçar sessão por sessão.
-  const materiasPorDia = useMemo(() => {
-    const inicio = new Date();
-    inicio.setHours(0, 0, 0, 0);
-    inicio.setDate(inicio.getDate() - ((inicio.getDay() + 6) % 7));
-    const byDay = {};
-    sessoes.forEach((sess) => {
-      const d = new Date(sess.started_at);
-      if (Number.isNaN(d.getTime()) || d < inicio) return;
-      const dow = d.getDay();
-      if (!byDay[dow]) byDay[dow] = [];
-      if (sess.subject_nome && !byDay[dow].includes(sess.subject_nome)) {
-        byDay[dow].push(sess.subject_nome);
-      }
-    });
-    return byDay;
-  }, [sessoes]);
+  // Atividade da semana atual (seg → dom): sessões + tópicos concluídos.
+  const atividadeSemana = useMemo(
+    () => buildWeeklyActivity(sessoes, materias),
+    [sessoes, materias]
+  );
+
+  // Tópicos concluídos no mesmo dia da sessão selecionada.
+  const selectedTopics = useMemo(() => {
+    if (!selectedSession) return [];
+    const materia = materias.find(
+      (m) => String(m.id) === String(selectedSession.subject_id)
+    );
+    if (!materia) return [];
+    const sessionDate = new Date(selectedSession.started_at).toDateString();
+    const seen = new Set();
+    return (Array.isArray(materia.topicos) ? materia.topicos : [])
+      .filter((t) => {
+        const completedAt = getTopicCompletedAt(t);
+        return completedAt && completedAt.toDateString() === sessionDate;
+      })
+      .map((t) => t?.nome || t?.titulo || 'tópico')
+      .filter((nome) => {
+        if (seen.has(nome)) return false;
+        seen.add(nome);
+        return true;
+      });
+  }, [selectedSession, materias]);
 
   return (
     <View style={s.container}>
@@ -172,24 +183,35 @@ export default function HistoricScreen({ navigation }) {
       </View>
 
       <View style={s.heatmapCard}>
-        <Text style={s.heatmapTitle}>Matérias da semana</Text>
+        <Text style={s.heatmapTitle}>Sua semana</Text>
         {DIAS_SEMANA.map(({ dow, label }) => {
-          const nomes = materiasPorDia[dow] || [];
+          const atividade = atividadeSemana[dow] || { sessoes: [], topicos: [] };
           const isToday = new Date().getDay() === dow;
+          const temSessoes = atividade.sessoes.length > 0;
+          const temTopicos = atividade.topicos.length > 0;
           return (
-                <View
-                  key={`dia-${dow}`}
-                  style={[s.weekDayRow, dow !== 1 && s.weekDayRowBorder]}
-                >
-                  <Text style={[s.weekDayLabel, isToday && s.weekDayLabelToday]}>
-                    {label}
-                  </Text>
-                  <Text
-                    style={[s.weekDayText, !nomes.length && s.weekDayTextEmpty]}
-                    numberOfLines={1}
-                  >
-                {nomes.length ? nomes.join(', ') : '—'}
+            <View
+              key={`dia-${dow}`}
+              style={[s.weekDayRow, dow !== 1 && s.weekDayRowBorder]}
+            >
+              <Text style={[s.weekDayLabel, isToday && s.weekDayLabelToday]}>
+                {label}
               </Text>
+              <View style={s.weekDayContent}>
+                {temSessoes ? (
+                  <Text style={s.weekDayText} numberOfLines={1}>
+                    {atividade.sessoes.join(', ')}
+                  </Text>
+                ) : null}
+                {temTopicos ? (
+                  <Text style={s.weekDayTopicText} numberOfLines={2}>
+                    ✓ {atividade.topicos.map((t) => `${t.materiaNome} · ${t.topicoNome}`).join(', ')}
+                  </Text>
+                ) : null}
+                {!temSessoes && !temTopicos ? (
+                  <Text style={[s.weekDayText, s.weekDayTextEmpty]}>—</Text>
+                ) : null}
+              </View>
             </View>
           );
         })}
@@ -199,17 +221,26 @@ export default function HistoricScreen({ navigation }) {
         sections={sections}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <View style={s.sessionItem}>
+          <TouchableOpacity
+            style={s.sessionItem}
+            activeOpacity={0.7}
+            onPress={() => setSelectedSession(item)}
+            accessibilityRole="button"
+            accessibilityLabel={`Ver sessão de ${item.subject_nome}`}
+          >
             <View style={s.sessionLeft}>
               <Text style={s.sessionSubject}>{item.subject_nome}</Text>
               <Text style={s.sessionTime}>
                 {new Date(item.started_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </Text>
             </View>
-            <Text style={s.sessionDuration}>
-              {item.duration_minutes > 0 ? formatarTempo(item.duration_minutes) : '—'}
-            </Text>
-          </View>
+            <View style={s.sessionRight}>
+              <Text style={s.sessionDuration}>
+                {item.duration_minutes > 0 ? formatarTempo(item.duration_minutes) : '—'}
+              </Text>
+              <Text style={s.sessionChevron}>›</Text>
+            </View>
+          </TouchableOpacity>
         )}
         renderSectionHeader={({ section: { title } }) => (
           <Text style={s.sectionHeader}>{title}</Text>
@@ -222,6 +253,87 @@ export default function HistoricScreen({ navigation }) {
           </View>
         }
       />
+
+      <Modal
+        visible={!!selectedSession}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedSession(null)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            {selectedSession ? (
+              <>
+                <View style={s.modalHeader}>
+                  <Text style={s.modalTitle} numberOfLines={1}>
+                    {selectedSession.subject_nome}
+                  </Text>
+                  <TouchableOpacity
+                    style={s.modalClose}
+                    activeOpacity={0.7}
+                    onPress={() => setSelectedSession(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Fechar detalhes da sessão"
+                  >
+                    <Text style={s.modalCloseText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={s.modalDate}>
+                  {formatSessionDate(selectedSession.started_at)}
+                </Text>
+
+                <View style={s.modalStatsRow}>
+                  <View style={s.modalStat}>
+                    <Text style={s.modalStatValue}>
+                      {formatHora(selectedSession.started_at)}
+                    </Text>
+                    <Text style={s.modalStatLabel}>Início</Text>
+                  </View>
+                  <View style={s.modalStat}>
+                    <Text style={s.modalStatValue}>
+                      {selectedSession.duration_minutes > 0
+                        ? formatarTempo(selectedSession.duration_minutes)
+                        : '—'}
+                    </Text>
+                    <Text style={s.modalStatLabel}>Duração</Text>
+                  </View>
+                </View>
+
+                {selectedTopics.length > 0 ? (
+                  <>
+                    <Text style={s.modalSectionTitle}>
+                      Tópicos concluídos nesse dia
+                    </Text>
+                    <ScrollView
+                      style={s.modalTopicsScroll}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {selectedTopics.map((topico, idx) => (
+                        <Text key={`${topico}-${idx}`} style={s.modalTopic}>
+                          ✓ {topico}
+                        </Text>
+                      ))}
+                    </ScrollView>
+                  </>
+                ) : null}
+
+                <TouchableOpacity
+                  style={s.modalButton}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    const id = selectedSession.subject_id;
+                    setSelectedSession(null);
+                    navigation?.navigate('Detail', { id });
+                  }}
+                >
+                  <Text style={s.modalButtonText}>Abrir matéria</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -243,6 +355,29 @@ function agruparPorData(sessoes) {
     map[data].push(s);
   });
   return Object.entries(map).map(([title, data]) => ({ title, data }));
+}
+
+function formatSessionDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const hoje = new Date();
+  const ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const mesmoDia = (a, b) => a.toDateString() === b.toDateString();
+  const data = d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    ...(d.getFullYear() !== hoje.getFullYear() ? { year: 'numeric' } : {}),
+  });
+  if (mesmoDia(d, hoje)) return `Hoje · ${data}`;
+  if (mesmoDia(d, ontem)) return `Ontem · ${data}`;
+  return data;
+}
+
+function formatHora(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 export function getHistoricStyles(colors) {
@@ -296,12 +431,14 @@ export function getHistoricStyles(colors) {
     heatmapDotToday: { borderWidth: 2, borderColor: colors.text },
     heatmapWeekday: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
     heatmapWeekdayToday: { color: colors.text },
-    weekDayRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
+    weekDayRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 5 },
     weekDayRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-    weekDayLabel: { width: 36, fontSize: 11, fontWeight: '800', color: colors.textMuted },
+    weekDayLabel: { width: 36, fontSize: 11, fontWeight: '800', color: colors.textMuted, paddingTop: 1 },
     weekDayLabelToday: { color: colors.accent },
-    weekDayText: { flex: 1, fontSize: 12, color: colors.text },
+    weekDayContent: { flex: 1 },
+    weekDayText: { fontSize: 12, color: colors.text },
     weekDayTextEmpty: { color: colors.textMuted },
+    weekDayTopicText: { fontSize: 11, color: colors.accent, marginTop: 3, lineHeight: 15 },
     listContent: { paddingHorizontal: 20, paddingBottom: 40 },
     sectionHeader: {
       color: colors.textMuted, fontSize: 13, fontWeight: '600', textTransform: 'uppercase',
@@ -315,8 +452,49 @@ export function getHistoricStyles(colors) {
     sessionLeft: { flex: 1 },
     sessionSubject: { color: colors.text, fontSize: 15, fontWeight: '600' },
     sessionTime: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+    sessionRight: { flexDirection: 'row', alignItems: 'center', marginLeft: 10 },
     sessionDuration: { color: colors.accent, fontSize: 14, fontWeight: '600' },
+    sessionChevron: { color: colors.textMuted, fontSize: 20, marginLeft: 6, lineHeight: 20 },
     empty: { alignItems: 'center', marginTop: 60 },
     emptyText: { color: colors.textMuted, fontSize: 15 },
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center', paddingHorizontal: 24,
+    },
+    modalCard: {
+      backgroundColor: colors.card, borderRadius: 18,
+      borderWidth: 1, borderColor: colors.border,
+      padding: 20,
+    },
+    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    modalTitle: { flex: 1, color: colors.text, fontSize: 18, fontWeight: '700', marginRight: 12 },
+    modalClose: {
+      width: 32, height: 32, borderRadius: 16,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: colors.card2, borderWidth: 1, borderColor: colors.border,
+    },
+    modalCloseText: { color: colors.textMuted, fontSize: 20, lineHeight: 22 },
+    modalDate: { color: colors.textMuted, fontSize: 13, marginTop: 4, marginBottom: 16 },
+    modalStatsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+    modalStat: {
+      flex: 1, backgroundColor: colors.card2, borderRadius: 12,
+      borderWidth: 1, borderColor: colors.border, padding: 12,
+    },
+    modalStatValue: { color: colors.text, fontSize: 16, fontWeight: '700' },
+    modalStatLabel: {
+      color: colors.textMuted, fontSize: 10, fontWeight: '600',
+      textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4,
+    },
+    modalSectionTitle: {
+      color: colors.textMuted, fontSize: 11, fontWeight: '700',
+      textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8,
+    },
+    modalTopicsScroll: { maxHeight: 140 },
+    modalTopic: { color: colors.text, fontSize: 13, marginBottom: 6, lineHeight: 18 },
+    modalButton: {
+      backgroundColor: colors.accent, borderRadius: 12,
+      paddingVertical: 12, alignItems: 'center', marginTop: 16,
+    },
+    modalButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   });
 }

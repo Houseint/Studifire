@@ -93,7 +93,7 @@ export function toggleTopicoWithFsrs(topicos, index, opts = {}) {
     const cur = t && typeof t === 'object' ? t : { nome: String(t ?? '') };
     const willStudy = !cur.estudado;
     if (!willStudy) {
-      return { ...cur, estudado: false, due_date: null };
+      return { ...cur, estudado: false, due_date: null, completed_at: null };
     }
     const difficulty = clampDifficulty(cur.difficulty ?? opts.difficulty ?? FSRS_DEFAULT_DIFFICULTY);
     return {
@@ -102,8 +102,33 @@ export function toggleTopicoWithFsrs(topicos, index, opts = {}) {
       difficulty,
       reps: (Number(cur.reps) || 0) + 1,
       due_date: calcDueDate(difficulty, now),
+      completed_at: now.toISOString(),
     };
   });
+}
+
+/**
+ * Data em que o tópico foi concluído/revisado pela última vez.
+ * Usa `completed_at` quando existe; para tópicos antigos, deduz a partir
+ * de `due_date - intervalo da dificuldade` (compatibilidade sem migração).
+ * @param {{estudado?:boolean, completed_at?:string|null, due_date?:string|null, difficulty?:number}} topic
+ * @returns {Date|null}
+ */
+export function getTopicCompletedAt(topic) {
+  if (!topic || !topic.estudado) return null;
+  if (topic.completed_at) {
+    const d = new Date(topic.completed_at);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  if (topic.due_date) {
+    const due = new Date(topic.due_date);
+    if (Number.isNaN(due.getTime())) return null;
+    const days = FSRS_INTERVALS[clampDifficulty(topic.difficulty)] || FSRS_INTERVALS[2];
+    const d = new Date(due);
+    d.setDate(d.getDate() - days);
+    return d;
+  }
+  return null;
 }
 
 /**
@@ -167,6 +192,7 @@ export function aplicarResultadoQuiz(topicos, index, result = {}) {
     return { topicos: list, difficulty: clampDifficulty(cur?.difficulty), score: 0 };
   }
   const score = correct / total;
+  const newNow = now.toISOString();
   const novos = list.map((t, i) => {
     if (i !== index) return t;
     const cur = t && typeof t === 'object' ? t : { nome: String(t ?? '') };
@@ -178,6 +204,7 @@ export function aplicarResultadoQuiz(topicos, index, result = {}) {
       difficulty,
       reps: (Number(cur.reps) || 0) + 1,
       due_date: calcDueDate(difficulty, now),
+      completed_at: newNow,
     };
   });
   return { topicos: novos, difficulty: clampDifficulty(novos[index]?.difficulty), score };
