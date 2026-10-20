@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextInput, Alert } from 'react-native';
 import { render, waitFor, fireEvent, act } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('../src/features/auth/authDb', () => ({
   getSessionUser: jest.fn(),
@@ -21,8 +22,9 @@ const App = require('../App').default;
 const LoginScreen = require('../src/screens/LoginScreen').default;
 const ProfileScreen = require('../src/screens/ProfileScreen').default;
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
+  await AsyncStorage.clear();
 });
 
 test('sem sessão salva: bootstrap vai para Login', async () => {
@@ -42,6 +44,20 @@ test('sessão válida (usuário existe no DB): vai direto para Home sem reload',
 
   expect(await findByText('SEU PROGRESSO')).toBeTruthy();
   expect(logoutUser).not.toHaveBeenCalled();
+});
+
+test('primeiro acesso à Home abre o tour e pular salva a flag', async () => {
+  getSessionUser.mockResolvedValue({ id: 1, email: 'a@b.com' });
+  getUserById.mockResolvedValue({ id: 1, email: 'a@b.com' });
+
+  const screen = render(<App />);
+
+  expect(await screen.findByText('Bem-vindo ao Studifire')).toBeTruthy();
+  fireEvent.press(screen.getByText('Pular tutorial'));
+
+  await waitFor(() => {
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@studifire/tutorial_seen_v1', '1');
+  });
 });
 
 test('sessão inválida (usuário removido do DB): limpa sessão e vai para Login', async () => {

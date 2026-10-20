@@ -53,4 +53,4 @@ _Nada — fila vazia._
 ## Backlog
 
 _Nada pendente (os 3 itens sugeridos — quiz automático, heatmap, metas por matéria — foram feitos acima). Sugestões futuras: sons/vibração no timer, exportar progresso em PDF p/ anexar no TCC._
-- [x] **Guia de primeiro uso (19/10, versão Ajuda):** tutorial de 6 passos em `TutorialModal` (matérias, timer, modo foco, progresso/histórico, conquistas/meta, lembrete/quiz), aberto pelo card "Como usar o Studify" na Ajuda. Carrossel pós-login com prints segue opcional (design em `thoughts/shared/designs/2026-09-17-guia-primeiro-uso-design.md`).
+- [x] **Guia de primeiro uso (19/10, versão Ajuda):** tutorial de 7 passos em `TutorialModal` (boas-vindas, matérias, timer, modo foco, progresso/histórico, conquistas/meta, lembrete/quiz), aberto automaticamente no primeiro acesso à Home (flag `@studifire/tutorial_seen_v1`) e reaberto pelo card "Como usar o Studifire" na Ajuda. Carrossel pós-login com prints segue opcional (design em `thoughts/shared/designs/2026-09-17-guia-primeiro-uso-design.md`).

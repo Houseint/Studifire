@@ -2,12 +2,17 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../shared/theme/ThemeContext';
 
-// Tour rápido do app: 6 passos, acessível pela tela de Ajuda.
+// Tour rápido do app: 7 passos, acessível pela Ajuda e aberto no primeiro uso.
 const PASSOS = [
   {
+    icon: '👋',
+    titulo: 'Bem-vindo ao Studifire',
+    texto: 'Este tour leva 1 minuto. Você pode pular agora e rever depois em Ajuda > Como usar o Studifire.',
+  },
+  {
     icon: '📚',
-    titulo: 'Matérias e tópicos',
-    texto: 'Crie suas matérias e adicione tópicos. Marque cada tópico como estudado para o progresso subir automaticamente.',
+    titulo: 'Crie sua primeira matéria',
+    texto: 'Toque em + Adicionar no rodapé, dê um nome e adicione os tópicos que vai estudar. Marque cada tópico como estudado para o progresso subir.',
   },
   {
     icon: '⏱️',
@@ -22,7 +27,7 @@ const PASSOS = [
   {
     icon: '📊',
     titulo: 'Progresso e histórico',
-    texto: 'Acompanhe horas estudadas, sequência de dias, heatmap e as matérias que você estudou em cada dia da semana.',
+    texto: 'Acompanhe horas estudadas, sequência de dias, heatmap e as matérias que você estudou em cada dia. Toque em uma sessão do histórico para ver os detalhes.',
   },
   {
     icon: '🏆',

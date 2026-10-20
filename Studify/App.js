@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HomeScreen from './src/screens/HomeScreen';
 import StudifyRegisterScreen from './src/screens/RegisterScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -17,8 +18,11 @@ import { getUserSettings } from './src/features/subjects';
 import { ThemeProvider } from './src/shared/theme/ThemeContext';
 import { TimerProvider } from './src/shared/timer/TimerContext';
 import MiniTimerBar from './src/components/common/MiniTimerBar';
+import TutorialModal from './src/components/common/TutorialModal';
 import { restoreDailyReminder } from './src/features/reminders';
 import ErrorBoundary from './src/components/ErrorBoundary';
+
+const TUTORIAL_SEEN_KEY = '@studifire/tutorial_seen_v1';
 
 // expo-splash-screen com lazy-require: o jest renderiza o App no Node
 // (fase0-05) e o módulo nativo não existe lá — mesmo padrão do reminderService.
@@ -63,6 +67,7 @@ function AppContent() {
   const [initialTheme, setInitialTheme] = useState('dark');
   const navRef = useRef(null);
   const [routeName, setRouteName] = useState(null);
+  const [tutorialVisible, setTutorialVisible] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -115,6 +120,24 @@ function AppContent() {
     };
   }, []);
 
+  useEffect(() => {
+    if (routeName !== 'Home') return undefined;
+    let active = true;
+    AsyncStorage.getItem(TUTORIAL_SEEN_KEY)
+      .then((seen) => {
+        if (active && !seen) setTutorialVisible(true);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [routeName]);
+
+  const dismissTutorial = () => {
+    setTutorialVisible(false);
+    AsyncStorage.setItem(TUTORIAL_SEEN_KEY, '1').catch(() => {});
+  };
+
   if (!initialRoute) {
     return <SplashLoading />;
   }
@@ -142,6 +165,7 @@ function AppContent() {
             </Stack.Navigator>
           </NavigationContainer>
           <MiniTimerBar navRef={navRef} hidden={routeName === 'Detail'} />
+          <TutorialModal visible={tutorialVisible} onClose={dismissTutorial} />
         </View>
       </TimerProvider>
     </ThemeProvider>

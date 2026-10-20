@@ -154,7 +154,7 @@ export default function HelpScreen({ navigation }) {
           <Text style={s.tutorialEmoji}>🎓</Text>
           <View style={{ flex: 1 }}>
             <Text style={s.tutorialTitle}>Como usar o Studifire</Text>
-            <Text style={s.tutorialSubtitle}>Tour rápido em 6 passos</Text>
+            <Text style={s.tutorialSubtitle}>Tour rápido em 7 passos</Text>
           </View>
           <Text style={s.tutorialArrow}>→</Text>
         </TouchableOpacity>
