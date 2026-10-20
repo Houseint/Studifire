@@ -1000,7 +1000,7 @@ export default function ProfileScreen({ navigation }) {
         onRequestClose={() => setGoalModalVisible(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={s.modalOverlay}
         >
           <TouchableOpacity

@@ -210,7 +210,7 @@ export default function ChatScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
@@ -246,12 +246,14 @@ export default function ChatScreen({ navigation }) {
 
       <FlatList
         ref={flatRef}
+        style={s.messageList}
         data={mensagens}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
         contentContainerStyle={s.lista}
         onContentSizeChange={() => setTimeout(() => flatRef.current?.scrollToEnd(), 100)}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={<View style={{ height: 8 }} />}
       />
 
@@ -382,6 +384,7 @@ export const getChatStyles = (colors) => StyleSheet.create({
   novaBtnText: { color: colors.accent, fontSize: 22, fontWeight: '300', lineHeight: 24 },
 
   lista: { paddingHorizontal: 16, paddingBottom: 8 },
+  messageList: { flex: 1 },
   bolha: {
     flexDirection: 'row', marginBottom: 12,
     alignItems: 'flex-end',
